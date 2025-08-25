@@ -52,16 +52,12 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
-				}
+				agent: {
+					active: 'hsl(var(--agent-active))',
+					inactive: 'hsl(var(--agent-inactive))',
+					memory: 'hsl(var(--agent-memory))',
+					task: 'hsl(var(--agent-task))'
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -75,8 +71,18 @@ export default {
 					},
 					to: {
 						height: 'var(--radix-accordion-content-height)'
-					}
-				},
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-card': 'var(--gradient-card)',
+				'gradient-agent': 'var(--gradient-agent)'
+			},
+			boxShadow: {
+				'glow-primary': 'var(--glow-primary)',
+				'glow-accent': 'var(--glow-accent)',
+				'card': 'var(--shadow-card)',
+				'agent': 'var(--shadow-agent)'
+			},
 				'accordion-up': {
 					from: {
 						height: 'var(--radix-accordion-content-height)'
