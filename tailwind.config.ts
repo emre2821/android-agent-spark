@@ -71,6 +71,16 @@ export default {
 					},
 					to: {
 						height: 'var(--radix-accordion-content-height)'
+					}
+				},
+				'accordion-up': {
+					from: {
+						height: 'var(--radix-accordion-content-height)'
+					},
+					to: {
+						height: '0'
+					}
+				}
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
@@ -82,15 +92,6 @@ export default {
 				'glow-accent': 'var(--glow-accent)',
 				'card': 'var(--shadow-card)',
 				'agent': 'var(--shadow-agent)'
-			},
-				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
