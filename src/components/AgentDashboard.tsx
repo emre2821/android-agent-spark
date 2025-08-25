@@ -4,7 +4,11 @@ import { Input } from '@/components/ui/input';
 import { AgentCard } from './AgentCard';
 import { CreateAgentDialog } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
-import { Plus, Search, Settings } from 'lucide-react';
+import { AgentSettingsDialog } from './AgentSettingsDialog';
+import { AgentConfigureDialog } from './AgentConfigureDialog';
+import { WorkflowDialog } from './WorkflowDialog';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Search, Settings, Workflow } from 'lucide-react';
 
 // Mock data for demonstration
 const mockAgents = [
@@ -41,7 +45,11 @@ export const AgentDashboard: React.FC = () => {
   const [agents, setAgents] = useState(mockAgents);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
+  const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const filteredAgents = agents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -58,6 +66,27 @@ export const AgentDashboard: React.FC = () => {
     };
     setAgents([...agents, newAgent]);
     setShowCreateDialog(false);
+    toast({
+      title: "Agent Created",
+      description: `${agentData.name} has been successfully created.`,
+    });
+  };
+
+  const handleConfigureAgent = (agentId: string, config: any) => {
+    setAgents(agents.map(agent => 
+      agent.id === agentId 
+        ? { ...agent, name: config.name, description: config.description, status: config.status }
+        : agent
+    ));
+    setSelectedAgentConfig(null);
+    toast({
+      title: "Agent Updated",
+      description: "Agent configuration has been saved successfully.",
+    });
+  };
+
+  const getSelectedAgent = () => {
+    return agents.find(agent => agent.id === selectedAgentConfig) || null;
   };
 
   return (
@@ -74,7 +103,19 @@ export const AgentDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowWorkflowDialog(true)}
+            >
+              <Workflow className="h-4 w-4 mr-2" />
+              Workflows
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowSettingsDialog(true)}
+            >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -129,7 +170,7 @@ export const AgentDashboard: React.FC = () => {
             <AgentCard
               key={agent.id}
               agent={agent}
-              onEdit={(id) => console.log('Edit agent:', id)}
+              onEdit={(id) => setSelectedAgentConfig(id)}
               onViewMemory={(id) => setSelectedAgentMemory(id)}
             />
           ))}
@@ -146,6 +187,23 @@ export const AgentDashboard: React.FC = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateAgent}
+      />
+
+      <AgentSettingsDialog
+        open={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
+      />
+
+      <WorkflowDialog
+        open={showWorkflowDialog}
+        onClose={() => setShowWorkflowDialog(false)}
+      />
+
+      <AgentConfigureDialog
+        open={selectedAgentConfig !== null}
+        onClose={() => setSelectedAgentConfig(null)}
+        agent={getSelectedAgent()}
+        onSave={handleConfigureAgent}
       />
 
       <AgentMemoryDialog
