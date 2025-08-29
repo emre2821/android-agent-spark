@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, Database, Zap, Settings } from 'lucide-react';
+import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Agent {
   id: string;
@@ -68,8 +69,19 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
         <div className="text-xs text-muted-foreground">
           Last active: {agent.lastActive}
         </div>
-        
+
         <div className="flex gap-2 pt-2">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="flex-1"
+          >
+            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center">
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
