@@ -20,7 +20,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/agents/:id" element={<AgentDetail />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* Place custom routes above the catch-all "*" route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
