@@ -9,40 +9,9 @@ import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { WorkflowDialog } from './WorkflowDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
-
-// Mock data for demonstration
-const mockAgents = [
-  {
-    id: '1',
-    name: 'Task Automator',
-    description: 'Automates daily tasks and workflows with intelligent decision making',
-    status: 'active' as const,
-    tasksCompleted: 147,
-    memoryItems: 23,
-    lastActive: '2 minutes ago'
-  },
-  {
-    id: '2', 
-    name: 'Data Collector',
-    description: 'Gathers and organizes information from multiple sources',
-    status: 'learning' as const,
-    tasksCompleted: 89,
-    memoryItems: 156,
-    lastActive: '1 hour ago'
-  },
-  {
-    id: '3',
-    name: 'Smart Assistant',
-    description: 'Provides intelligent responses and performs complex reasoning',
-    status: 'inactive' as const,
-    tasksCompleted: 342,
-    memoryItems: 89,
-    lastActive: '3 days ago'
-  }
-];
-
+import { useAgents } from '@/hooks/use-agents';
 export const AgentDashboard: React.FC = () => {
-  const [agents, setAgents] = useState(mockAgents);
+  const { agents, setAgents } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
