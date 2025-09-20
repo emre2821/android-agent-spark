@@ -5,22 +5,30 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import type { Agent } from '@/types/agent';
 
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (agentData: any) => void;
+  onSubmit: (agentData: CreateAgentFormValues) => void;
+}
+
+type AgentStatus = Agent['status'];
+
+export interface CreateAgentFormValues {
+  name: string;
+  description: string;
+  status: AgentStatus;
 }
 
 export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    status: 'active' | 'inactive' | 'learning';
-  }>({
+  const isMobile = useIsMobile();
+  const [formData, setFormData] = useState<CreateAgentFormValues>({
     name: '',
     description: '',
-    status: 'active'
+    status: 'active',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -33,11 +41,11 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn('sm:max-w-md', isMobile && 'max-w-[calc(100vw-2rem)] p-4')}>
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create New Agent</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Agent Name</Label>
@@ -63,10 +71,10 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
           
           <div className="space-y-2">
             <Label htmlFor="status">Initial Status</Label>
-            <Select 
-              value={formData.status} 
-              onValueChange={(value: 'active' | 'inactive' | 'learning') => 
-                setFormData({ ...formData, status: value })
+            <Select
+              value={formData.status}
+              onValueChange={(value) =>
+                setFormData({ ...formData, status: value as AgentStatus })
               }
             >
               <SelectTrigger>
@@ -79,12 +87,15 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
               </SelectContent>
             </Select>
           </div>
-          
-          <DialogFooter className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+
+          <DialogFooter className={cn('gap-2', isMobile && 'space-y-2 sm:space-y-0')}>
+            <Button type="button" variant="outline" onClick={onClose} className={cn(isMobile && 'w-full justify-center')}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-gradient-primary">
+            <Button
+              type="submit"
+              className={cn('bg-gradient-primary', isMobile && 'w-full justify-center')}
+            >
               Create Agent
             </Button>
           </DialogFooter>

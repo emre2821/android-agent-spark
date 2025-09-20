@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Agent {
   id: string;
@@ -22,6 +24,7 @@ interface AgentCardProps {
 }
 
 export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemory }) => {
+  const isMobile = useIsMobile();
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -70,14 +73,17 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           Last active: {agent.lastActive}
         </div>
 
-        <div className="flex gap-2 pt-2">
+        <div className={cn('flex gap-2 pt-2', isMobile && 'flex-col')}>
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="flex-1"
+            className={cn('flex-1', isMobile && 'w-full')}
           >
-            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center">
+            <Link
+              to={`/agents/${agent.id}`}
+              className={cn('flex items-center justify-center gap-1', isMobile && 'w-full')}
+            >
               <Eye className="h-4 w-4 mr-1" />
               View
             </Link>
@@ -86,7 +92,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="outline"
             size="sm"
             onClick={() => onEdit(agent.id)}
-            className="flex-1"
+            className={cn('flex-1', isMobile && 'w-full justify-center')}
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
@@ -95,7 +101,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="secondary"
             size="sm"
             onClick={() => onViewMemory(agent.id)}
-            className="flex-1"
+            className={cn('flex-1', isMobile && 'w-full justify-center')}
           >
             <Database className="h-4 w-4 mr-1" />
             Memory

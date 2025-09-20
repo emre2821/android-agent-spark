@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface Agent {
   id: string;
@@ -26,12 +28,41 @@ interface Agent {
   lastActive: string;
 }
 
+type AgentStatus = Agent['status'];
+type AgentPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface AgentConfiguration {
+  name: string;
+  description: string;
+  status: AgentStatus;
+  autoStart: boolean;
+  learningMode: boolean;
+  maxTasks: number;
+  priority: AgentPriority;
+  tags: string[];
+  systemPrompt: string;
+  memoryLimit: number;
+}
+
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
   agent: Agent | null;
-  onSave: (agentId: string, config: any) => void;
+  onSave: (agentId: string, config: AgentConfiguration) => void;
 }
+
+const createInitialConfig = (agent: Agent | null): AgentConfiguration => ({
+  name: agent?.name ?? '',
+  description: agent?.description ?? '',
+  status: agent?.status ?? 'inactive',
+  autoStart: true,
+  learningMode: true,
+  maxTasks: 100,
+  priority: 'medium',
+  tags: ['automation', 'ai'],
+  systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
+  memoryLimit: 1000,
+});
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
@@ -39,20 +70,21 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   agent,
   onSave,
 }) => {
-  const [config, setConfig] = useState({
-    name: agent?.name || '',
-    description: agent?.description || '',
-    status: agent?.status || 'inactive',
-    autoStart: true,
-    learningMode: true,
-    maxTasks: 100,
-    priority: 'medium',
-    tags: ['automation', 'ai'],
-    systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
-    memoryLimit: 1000,
-  });
+  const isMobile = useIsMobile();
+  const [config, setConfig] = useState<AgentConfiguration>(createInitialConfig(agent));
 
   const [newTag, setNewTag] = useState('');
+
+  useEffect(() => {
+    if (!agent) {
+      setConfig(createInitialConfig(null));
+      setNewTag('');
+      return;
+    }
+
+    setConfig(createInitialConfig(agent));
+    setNewTag('');
+  }, [agent]);
 
   const handleSave = () => {
     if (!agent) return;
@@ -81,7 +113,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
+          isMobile && 'max-w-[calc(100vw-1.5rem)] p-4'
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -96,7 +133,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
               <Input
@@ -118,10 +155,15 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={config.status} onValueChange={(value: any) => setConfig({ ...config, status: value })}>
+                <Select
+                  value={config.status}
+                  onValueChange={(value) =>
+                    setConfig({ ...config, status: value as AgentStatus })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -135,7 +177,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={config.priority} onValueChange={(value) => setConfig({ ...config, priority: value })}>
+                <Select
+                  value={config.priority}
+                  onValueChange={(value) =>
+                    setConfig({ ...config, priority: value as AgentPriority })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -155,8 +202,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Behavior Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
-            
-            <div className="flex items-center justify-between">
+
+            <div className={cn('flex items-center justify-between', isMobile && 'flex-col items-start gap-3')}>
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
                 <p className="text-xs text-muted-foreground">
@@ -169,7 +216,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className={cn('flex items-center justify-between', isMobile && 'flex-col items-start gap-3')}>
               <div className="space-y-0.5">
                 <Label className="text-sm">Learning mode</Label>
                 <p className="text-xs text-muted-foreground">
@@ -182,7 +229,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
               <div className="space-y-2">
                 <Label htmlFor="maxTasks">Max concurrent tasks</Label>
                 <Input
@@ -224,14 +271,14 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className={cn('flex gap-2', isMobile && 'flex-col')}>
               <Input
                 placeholder="Add new tag"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTag()}
               />
-              <Button size="sm" onClick={addTag}>
+              <Button size="sm" onClick={addTag} className={cn(isMobile && 'w-full justify-center')}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -254,9 +301,13 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
           {/* Workflows */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className={cn('flex items-center justify-between', isMobile && 'flex-col gap-3 items-start')}>
               <h4 className="text-sm font-medium text-foreground">Workflows</h4>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(isMobile && 'w-full justify-center')}
+              >
                 <Workflow className="h-4 w-4 mr-2" />
                 Manage Workflows
               </Button>
@@ -267,11 +318,11 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <div className={cn('flex justify-end gap-2', isMobile && 'flex-col-reverse')}>
+          <Button variant="outline" onClick={onClose} className={cn(isMobile && 'w-full justify-center')}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} className={cn(isMobile && 'w-full justify-center')}>
             <Save className="h-4 w-4 mr-2" />
             Save Configuration
           </Button>

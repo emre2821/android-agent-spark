@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Edit } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface MemoryItem {
   id: string;
@@ -15,6 +17,8 @@ interface MemoryItem {
   type: 'fact' | 'preference' | 'skill' | 'context';
   timestamp: string;
 }
+
+type MemoryType = MemoryItem['type'];
 
 interface AgentMemoryDialogProps {
   open: boolean;
@@ -48,8 +52,13 @@ const mockMemoryItems: MemoryItem[] = [
 ];
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
+  const isMobile = useIsMobile();
   const [memoryItems, setMemoryItems] = useState<MemoryItem[]>(mockMemoryItems);
-  const [newItem, setNewItem] = useState({ key: '', value: '', type: 'fact' as const });
+  const [newItem, setNewItem] = useState<{ key: string; value: string; type: MemoryType }>({
+    key: '',
+    value: '',
+    type: 'fact',
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const handleAddMemory = () => {
@@ -88,7 +97,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <DialogContent className={cn('sm:max-w-2xl max-h-[80vh]', isMobile && 'max-w-[calc(100vw-1.5rem)] p-4')}>
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             Agent Memory Store
@@ -111,7 +120,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               <select
                 className="px-3 py-2 bg-input border border-border rounded-md text-sm"
                 value={newItem.type}
-                onChange={(e) => setNewItem({ ...newItem, type: e.target.value as any })}
+                onChange={(e) => setNewItem({ ...newItem, type: e.target.value as MemoryType })}
               >
                 <option value="fact">Fact</option>
                 <option value="preference">Preference</option>
@@ -141,7 +150,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               {memoryItems.map((item, index) => (
                 <div key={item.id}>
                   <div className="agent-card p-4 space-y-2">
-                    <div className="flex items-start justify-between">
+                    <div className={cn('flex items-start justify-between', isMobile && 'flex-col gap-3')}>
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-foreground">{item.key}</span>
@@ -154,11 +163,12 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
                           Added: {item.timestamp}
                         </p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className={cn('flex gap-1', isMobile && 'w-full justify-end')}>
                         <Button
-                          variant="ghost" 
+                          variant="ghost"
                           size="sm"
                           onClick={() => setEditingId(item.id)}
+                          className={cn(isMobile && 'flex-1 justify-center')}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -166,6 +176,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteMemory(item.id)}
+                          className={cn(isMobile && 'flex-1 justify-center')}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
