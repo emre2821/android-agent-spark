@@ -6,7 +6,6 @@ import { CreateAgentDialog } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
-import { WorkflowDialog } from './WorkflowDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
@@ -16,11 +15,11 @@ export const AgentDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const filteredAgents = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -74,7 +73,7 @@ export const AgentDashboard: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowWorkflowDialog(true)}
+              onClick={() => navigate('/workflows')}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
@@ -136,24 +135,6 @@ export const AgentDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Agents Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAgents.map((agent) => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  onEdit={(id) => setSelectedAgentConfig(id)}
-                  onViewMemory={(id) => setSelectedAgentMemory(id)}
-                />
-              ))}
-            </div>
-
-            {filteredAgents.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No agents found matching your search.</p>
-              </div>
-            )}
-          </>
         )}
       </div>
 
@@ -167,11 +148,6 @@ export const AgentDashboard: React.FC = () => {
       <AgentSettingsDialog
         open={showSettingsDialog}
         onClose={() => setShowSettingsDialog(false)}
-      />
-
-      <WorkflowDialog
-        open={showWorkflowDialog}
-        onClose={() => setShowWorkflowDialog(false)}
       />
 
       <AgentConfigureDialog
