@@ -6,19 +6,19 @@ import { CreateAgentDialog } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
-import { WorkflowDialog } from './WorkflowDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
+import { useNavigate } from 'react-router-dom';
 export const AgentDashboard: React.FC = () => {
   const { agents, setAgents } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const filteredAgents = agents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,10 +72,10 @@ export const AgentDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
-              onClick={() => setShowWorkflowDialog(true)}
+              onClick={() => navigate('/workflows')}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
@@ -141,6 +141,7 @@ export const AgentDashboard: React.FC = () => {
               agent={agent}
               onEdit={(id) => setSelectedAgentConfig(id)}
               onViewMemory={(id) => setSelectedAgentMemory(id)}
+              onBuildWorkflow={(id) => navigate(`/workflows?agentId=${id}`)}
             />
           ))}
         </div>
@@ -161,11 +162,6 @@ export const AgentDashboard: React.FC = () => {
       <AgentSettingsDialog
         open={showSettingsDialog}
         onClose={() => setShowSettingsDialog(false)}
-      />
-
-      <WorkflowDialog
-        open={showWorkflowDialog}
-        onClose={() => setShowWorkflowDialog(false)}
       />
 
       <AgentConfigureDialog

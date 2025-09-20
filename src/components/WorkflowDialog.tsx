@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -15,21 +16,22 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Workflow, 
-  Plus, 
-  Save, 
-  Play, 
-  Clock, 
-  Mail, 
-  FileText, 
-  Database, 
+import {
+  Workflow,
+  Plus,
+  Save,
+  Play,
+  Mail,
+  FileText,
+  Database,
   Globe,
-  MessageSquare,
   Calendar,
   Shield,
   X
 } from 'lucide-react';
+import { useWorkflows } from '@/hooks/use-workflows';
+import { createEmptyStep, WorkflowStep } from '@/types/workflow';
+import { useToast } from '@/hooks/use-toast';
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -37,11 +39,11 @@ interface WorkflowDialogProps {
   agentId?: string;
 }
 
-interface WorkflowStep {
+interface WorkflowTemplateStep {
   id: string;
   type: string;
   name: string;
-  config: any;
+  config: Record<string, unknown>;
 }
 
 interface WorkflowTemplate {
@@ -50,7 +52,7 @@ interface WorkflowTemplate {
   description: string;
   category: string;
   icon: React.ComponentType<any>;
-  steps: WorkflowStep[];
+  steps: WorkflowTemplateStep[];
 }
 
 const prebuiltWorkflows: WorkflowTemplate[] = [
@@ -139,6 +141,9 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
   onClose,
   agentId,
 }) => {
+  const navigate = useNavigate();
+  const { createWorkflow } = useWorkflows();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('prebuilt');
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowTemplate | null>(null);
   const [customWorkflow, setCustomWorkflow] = useState({
@@ -148,25 +153,100 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
     steps: [] as WorkflowStep[],
   });
 
+  const buildSteps = (steps: WorkflowTemplateStep[]): WorkflowStep[] =>
+    steps.map((step, index) => {
+      const base = createEmptyStep({
+        name: step.name,
+        type: step.type,
+        config: step.config,
+        position: { x: 160, y: 120 + index * 140 },
+      });
+
+      if (step.type === 'condition') {
+        return {
+          ...base,
+          outputs: [
+            { id: crypto.randomUUID(), label: 'Yes', dataType: 'boolean' },
+            { id: crypto.randomUUID(), label: 'No', dataType: 'boolean' },
+          ],
+          branches: [
+            { id: crypto.randomUUID(), label: 'On true', condition: 'true' },
+            { id: crypto.randomUUID(), label: 'On false', condition: 'false' },
+          ],
+        };
+      }
+
+      return {
+        ...base,
+        outputs: base.outputs.length > 0 ? base.outputs : [{
+          id: crypto.randomUUID(),
+          label: 'Result',
+          dataType: 'json',
+        }],
+      };
+    });
+
+  const redirectToBuilder = (workflowId: string) => {
+    const params = new URLSearchParams();
+    params.set('workflowId', workflowId);
+    if (agentId) params.set('agentId', agentId);
+    navigate({ pathname: '/workflows', search: params.toString() });
+  };
+
   const handleApplyPrebuilt = (workflow: WorkflowTemplate) => {
-    console.log('Applying prebuilt workflow:', workflow.name, 'to agent:', agentId);
-    // Logic to apply workflow to agent would go here
+    const created = createWorkflow({
+      name: workflow.name,
+      description: workflow.description,
+      agentId,
+      steps: buildSteps(workflow.steps),
+    });
+    toast({
+      title: 'Workflow copied',
+      description: `${workflow.name} is ready in the builder.`,
+    });
+    redirectToBuilder(created.id);
     onClose();
   };
 
   const handleSaveCustom = () => {
-    console.log('Saving custom workflow:', customWorkflow);
-    // Logic to save custom workflow would go here
+    const steps = customWorkflow.steps.length
+      ? customWorkflow.steps
+      : [
+          createEmptyStep({
+            name: customWorkflow.trigger || 'Trigger',
+            type: customWorkflow.trigger || 'trigger',
+            position: { x: 160, y: 120 },
+          }),
+        ];
+
+    const normalizedSteps = steps.map((step, index) => ({
+      ...step,
+      position: step.position ?? { x: 160, y: 120 + index * 140 },
+    }));
+
+    const created = createWorkflow({
+      name: customWorkflow.name,
+      description: customWorkflow.description || 'Custom automation workflow',
+      agentId,
+      steps: normalizedSteps,
+    });
+
+    toast({
+      title: 'Workflow saved',
+      description: `${customWorkflow.name || 'Custom workflow'} created successfully.`,
+    });
+    redirectToBuilder(created.id);
     onClose();
+    setCustomWorkflow({
+      name: '',
+      description: '',
+      trigger: '',
+      steps: [],
+    });
   };
 
   const addCustomStep = () => {
-    const newStep: WorkflowStep = {
-      id: Date.now().toString(),
-      type: 'action',
-      name: 'New Step',
-      config: {},
-    };
+    const newStep = createEmptyStep({ name: 'New Step', type: 'action' });
     setCustomWorkflow({
       ...customWorkflow,
       steps: [...customWorkflow.steps, newStep],
