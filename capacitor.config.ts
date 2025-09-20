@@ -13,7 +13,21 @@ const config: CapacitorConfig = {
       launchShowDuration: 2000,
       backgroundColor: "#1a1a2e",
       showSpinner: false
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
+    },
+    BackgroundRunner: {
+      enabled: true
     }
+  },
+  android: {
+    allowMixedContent: true,
+    backgroundColor: '#0f172a'
+  },
+  ios: {
+    backgroundColor: '#0f172a',
+    contentInset: 'always'
   }
 };
 

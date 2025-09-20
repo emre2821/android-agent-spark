@@ -6,10 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Edit, Save, X } from 'lucide-react';
-import { useAgents } from '@/hooks/use-agents';
-import { AgentMemory } from '@/types/agent';
-import { useToast } from '@/hooks/use-toast';
+
+
+type MemoryType = MemoryItem['type'];
 
 interface AgentMemoryDialogProps {
   open: boolean;
@@ -22,10 +21,6 @@ type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 const emptyDraft: MemoryDraft = { key: '', value: '', type: 'fact' };
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
-  const { fetchAgentMemory, addMemoryItem, updateMemoryItem, deleteMemoryItem } = useAgents();
-  const { toast } = useToast();
-  const [memoryItems, setMemoryItems] = useState<AgentMemory[]>([]);
-  const [newItem, setNewItem] = useState<MemoryDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<MemoryDraft>(emptyDraft);
   const [isLoading, setIsLoading] = useState(false);
@@ -145,7 +140,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <DialogContent className={cn('sm:max-w-2xl max-h-[80vh]', isMobile && 'max-w-[calc(100vw-1.5rem)] p-4')}>
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             Agent Memory Store
@@ -169,8 +164,6 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               <select
                 className="px-3 py-2 bg-input border border-border rounded-md text-sm"
                 value={newItem.type}
-                onChange={(e) => setNewItem({ ...newItem, type: e.target.value as MemoryDraft['type'] })}
-                disabled={isSubmitting}
               >
                 <option value="fact">Fact</option>
                 <option value="preference">Preference</option>
@@ -199,91 +192,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
           {/* Memory items list */}
           <ScrollArea className="h-96">
             <div className="space-y-3 pr-3">
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">Loading memory...</div>
-              ) : (
-                memoryItems.map((item, index) => (
-                  <div key={item.id}>
-                    <div className="agent-card p-4 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-1">
-                          {editingId === item.id ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={editDraft.key}
-                                onChange={(e) => setEditDraft({ ...editDraft, key: e.target.value })}
-                                disabled={isUpdating}
-                              />
-                              <select
-                                className="px-3 py-2 bg-input border border-border rounded-md text-sm"
-                                value={editDraft.type}
-                                onChange={(e) => setEditDraft({ ...editDraft, type: e.target.value as MemoryDraft['type'] })}
-                                disabled={isUpdating}
-                              >
-                                <option value="fact">Fact</option>
-                                <option value="preference">Preference</option>
-                                <option value="skill">Skill</option>
-                                <option value="context">Context</option>
-                              </select>
-                              <Textarea
-                                value={editDraft.value}
-                                onChange={(e) => setEditDraft({ ...editDraft, value: e.target.value })}
-                                rows={2}
-                                disabled={isUpdating}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground">{item.key}</span>
-                                <Badge className={getTypeColor(item.type)}>{item.type}</Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{item.value}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Updated: {new Date(item.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          {editingId === item.id ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleUpdateMemory}
-                                disabled={isUpdating}
-                              >
-                                <Save className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={resetEditor}
-                                disabled={isUpdating}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => startEditing(item)}
-                              >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteMemory(item.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+
                       </div>
                     </div>
                     {index < memoryItems.length - 1 && <Separator />}

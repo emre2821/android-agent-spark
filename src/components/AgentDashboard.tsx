@@ -2,16 +2,21 @@ import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AgentCard } from './AgentCard';
-import { CreateAgentDialog } from './CreateAgentDialog';
+import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
-import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Settings, Workflow } from 'lucide-react';
+import {
+  AlertCircle,
+  Plus,
+  RefreshCcw,
+  Search,
+  Settings,
+  WifiOff,
+  Workflow,
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { useAgents } from '@/hooks/use-agents';
-
-export const AgentDashboard: React.FC = () => {
-  const { agents, isLoading, createAgent } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -30,12 +35,6 @@ export const AgentDashboard: React.FC = () => {
         agent.description.toLowerCase().includes(query)
     );
   }, [agents, searchQuery]);
-
-  const selectedAgent = useMemo(
-    () => agents.find((agent) => agent.id === selectedAgentConfig) ?? null,
-    [agents, selectedAgentConfig]
-  );
-
   const handleCreateAgent = async (agentData: any) => {
     setIsCreating(true);
     try {
@@ -57,23 +56,23 @@ export const AgentDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className={cn('min-h-screen bg-background', isMobile ? 'p-4' : 'p-6')}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+        <div className={cn('flex justify-between gap-4', isMobile ? 'flex-col' : 'flex-col sm:flex-row sm:items-center')}>
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               AI Agent Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
               Manage your intelligent automation agents
             </p>
+            {lastSyncedRelative && (
+              <p className="text-xs text-muted-foreground">
+                Last synced {lastSyncedRelative}
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/workflows')}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
@@ -82,13 +81,15 @@ export const AgentDashboard: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowSettingsDialog(true)}
+              className={cn(isMobile && 'w-full justify-center')}
             >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
             <Button
               onClick={() => setShowCreateDialog(true)}
-              className="bg-gradient-primary hover:opacity-90 transition-opacity"
+              className={cn('bg-gradient-primary hover:opacity-90 transition-opacity', isMobile && 'w-full justify-center')}
+              size={isMobile ? 'sm' : 'default'}
             >
               <Plus className="h-4 w-4 mr-2" />
               New Agent
@@ -96,8 +97,30 @@ export const AgentDashboard: React.FC = () => {
           </div>
         </div>
 
+        <div className="space-y-3">
+          {!isOnline && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100 flex items-start gap-3">
+              <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">Offline mode</p>
+                <p>Your cached agents are available. Changes will sync when you reconnect.</p>
+              </div>
+            </div>
+          )}
+
+          {isOnline && hasPendingSync && (
+            <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100 flex items-start gap-3">
+              <RefreshCcw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+              <div>
+                <p className="font-medium">Syncing changes</p>
+                <p>Your recent updates are being uploaded to the automation hub.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className={cn('flex gap-4', isMobile ? 'flex-col' : 'flex-row items-center')}>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -108,33 +131,6 @@ export const AgentDashboard: React.FC = () => {
             />
           </div>
         </div>
-
-        {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading agents...</div>
-        ) : (
-          <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="gradient-card rounded-lg p-4 border border-border/50">
-                <div className="text-2xl font-bold text-agent-active">
-                  {agents.filter((a) => a.status === 'active').length}
-                </div>
-                <div className="text-sm text-muted-foreground">Active Agents</div>
-              </div>
-              <div className="gradient-card rounded-lg p-4 border border-border/50">
-                <div className="text-2xl font-bold text-agent-task">
-                  {agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0)}
-                </div>
-                <div className="text-sm text-muted-foreground">Total Tasks</div>
-              </div>
-              <div className="gradient-card rounded-lg p-4 border border-border/50">
-                <div className="text-2xl font-bold text-agent-memory">
-                  {agents.reduce((sum, agent) => sum + agent.memoryItems, 0)}
-                </div>
-                <div className="text-sm text-muted-foreground">Memory Items</div>
-              </div>
-            </div>
-
         )}
       </div>
 

@@ -5,25 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import type { Agent } from '@/types/agent';
 
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (agentData: any) => Promise<void>;
-  isSubmitting?: boolean;
-}
 
-export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  isSubmitting = false,
-}) => {
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    status: 'active' | 'inactive' | 'learning';
-  }>({
     name: '',
     description: '',
     status: 'active',
@@ -44,7 +33,7 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn('sm:max-w-md', isMobile && 'max-w-[calc(100vw-2rem)] p-4')}>
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create New Agent</DialogTitle>
         </DialogHeader>
@@ -78,8 +67,7 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
             <Label htmlFor="status">Initial Status</Label>
             <Select
               value={formData.status}
-              onValueChange={(value: 'active' | 'inactive' | 'learning') =>
-                setFormData({ ...formData, status: value })
+
               }
               disabled={isSubmitting}
             >
@@ -93,13 +81,6 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-
-          <DialogFooter className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating...' : 'Create Agent'}
             </Button>
           </DialogFooter>
         </form>

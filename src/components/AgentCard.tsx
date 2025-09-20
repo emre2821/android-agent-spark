@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;
@@ -13,7 +12,6 @@ interface AgentCardProps {
   onBuildWorkflow: (agentId: string) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemory, onBuildWorkflow }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -62,14 +60,15 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           Last active: {agent.lastActive}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-2">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="w-full"
           >
-            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center">
+            <Link
+              to={`/agents/${agent.id}`}
+              className={cn('flex items-center justify-center gap-1', isMobile && 'w-full')}
+            >
               <Eye className="h-4 w-4 mr-1" />
               View
             </Link>
@@ -78,7 +77,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="outline"
             size="sm"
             onClick={() => onEdit(agent.id)}
-            className="w-full"
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
@@ -87,7 +85,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="secondary"
             size="sm"
             onClick={() => onViewMemory(agent.id)}
-            className="w-full"
           >
             <Database className="h-4 w-4 mr-1" />
             Memory
