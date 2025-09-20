@@ -135,8 +135,6 @@ export const AgentDashboard: React.FC = () => {
               </div>
             </div>
 
-
-
             {filteredAgents.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No agents found matching your search.</p>
