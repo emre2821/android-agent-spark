@@ -10,4 +10,3 @@ export interface Agent {
   lastActive: string
 }
 
-export type AgentDraft = Pick<Agent, 'name' | 'description' | 'status'>

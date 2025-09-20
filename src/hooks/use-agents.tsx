@@ -1,92 +1,125 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Agent } from '@/types/agent';
-import {
-  getCachedAgents,
-  persistAgents as persistAgentsToCache,
-} from '@/lib/offline-storage';
 
-interface AgentsContextValue {
-  agents: Agent[];
-  setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
+
 }
 
 const AgentsContext = createContext<AgentsContextValue | undefined>(undefined);
 
-const fetchAgents = async (): Promise<Agent[]> => {
-  const response = await fetch('http://localhost:3001/agents');
-  if (!response.ok) {
-    throw new Error('Failed to fetch agents');
+async function request(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-  return response.json();
+  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const text = await response.text();
+  let data: any = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = typeof data === 'string' ? data : data?.message;
+    throw new Error(message || 'Request failed');
+  }
+
+  return data;
+}
+
+const fetchAgents = async (): Promise<Agent[]> => {
+
 };
 
+function deriveWebSocketUrl(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = '/ws';
+    url.search = '';
+    return url.toString();
+  } catch {
+    return baseUrl.replace(/^http/, 'ws') + '/ws';
+  }
+}
+
+function applyAgentUpdate(current: Agent[], agent: Agent) {
+  const existingIndex = current.findIndex((item) => item.id === agent.id);
+  if (existingIndex === -1) {
+    return [...current, agent];
+  }
+  const next = [...current];
+  next[existingIndex] = agent;
+  return next;
+}
+
+function removeAgent(current: Agent[], agentId: string) {
+  return current.filter((item) => item.id !== agentId);
+}
+
 export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [agents, setAgentsState] = useState<Agent[]>([]);
 
-  const { data } = useQuery<Agent[]>({
-    queryKey: ['agents'],
-    queryFn: async () => {
-      try {
-        const remoteAgents = await fetchAgents();
-        await persistAgentsToCache(remoteAgents);
-        return remoteAgents;
-      } catch (error) {
-        const cachedAgents = await getCachedAgents();
-        if (cachedAgents) {
-          console.warn('Falling back to cached agent data', error);
-          return cachedAgents;
-        }
-        throw error;
-      }
-    },
-    networkMode: 'offlineFirst',
-    refetchOnWindowFocus: false,
-    retry: 1,
-  });
+  );
 
-  useEffect(() => {
-    let mounted = true;
-    getCachedAgents().then((cached) => {
-      if (mounted && cached) {
-        setAgentsState(cached);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (data) {
-      setAgentsState(data);
-    }
-  }, [data]);
-
-  const persistAgents = React.useCallback(async (nextAgents: Agent[]) => {
-    try {
-      await persistAgentsToCache(nextAgents);
-    } catch (error) {
-      console.warn('Failed to persist agents cache', error);
-    }
-  }, []);
-
-  const setAgents = React.useCallback(
-    (value: React.SetStateAction<Agent[]>) => {
-      setAgentsState((previous) => {
-        const next = typeof value === 'function' ? value(previous) : value;
-        void persistAgents(next);
-        return next;
+  const updateMemoryItem = useCallback(
+    async (agentId: string, memoryId: string, payload: MemoryInput) => {
+      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
       });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
+      }
+      return result?.memory as AgentMemory;
     },
-    [persistAgents]
+    [updateAgentFromServer]
   );
 
-  return (
-    <AgentsContext.Provider value={{ agents, setAgents }}>
-      {children}
-    </AgentsContext.Provider>
+  const deleteMemoryItem = useCallback(
+    async (agentId: string, memoryId: string) => {
+      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
+        method: 'DELETE',
+      });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
+      }
+    },
+    [updateAgentFromServer]
   );
+
+  const value = useMemo<AgentsContextValue>(() => ({
+    agents,
+    isLoading,
+    createAgent: (payload) => createAgentMutation.mutateAsync(payload) as Promise<Agent>,
+    updateAgent: (agentId, updates) =>
+      updateAgentMutation.mutateAsync({ agentId, updates }) as Promise<Agent>,
+    deleteAgent: (agentId) => deleteAgentMutation.mutateAsync(agentId).then(() => {}),
+    fetchAgentTasks,
+    createTask: createTaskFn,
+    updateTask: updateTaskFn,
+    deleteTask: deleteTaskFn,
+    fetchAgentMemory,
+    addMemoryItem,
+    updateMemoryItem,
+    deleteMemoryItem,
+  }), [
+    agents,
+    isLoading,
+    createAgentMutation,
+    updateAgentMutation,
+    deleteAgentMutation,
+    fetchAgentTasks,
+    createTaskFn,
+    updateTaskFn,
+    deleteTaskFn,
+    fetchAgentMemory,
+    addMemoryItem,
+    updateMemoryItem,
+    deleteMemoryItem,
+  ]);
+
+  return <AgentsContext.Provider value={value}>{children}</AgentsContext.Provider>;
 };
 
 export const useAgents = () => {

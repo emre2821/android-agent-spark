@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,17 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Edit } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 
-interface MemoryItem {
-  id: string;
-  key: string;
-  value: string;
-  type: 'fact' | 'preference' | 'skill' | 'context';
-  timestamp: string;
-}
 
 interface AgentMemoryDialogProps {
   open: boolean;
@@ -24,57 +14,91 @@ interface AgentMemoryDialogProps {
   agentId: string;
 }
 
-// Mock memory data
-const mockMemoryItems: MemoryItem[] = [
-  {
-    id: '1',
-    key: 'user_timezone',
-    value: 'UTC-8 (Pacific Time)',
-    type: 'fact',
-    timestamp: '2024-01-15 10:30:00'
-  },
-  {
-    id: '2',
-    key: 'preferred_communication_style',
-    value: 'Concise and professional',
-    type: 'preference',
-    timestamp: '2024-01-14 15:22:00'
-  },
-  {
-    id: '3',
-    key: 'learned_automation_pattern',
-    value: 'User prefers email notifications sent at 9 AM daily',
-    type: 'skill',
-    timestamp: '2024-01-12 09:15:00'
-  }
-];
+type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
+
+const emptyDraft: MemoryDraft = { key: '', value: '', type: 'fact' };
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
-  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>(mockMemoryItems);
-  const [newItem, setNewItem] = useState({ key: '', value: '', type: 'fact' as const });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const isMobile = useIsMobile();
 
-  const handleAddMemory = () => {
-    if (!newItem.key.trim() || !newItem.value.trim()) return;
-    
-    const item: MemoryItem = {
-      id: Date.now().toString(),
-      key: newItem.key.trim(),
-      value: newItem.value.trim(),
-      type: newItem.type,
-      timestamp: new Date().toLocaleString()
-    };
-    
-    setMemoryItems([item, ...memoryItems]);
-    setNewItem({ key: '', value: '', type: 'fact' });
+  const resetEditor = () => {
+    setEditingId(null);
+    setEditDraft(emptyDraft);
   };
 
-  const handleDeleteMemory = (id: string) => {
-    setMemoryItems(memoryItems.filter(item => item.id !== id));
+  const handleAddMemory = async () => {
+    if (!agentId || !newItem.key.trim() || !newItem.value.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const memory = await addMemoryItem(agentId, {
+        key: newItem.key.trim(),
+        value: newItem.value.trim(),
+        type: newItem.type,
+      });
+      if (memory) {
+        setMemoryItems((items) => [memory, ...items]);
+        setNewItem(emptyDraft);
+        toast({ title: 'Memory added', description: 'The memory item has been stored successfully.' });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Unable to add memory',
+        description: error?.message ?? 'Something went wrong while saving the memory item.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const getTypeColor = (type: string) => {
+  const handleDeleteMemory = async (id: string) => {
+    if (!agentId) return;
+    try {
+      await deleteMemoryItem(agentId, id);
+      setMemoryItems((items) => items.filter((item) => item.id !== id));
+      toast({ title: 'Memory removed', description: 'The memory item was deleted.' });
+    } catch (error: any) {
+      toast({
+        title: 'Unable to remove memory',
+        description: error?.message ?? 'Something went wrong while deleting the memory item.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const startEditing = (item: AgentMemory) => {
+    setEditingId(item.id);
+    setEditDraft({ key: item.key, value: item.value, type: item.type });
+  };
+
+  const handleUpdateMemory = async () => {
+    if (!agentId || !editingId || !editDraft.key.trim() || !editDraft.value.trim()) return;
+    setIsUpdating(true);
+    try {
+      const memory = await updateMemoryItem(agentId, editingId, {
+        key: editDraft.key.trim(),
+        value: editDraft.value.trim(),
+        type: editDraft.type,
+      });
+      if (memory) {
+        setMemoryItems((items) =>
+          items.map((item) => (item.id === memory.id ? memory : item))
+        );
+        toast({ title: 'Memory updated', description: 'The memory item changes have been saved.' });
+      }
+      resetEditor();
+    } catch (error: any) {
+      toast({
+        title: 'Unable to update memory',
+        description: error?.message ?? 'Something went wrong while updating the memory item.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case 'fact':
         return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
@@ -87,27 +111,23 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
       default:
         return 'bg-muted text-muted-foreground';
     }
-  };
+  }, []);
+
+  const memoryCount = useMemo(() => memoryItems.length, [memoryItems]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent
-        className={cn(
-          'sm:max-w-2xl max-h-[80vh]',
-          isMobile &&
-            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-h-none max-w-none overflow-hidden rounded-2xl border border-border/50 p-0'
-        )}
-      >
+
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             Agent Memory Store
             <Badge variant="outline" className="text-xs">
-              {memoryItems.length} items
+              {memoryCount} items
             </Badge>
           </DialogTitle>
         </DialogHeader>
 
-        <div className={cn('space-y-4', isMobile ? 'px-5 pb-5' : '')}>
+
           {/* Add new memory item */}
           <div className="gradient-card p-4 rounded-lg border border-border/50 space-y-3">
             <h3 className="text-sm font-medium">Add Memory Item</h3>
@@ -116,13 +136,12 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
                 placeholder="Memory key (e.g., user_preference)"
                 value={newItem.key}
                 onChange={(e) => setNewItem({ ...newItem, key: e.target.value })}
+                disabled={isSubmitting}
               />
               <select
                 className="px-3 py-2 bg-input border border-border rounded-md text-sm"
                 value={newItem.type}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, type: e.target.value as MemoryItem['type'] })
-                }
+
               >
                 <option value="fact">Fact</option>
                 <option value="preference">Preference</option>
@@ -135,60 +154,24 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               value={newItem.value}
               onChange={(e) => setNewItem({ ...newItem, value: e.target.value })}
               rows={2}
+              disabled={isSubmitting}
             />
             <Button
               onClick={handleAddMemory}
-              size={isMobile ? 'default' : 'sm'}
-              className={cn('w-full bg-gradient-primary', isMobile && 'text-base')}
+
             >
               <Plus className="h-4 w-4 mr-1" />
-              Add Memory
+              {isSubmitting ? 'Saving...' : 'Add Memory'}
             </Button>
           </div>
 
           {/* Memory items list */}
-          <ScrollArea className={cn(isMobile ? 'h-[calc(100vh-28rem)]' : 'h-96')}>
-            <div className={cn('space-y-3 pr-3', isMobile && 'pr-1')}>
-              {memoryItems.map((item, index) => (
-                <div key={item.id}>
-                  <div className="agent-card p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{item.key}</span>
-                          <Badge className={getTypeColor(item.type)}>
-                            {item.type}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{item.value}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Added: {item.timestamp}
-                        </p>
-                      </div>
-                      <div className={cn('flex gap-1', isMobile && 'gap-2')}>
-                        <Button
-                          variant="ghost"
-                          size={isMobile ? 'default' : 'sm'}
-                          onClick={() => setEditingId(item.id)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size={isMobile ? 'default' : 'sm'}
-                          onClick={() => handleDeleteMemory(item.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+
                       </div>
                     </div>
+                    {index < memoryItems.length - 1 && <Separator />}
                   </div>
-                  {index < memoryItems.length - 1 && <Separator />}
-                </div>
-              ))}
-              
-              {memoryItems.length === 0 && (
-                <div className="py-8 text-center">
+
                   <p className="text-muted-foreground">No memory items yet.</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Add your first memory item above to get started.

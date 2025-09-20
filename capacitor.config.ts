@@ -13,19 +13,16 @@ const config: CapacitorConfig = {
       backgroundColor: '#1a1a2e',
       showSpinner: false
     },
-    Preferences: {
-      group: 'agentDashboard'
-    },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert']
-    },
-    BackgroundTask: {
-      stopOnTerminate: false
-    },
-    LocalNotifications: {
-      smallIcon: 'ic_stat_notify',
-      iconColor: '#6c5ce7'
+
     }
+  },
+  android: {
+    allowMixedContent: true,
+    backgroundColor: '#0f172a'
+  },
+  ios: {
+    backgroundColor: '#0f172a',
+    contentInset: 'always'
   }
 };
 

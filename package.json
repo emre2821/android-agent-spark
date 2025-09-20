@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "npm run build:web",
@@ -17,14 +18,22 @@
     "lint": "eslint .",
     "test": "vitest",
     "preview": "vite preview",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "cap:copy": "npx cap copy",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npm run build && npx cap sync android",
+    "cap:ios": "npm run build && npx cap sync ios",
+    "desktop:dev": "concurrently -k \"npm:dev\" \"wait-on http://localhost:5173 && ELECTRON_START_URL=http://localhost:5173 electron electron/main.js\"",
+    "desktop:build": "npm run build && electron-builder"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
+    "@capacitor/background-runner": "^2.1.0",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/preferences": "^7.0.2",
+
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -76,6 +85,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
+    "ws": "^8.18.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -88,6 +98,9 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -99,7 +112,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^1.6.0",
-    "cross-env": "^10.0.0"
+
   }
 }
