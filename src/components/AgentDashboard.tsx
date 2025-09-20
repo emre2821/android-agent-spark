@@ -5,8 +5,6 @@ import { AgentCard } from './AgentCard';
 import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
-import { AgentConfigureDialog, type AgentConfiguration } from './AgentConfigureDialog';
-import { WorkflowDialog } from './WorkflowDialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertCircle,
@@ -19,72 +17,42 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAgents } from '@/hooks/use-agents';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-
-export const AgentDashboard: React.FC = () => {
-  const { agents, setAgents, isOnline, hasPendingSync, lastSyncedAt } = useAgents();
-  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const filteredAgents = agents.filter(agent =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const stats = useMemo(() => ({
-    active: agents.filter(a => a.status === 'active').length,
-    tasks: agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0),
-    memory: agents.reduce((sum, agent) => sum + agent.memoryItems, 0),
-  }), [agents]);
-
-  const lastSyncedRelative = useMemo(() => {
-    if (!lastSyncedAt) return null;
+  const filteredAgents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return agents;
+    return agents.filter(
+      (agent) =>
+        agent.name.toLowerCase().includes(query) ||
+        agent.description.toLowerCase().includes(query)
+    );
+  }, [agents, searchQuery]);
+  const handleCreateAgent = async (agentData: any) => {
+    setIsCreating(true);
     try {
-      return formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true });
-    } catch (error) {
-      console.warn('Failed to format sync timestamp', error);
-      return null;
+      await createAgent(agentData);
+      setShowCreateDialog(false);
+      toast({
+        title: 'Agent Created',
+        description: `${agentData.name} has been successfully created.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Unable to create agent',
+        description: error?.message ?? 'An unexpected error occurred while creating the agent.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
     }
-  }, [lastSyncedAt]);
-
-  const handleCreateAgent = (agentData: CreateAgentFormValues) => {
-    const newAgent = {
-      id: Date.now().toString(),
-      ...agentData,
-      tasksCompleted: 0,
-      memoryItems: 0,
-      lastActive: 'Just created'
-    };
-    setAgents(prev => [...prev, newAgent]);
-    setShowCreateDialog(false);
-    toast({
-      title: 'Agent Created',
-      description: `${agentData.name} has been successfully created.`,
-    });
-  };
-
-  const handleConfigureAgent = (agentId: string, config: AgentConfiguration) => {
-    setAgents(prev => prev.map(agent =>
-      agent.id === agentId
-        ? { ...agent, name: config.name, description: config.description, status: config.status }
-        : agent
-    ));
-    setSelectedAgentConfig(null);
-    toast({
-      title: 'Agent Updated',
-      description: 'Agent configuration has been saved successfully.',
-    });
-  };
-
-  const getSelectedAgent = () => {
-    return agents.find(agent => agent.id === selectedAgentConfig) || null;
   };
 
   return (
@@ -105,12 +73,6 @@ export const AgentDashboard: React.FC = () => {
               </p>
             )}
           </div>
-          <div className={cn('flex gap-2', isMobile ? 'flex-col w-full' : 'items-center')}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowWorkflowDialog(true)}
-              className={cn(isMobile && 'w-full justify-center')}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
@@ -169,42 +131,6 @@ export const AgentDashboard: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-3')}>
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-active">{stats.active}</div>
-            <div className="text-sm text-muted-foreground">Active Agents</div>
-          </div>
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-task">{stats.tasks}</div>
-            <div className="text-sm text-muted-foreground">Total Tasks</div>
-          </div>
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-memory">{stats.memory}</div>
-            <div className="text-sm text-muted-foreground">Memory Items</div>
-          </div>
-        </div>
-
-        {/* Agents Grid */}
-        <div className={cn('grid grid-cols-1 gap-6', !isMobile && 'md:grid-cols-2 lg:grid-cols-3')}>
-          {filteredAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onEdit={(id) => setSelectedAgentConfig(id)}
-              onViewMemory={(id) => setSelectedAgentMemory(id)}
-            />
-          ))}
-        </div>
-
-        {filteredAgents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground flex items-center justify-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              No agents found matching your search.
-            </p>
-          </div>
         )}
       </div>
 
@@ -212,6 +138,7 @@ export const AgentDashboard: React.FC = () => {
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateAgent}
+        isSubmitting={isCreating}
       />
 
       <AgentSettingsDialog
@@ -219,16 +146,10 @@ export const AgentDashboard: React.FC = () => {
         onClose={() => setShowSettingsDialog(false)}
       />
 
-      <WorkflowDialog
-        open={showWorkflowDialog}
-        onClose={() => setShowWorkflowDialog(false)}
-      />
-
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
-        agent={getSelectedAgent()}
-        onSave={handleConfigureAgent}
+        agent={selectedAgent}
       />
 
       <AgentMemoryDialog

@@ -15,18 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
 
 type AgentStatus = Agent['status'];
 type AgentPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -48,11 +36,7 @@ interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
   agent: Agent | null;
-  onSave: (agentId: string, config: AgentConfiguration) => void;
-}
-
-const createInitialConfig = (agent: Agent | null): AgentConfiguration => ({
-  name: agent?.name ?? '',
+<  name: agent?.name ?? '',
   description: agent?.description ?? '',
   status: agent?.status ?? 'inactive',
   autoStart: true,
@@ -68,28 +52,37 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
   onClose,
   agent,
-  onSave,
 }) => {
-  const isMobile = useIsMobile();
-  const [config, setConfig] = useState<AgentConfiguration>(createInitialConfig(agent));
 
   const [newTag, setNewTag] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!agent) {
-      setConfig(createInitialConfig(null));
-      setNewTag('');
-      return;
-    }
-
-    setConfig(createInitialConfig(agent));
-    setNewTag('');
+    setConfig(defaultConfig(agent ?? undefined));
   }, [agent]);
 
-  const handleSave = () => {
     if (!agent) return;
-    onSave(agent.id, config);
-    onClose();
+    setIsSaving(true);
+    try {
+      await updateAgent(agent.id, {
+        name: config.name,
+        description: config.description,
+        status: config.status,
+      });
+      toast({
+        title: 'Agent Updated',
+        description: 'Agent configuration has been saved successfully.',
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: 'Unable to update agent',
+        description: error?.message ?? 'Something went wrong while updating the agent.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addTag = () => {
@@ -105,7 +98,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const removeTag = (tagToRemove: string) => {
     setConfig({
       ...config,
-      tags: config.tags.filter(tag => tag !== tagToRemove),
+      tags: config.tags.filter((tag) => tag !== tagToRemove),
     });
   };
 
@@ -203,7 +196,6 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
 
-            <div className={cn('flex items-center justify-between', isMobile && 'flex-col items-start gap-3')}>
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
                 <p className="text-xs text-muted-foreground">
@@ -261,7 +253,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Tags */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Tags</h4>
-            
+
             <div className="flex flex-wrap gap-2">
               {config.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -317,14 +309,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             </p>
           </div>
         </div>
-
-        <div className={cn('flex justify-end gap-2', isMobile && 'flex-col-reverse')}>
-          <Button variant="outline" onClick={onClose} className={cn(isMobile && 'w-full justify-center')}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} className={cn(isMobile && 'w-full justify-center')}>
             <Save className="h-4 w-4 mr-2" />
-            Save Configuration
+            {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
       </DialogContent>

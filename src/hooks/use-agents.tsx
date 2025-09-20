@@ -5,206 +5,169 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
-} from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Agent } from '@/types/agent';
-import {
-  cacheAgents,
-  cachePendingAgents,
-  clearPendingAgents,
-  loadCachedAgents,
-  loadPendingAgents,
-} from '@/lib/offline-storage';
 
-interface AgentsContextValue {
-  agents: Agent[];
-  setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
-  isOnline: boolean;
-  hasPendingSync: boolean;
-  lastSyncedAt: string | null;
 }
 
 const AgentsContext = createContext<AgentsContextValue | undefined>(undefined);
 
+async function request(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers ?? {});
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const text = await response.text();
+  let data: any = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = typeof data === 'string' ? data : data?.message;
+    throw new Error(message || 'Request failed');
+  }
+
+  return data;
+}
+
 const fetchAgents = async (): Promise<Agent[]> => {
-  const res = await fetch('http://localhost:3001/agents');
-  if (!res.ok) throw new Error('Failed to fetch agents');
-  return res.json();
+  const data = await request('/agents');
+  return Array.isArray(data) ? data : [];
 };
 
+function deriveWebSocketUrl(baseUrl: string) {
+  try {
+    const url = new URL(baseUrl);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = '/ws';
+    url.search = '';
+    return url.toString();
+  } catch {
+    return baseUrl.replace(/^http/, 'ws') + '/ws';
+  }
+}
+
+function applyAgentUpdate(current: Agent[], agent: Agent) {
+  const existingIndex = current.findIndex((item) => item.id === agent.id);
+  if (existingIndex === -1) {
+    return [...current, agent];
+  }
+  const next = [...current];
+  next[existingIndex] = agent;
+  return next;
+}
+
+function removeAgent(current: Agent[], agentId: string) {
+  return current.filter((item) => item.id !== agentId);
+}
+
 export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [agents, internalSetAgents] = useState<Agent[]>([]);
-  const [isOnline, setIsOnline] = useState(
-    typeof window !== 'undefined' ? navigator.onLine : true,
-  );
-  const [hasPendingSync, setHasPendingSync] = useState(false);
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  const initializingRef = useRef(true);
-  const pendingUpdateRef = useRef(false);
-
-  const { data, refetch } = useQuery<Agent[]>({
-    queryKey: ['agents'],
     queryFn: fetchAgents,
     enabled: isOnline && !hasPendingSync,
     staleTime: 1000 * 60,
     retry: 1,
   });
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+  );
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    setIsOnline(window.navigator.onLine);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const [cached, pending] = await Promise.all([
-        loadCachedAgents(),
-        loadPendingAgents(),
-      ]);
-
-      if (cancelled) return;
-
-      if (cached?.agents?.length) {
-        internalSetAgents(cached.agents);
-        setLastSyncedAt(cached.updatedAt);
-      }
-
-      if (pending?.agents?.length) {
-        internalSetAgents(pending.agents);
-        setHasPendingSync(true);
-      }
-
-      initializingRef.current = false;
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!data || hasPendingSync) return;
-
-    internalSetAgents(data);
-    cacheAgents(data).then((payload) => setLastSyncedAt(payload.updatedAt));
-  }, [data, hasPendingSync]);
-
-  const syncAgentsWithBackend = useCallback(
-    async (payload: Agent[]) => {
-      try {
-        const response = await fetch('http://localhost:3001/agents/sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            agents: payload,
-            timestamp: new Date().toISOString(),
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Sync failed with status ${response.status}`);
-        }
-
-        const result = await response.json().catch(() => ({}));
-        await clearPendingAgents();
-        setHasPendingSync(false);
-        setLastSyncedAt(result.syncedAt ?? new Date().toISOString());
-        refetch();
-      } catch (error) {
-        console.error('Failed to sync agents with backend', error);
-        await cachePendingAgents(payload);
-        setHasPendingSync(true);
+  const deleteTaskFn = useCallback(
+    async (agentId: string, taskId: string) => {
+      const result = await request(`/agents/${agentId}/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
       }
     },
-    [refetch],
+    [updateAgentFromServer]
   );
 
-  useEffect(() => {
-    if (!isOnline) return;
-
-    let cancelled = false;
-    (async () => {
-      const pending = await loadPendingAgents();
-      if (cancelled || !pending?.agents?.length) return;
-      setHasPendingSync(true);
-      await syncAgentsWithBackend(pending.agents);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOnline, syncAgentsWithBackend]);
-
-  useEffect(() => {
-    if (initializingRef.current) return;
-
-    cacheAgents(agents).catch((error) => {
-      console.error('Failed to persist agents cache', error);
-    });
-
-    if (!pendingUpdateRef.current) return;
-
-    const executeSync = async () => {
-      if (isOnline) {
-        await syncAgentsWithBackend(agents);
-      } else {
-        await cachePendingAgents(agents);
-        setHasPendingSync(true);
-      }
-      pendingUpdateRef.current = false;
-    };
-
-    executeSync();
-  }, [agents, isOnline, syncAgentsWithBackend]);
-
-  const updateAgents = useCallback<React.Dispatch<React.SetStateAction<Agent[]>>>(
-    (value) => {
-      pendingUpdateRef.current = true;
-      setHasPendingSync(true);
-
-      internalSetAgents((prev) =>
-        typeof value === 'function'
-          ? (value as (previous: Agent[]) => Agent[])(prev)
-          : value,
-      );
+  const fetchAgentMemory = useCallback(
+    async (agentId: string) => {
+      const data = await request(`/agents/${agentId}/memory`);
+      return Array.isArray(data) ? (data as AgentMemory[]) : [];
     },
-    [],
+    []
   );
 
-  const contextValue = useMemo(
-    () => ({
-      agents,
-      setAgents: updateAgents,
-      isOnline,
-      hasPendingSync,
-      lastSyncedAt,
-    }),
-    [agents, updateAgents, isOnline, hasPendingSync, lastSyncedAt],
+  const addMemoryItem = useCallback(
+    async (agentId: string, payload: MemoryInput) => {
+      const result = await request(`/agents/${agentId}/memory`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
+      }
+      return result?.memory as AgentMemory;
+    },
+    [updateAgentFromServer]
   );
 
-  return (
-    <AgentsContext.Provider value={contextValue}>
-      {children}
-    </AgentsContext.Provider>
+  const updateMemoryItem = useCallback(
+    async (agentId: string, memoryId: string, payload: MemoryInput) => {
+      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
+      }
+      return result?.memory as AgentMemory;
+    },
+    [updateAgentFromServer]
   );
+
+  const deleteMemoryItem = useCallback(
+    async (agentId: string, memoryId: string) => {
+      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
+        method: 'DELETE',
+      });
+      if (result?.agent) {
+        updateAgentFromServer(result.agent as Agent);
+      }
+    },
+    [updateAgentFromServer]
+  );
+
+  const value = useMemo<AgentsContextValue>(() => ({
+    agents,
+    isLoading,
+    createAgent: (payload) => createAgentMutation.mutateAsync(payload) as Promise<Agent>,
+    updateAgent: (agentId, updates) =>
+      updateAgentMutation.mutateAsync({ agentId, updates }) as Promise<Agent>,
+    deleteAgent: (agentId) => deleteAgentMutation.mutateAsync(agentId).then(() => {}),
+    fetchAgentTasks,
+    createTask: createTaskFn,
+    updateTask: updateTaskFn,
+    deleteTask: deleteTaskFn,
+    fetchAgentMemory,
+    addMemoryItem,
+    updateMemoryItem,
+    deleteMemoryItem,
+  }), [
+    agents,
+    isLoading,
+    createAgentMutation,
+    updateAgentMutation,
+    deleteAgentMutation,
+    fetchAgentTasks,
+    createTaskFn,
+    updateTaskFn,
+    deleteTaskFn,
+    fetchAgentMemory,
+    addMemoryItem,
+    updateMemoryItem,
+    deleteMemoryItem,
+  ]);
+
+  return <AgentsContext.Provider value={value}>{children}</AgentsContext.Provider>;
 };
 
 export const useAgents = () => {

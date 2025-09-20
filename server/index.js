@@ -1,31 +1,30 @@
 import express from 'express';
 import cors from 'cors';
-import { mockAgents } from './mockAgents.js';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import {
+  listAgents,
+  getAgent,
+  createAgent,
+  updateAgent,
+  deleteAgent,
+  listTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  listMemories,
+  createMemory,
+  updateMemory,
+  deleteMemory,
+} from './dataStore.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let agents = [...mockAgents];
-
-app.get('/agents', (req, res) => {
-  res.json(agents);
-});
-
-app.post('/agents/sync', (req, res) => {
-  const { agents: incomingAgents, timestamp } = req.body ?? {};
-
-  if (!Array.isArray(incomingAgents)) {
-    return res.status(400).json({ message: 'Invalid agent payload' });
-  }
-
-  agents = incomingAgents;
-  const syncedAt = timestamp || new Date().toISOString();
-
-  res.json({ status: 'ok', syncedAt, total: agents.length });
 });
 
 const port = process.env.PORT || 3001;
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`API server running on http://localhost:${port}`);
 });

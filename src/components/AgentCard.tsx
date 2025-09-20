@@ -2,29 +2,16 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
+import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
 
 interface AgentCardProps {
   agent: Agent;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
+  onBuildWorkflow: (agentId: string) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemory }) => {
-  const isMobile = useIsMobile();
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -73,12 +60,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           Last active: {agent.lastActive}
         </div>
 
-        <div className={cn('flex gap-2 pt-2', isMobile && 'flex-col')}>
           <Button
             asChild
             variant="outline"
             size="sm"
-            className={cn('flex-1', isMobile && 'w-full')}
           >
             <Link
               to={`/agents/${agent.id}`}
@@ -92,7 +77,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="outline"
             size="sm"
             onClick={() => onEdit(agent.id)}
-            className={cn('flex-1', isMobile && 'w-full justify-center')}
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
@@ -101,10 +85,18 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             variant="secondary"
             size="sm"
             onClick={() => onViewMemory(agent.id)}
-            className={cn('flex-1', isMobile && 'w-full justify-center')}
           >
             <Database className="h-4 w-4 mr-1" />
             Memory
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onBuildWorkflow(agent.id)}
+            className="w-full"
+          >
+            <Workflow className="h-4 w-4 mr-1" />
+            Workflows
           </Button>
         </div>
       </CardContent>
