@@ -1,19 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { formatDistanceToNow } from 'date-fns';
+import type { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;
@@ -34,6 +26,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
         return 'bg-muted text-muted-foreground';
     }
   };
+
+  const lastActiveLabel = useMemo(() => {
+    try {
+      return formatDistanceToNow(new Date(agent.lastActive), { addSuffix: true });
+    } catch (error) {
+      return agent.lastActive;
+    }
+  }, [agent.lastActive]);
 
   return (
     <Card className="agent-card border-border/50 hover:border-primary/30 group">
@@ -65,9 +65,9 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
             <span className="font-medium text-foreground">{agent.memoryItems}</span>
           </div>
         </div>
-        
+
         <div className="text-xs text-muted-foreground">
-          Last active: {agent.lastActive}
+          Last active: {lastActiveLabel}
         </div>
 
         <div className="flex gap-2 pt-2">

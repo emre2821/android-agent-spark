@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,49 +15,76 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { useAgents } from '@/hooks/use-agents';
+import { useToast } from '@/hooks/use-toast';
+import type { AgentStatus } from '@/types/agent';
 
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
-  agent: Agent | null;
-  onSave: (agentId: string, config: any) => void;
+  agentId: string | null;
 }
+
+const DEFAULT_TAGS = ['automation', 'ai'];
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
   onClose,
-  agent,
-  onSave,
+  agentId,
 }) => {
+  const { agents, updateAgent } = useAgents();
+  const { toast } = useToast();
+  const agent = useMemo(() => agents.find((item) => item.id === agentId) ?? null, [agents, agentId]);
+  const [isSaving, setIsSaving] = useState(false);
   const [config, setConfig] = useState({
-    name: agent?.name || '',
-    description: agent?.description || '',
-    status: agent?.status || 'inactive',
+    name: '',
+    description: '',
+    status: 'inactive' as AgentStatus,
     autoStart: true,
     learningMode: true,
     maxTasks: 100,
     priority: 'medium',
-    tags: ['automation', 'ai'],
+    tags: [...DEFAULT_TAGS],
     systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
     memoryLimit: 1000,
   });
-
   const [newTag, setNewTag] = useState('');
 
-  const handleSave = () => {
+  useEffect(() => {
     if (!agent) return;
-    onSave(agent.id, config);
-    onClose();
+    setConfig((previous) => ({
+      ...previous,
+      name: agent.name,
+      description: agent.description,
+      status: agent.status,
+    }));
+    setNewTag('');
+  }, [agent]);
+
+  const handleSave = async () => {
+    if (!agent) return;
+    setIsSaving(true);
+    try {
+      await updateAgent(agent.id, {
+        name: config.name,
+        description: config.description,
+        status: config.status,
+      });
+      toast({
+        title: 'Agent Updated',
+        description: 'Agent configuration has been saved successfully.',
+      });
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update agent';
+      toast({
+        title: 'Update failed',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addTag = () => {
@@ -73,11 +100,13 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const removeTag = (tagToRemove: string) => {
     setConfig({
       ...config,
-      tags: config.tags.filter(tag => tag !== tagToRemove),
+      tags: config.tags.filter((tag) => tag !== tagToRemove),
     });
   };
 
-  if (!agent) return null;
+  if (!agent) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -96,7 +125,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
               <Input
@@ -121,7 +150,10 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={config.status} onValueChange={(value: any) => setConfig({ ...config, status: value })}>
+                <Select
+                  value={config.status}
+                  onValueChange={(value: AgentStatus) => setConfig({ ...config, status: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -135,7 +167,10 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={config.priority} onValueChange={(value) => setConfig({ ...config, priority: value })}>
+                <Select
+                  value={config.priority}
+                  onValueChange={(value) => setConfig({ ...config, priority: value })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -155,7 +190,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Behavior Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
@@ -191,7 +226,9 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   min="1"
                   max="1000"
                   value={config.maxTasks}
-                  onChange={(e) => setConfig({ ...config, maxTasks: parseInt(e.target.value) || 100 })}
+                  onChange={(e) =>
+                    setConfig({ ...config, maxTasks: parseInt(e.target.value, 10) || 100 })
+                  }
                 />
               </div>
 
@@ -203,7 +240,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   min="100"
                   max="10000"
                   value={config.memoryLimit}
-                  onChange={(e) => setConfig({ ...config, memoryLimit: parseInt(e.target.value) || 1000 })}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      memoryLimit: parseInt(e.target.value, 10) || 1000,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -214,7 +256,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Tags */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Tags</h4>
-            
+
             <div className="flex flex-wrap gap-2">
               {config.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -268,12 +310,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={!config.name.trim() || isSaving}>
             <Save className="h-4 w-4 mr-2" />
-            Save Configuration
+            {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
       </DialogContent>
