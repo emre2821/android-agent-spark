@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Edit } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface MemoryItem {
   id: string;
@@ -51,6 +53,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   const [memoryItems, setMemoryItems] = useState<MemoryItem[]>(mockMemoryItems);
   const [newItem, setNewItem] = useState({ key: '', value: '', type: 'fact' as const });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const handleAddMemory = () => {
     if (!newItem.key.trim() || !newItem.value.trim()) return;
@@ -88,7 +91,13 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <DialogContent
+        className={cn(
+          'sm:max-w-2xl max-h-[80vh]',
+          isMobile &&
+            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-h-none max-w-none overflow-hidden rounded-2xl border border-border/50 p-0'
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             Agent Memory Store
@@ -97,12 +106,12 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
             </Badge>
           </DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4">
+
+        <div className={cn('space-y-4', isMobile ? 'px-5 pb-5' : '')}>
           {/* Add new memory item */}
           <div className="gradient-card p-4 rounded-lg border border-border/50 space-y-3">
             <h3 className="text-sm font-medium">Add Memory Item</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Input
                 placeholder="Memory key (e.g., user_preference)"
                 value={newItem.key}
@@ -111,7 +120,9 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               <select
                 className="px-3 py-2 bg-input border border-border rounded-md text-sm"
                 value={newItem.type}
-                onChange={(e) => setNewItem({ ...newItem, type: e.target.value as any })}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, type: e.target.value as MemoryItem['type'] })
+                }
               >
                 <option value="fact">Fact</option>
                 <option value="preference">Preference</option>
@@ -125,10 +136,10 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               onChange={(e) => setNewItem({ ...newItem, value: e.target.value })}
               rows={2}
             />
-            <Button 
+            <Button
               onClick={handleAddMemory}
-              size="sm"
-              className="w-full bg-gradient-primary"
+              size={isMobile ? 'default' : 'sm'}
+              className={cn('w-full bg-gradient-primary', isMobile && 'text-base')}
             >
               <Plus className="h-4 w-4 mr-1" />
               Add Memory
@@ -136,8 +147,8 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
           </div>
 
           {/* Memory items list */}
-          <ScrollArea className="h-96">
-            <div className="space-y-3 pr-3">
+          <ScrollArea className={cn(isMobile ? 'h-[calc(100vh-28rem)]' : 'h-96')}>
+            <div className={cn('space-y-3 pr-3', isMobile && 'pr-1')}>
               {memoryItems.map((item, index) => (
                 <div key={item.id}>
                   <div className="agent-card p-4 space-y-2">
@@ -154,17 +165,17 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
                           Added: {item.timestamp}
                         </p>
                       </div>
-                      <div className="flex gap-1">
+                      <div className={cn('flex gap-1', isMobile && 'gap-2')}>
                         <Button
-                          variant="ghost" 
-                          size="sm"
+                          variant="ghost"
+                          size={isMobile ? 'default' : 'sm'}
                           onClick={() => setEditingId(item.id)}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size={isMobile ? 'default' : 'sm'}
                           onClick={() => handleDeleteMemory(item.id)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -177,7 +188,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               ))}
               
               {memoryItems.length === 0 && (
-                <div className="text-center py-8">
+                <div className="py-8 text-center">
                   <p className="text-muted-foreground">No memory items yet.</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Add your first memory item above to get started.

@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Save, RotateCcw } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface AgentSettingsDialogProps {
   open: boolean;
@@ -30,6 +32,7 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
     memoryRetention: 30,
     apiTimeout: 30,
   });
+  const isMobile = useIsMobile();
 
   const handleSave = () => {
     // Save settings logic would go here
@@ -50,7 +53,13 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className={cn(
+          'sm:max-w-[500px]',
+          isMobile &&
+            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -61,12 +70,17 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* General Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">General</h4>
-            
-            <div className="flex items-center justify-between">
+
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                isMobile && 'flex-col items-start gap-2 rounded-xl border border-border/60 p-3'
+              )}
+            >
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-save changes</Label>
                 <p className="text-xs text-muted-foreground">
@@ -81,7 +95,12 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                isMobile && 'flex-col items-start gap-2 rounded-xl border border-border/60 p-3'
+              )}
+            >
               <div className="space-y-0.5">
                 <Label className="text-sm">Notifications</Label>
                 <p className="text-xs text-muted-foreground">
@@ -96,7 +115,12 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                isMobile && 'flex-col items-start gap-2 rounded-xl border border-border/60 p-3'
+              )}
+            >
               <div className="space-y-0.5">
                 <Label className="text-sm">Dark mode</Label>
                 <p className="text-xs text-muted-foreground">
@@ -186,19 +210,35 @@ export const AgentSettingsDialog: React.FC<AgentSettingsDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={handleReset}>
+        <div
+          className={cn(
+            'flex justify-between',
+            isMobile && 'flex-col-reverse gap-3 px-5 pb-5'
+          )}
+        >
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className={cn(isMobile && 'w-full text-base')}
+          >
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className={cn('flex gap-2', isMobile && 'flex-col-reverse w-full gap-3')}>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className={cn(isMobile && 'w-full text-base')}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button
+              onClick={handleSave}
+              className={cn(isMobile && 'w-full text-base')}
+            >
               <Save className="h-4 w-4 mr-2" />
               Save Settings
-            </Button>  
+            </Button>
           </div>
         </div>
       </DialogContent>

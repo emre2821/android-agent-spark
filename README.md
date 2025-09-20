@@ -32,6 +32,30 @@ npm run server
 npm run build
 ```
 
+### Mobile & desktop bundles
+- **Android:** `npm run bundle:android`
+- **iOS:** `npm run bundle:ios`
+- **Desktop shell:** `npm run bundle:desktop`
+
+Each script sets `VITE_RUNTIME_TARGET` so the UI can adapt to the active platform and then runs the appropriate Capacitor/Tauri copy step. After bundling, use `npx cap sync <platform>` before opening the native project.
+
+### Offline-first data
+- Agent and workflow payloads are cached with IndexedDB on the web and Capacitor Preferences on native builds (`src/lib/offline-storage.ts`).
+- The dashboard loads cached state immediately, falling back to it when the API is unreachable (`use-agents`, `use-workflows`).
+- Saved workflows are available under the new **Saved** tab even while offline.
+
+### Native plugin requirements
+Install these Capacitor plugins in the native shells to unlock mobile capabilities:
+
+- `@capacitor/preferences` – persistent key/value cache.
+- `@capacitor/push-notifications` & `@capacitor/local-notifications` – surface workflow alerts.
+- `@capacitor/background-task` – background sync for workflows.
+
+Update `android/app/src/main/AndroidManifest.xml` and `ios/App/App/Info.plist` with the appropriate notification/background permissions.
+
+### Desktop runtime evaluation
+The desktop build targets a Tauri (or Capacitor Desktop) wrapper that loads the same Vite bundle. The workflow dialog exposes optional filesystem/webhook bridges that are only toggleable when `VITE_RUNTIME_TARGET=desktop`. Wire these toggles to the native side to connect file watchers and webhook relays.
+
 ### Linting
 ```bash
 npm run lint
@@ -49,6 +73,6 @@ src/
 
 ## Next Steps
 - Persist agent updates back to the API and expand endpoints.
+- Connect the desktop bridge toggles to native filesystem/webhook handlers.
 - Add tests and expand routing beyond the dashboard.
-- Explore [Capacitor](https://capacitorjs.com/) targets for mobile deployment.
 
