@@ -4,16 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;

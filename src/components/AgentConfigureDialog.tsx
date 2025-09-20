@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,49 +15,67 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { Agent } from '@/types/agent';
+import { useAgents } from '@/hooks/use-agents';
+import { useToast } from '@/hooks/use-toast';
 
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
   agent: Agent | null;
-  onSave: (agentId: string, config: any) => void;
 }
+
+const defaultConfig = (agent?: Agent) => ({
+  name: agent?.name ?? '',
+  description: agent?.description ?? '',
+  status: agent?.status ?? 'inactive',
+  autoStart: true,
+  learningMode: true,
+  maxTasks: 100,
+  priority: 'medium',
+  tags: ['automation', 'ai'],
+  systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
+  memoryLimit: 1000,
+});
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
   onClose,
   agent,
-  onSave,
 }) => {
-  const [config, setConfig] = useState({
-    name: agent?.name || '',
-    description: agent?.description || '',
-    status: agent?.status || 'inactive',
-    autoStart: true,
-    learningMode: true,
-    maxTasks: 100,
-    priority: 'medium',
-    tags: ['automation', 'ai'],
-    systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
-    memoryLimit: 1000,
-  });
-
+  const { updateAgent } = useAgents();
+  const { toast } = useToast();
+  const [config, setConfig] = useState(defaultConfig(agent ?? undefined));
   const [newTag, setNewTag] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    setConfig(defaultConfig(agent ?? undefined));
+  }, [agent]);
+
+  const handleSave = async () => {
     if (!agent) return;
-    onSave(agent.id, config);
-    onClose();
+    setIsSaving(true);
+    try {
+      await updateAgent(agent.id, {
+        name: config.name,
+        description: config.description,
+        status: config.status,
+      });
+      toast({
+        title: 'Agent Updated',
+        description: 'Agent configuration has been saved successfully.',
+      });
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: 'Unable to update agent',
+        description: error?.message ?? 'Something went wrong while updating the agent.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addTag = () => {
@@ -73,7 +91,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const removeTag = (tagToRemove: string) => {
     setConfig({
       ...config,
-      tags: config.tags.filter(tag => tag !== tagToRemove),
+      tags: config.tags.filter((tag) => tag !== tagToRemove),
     });
   };
 
@@ -96,7 +114,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
               <Input
@@ -155,7 +173,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Behavior Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
@@ -214,7 +232,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Tags */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Tags</h4>
-            
+
             <div className="flex flex-wrap gap-2">
               {config.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -268,12 +286,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4 mr-2" />
-            Save Configuration
+            {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
       </DialogContent>
