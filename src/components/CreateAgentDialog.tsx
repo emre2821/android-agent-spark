@@ -6,18 +6,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+type AgentStatus = 'active' | 'inactive' | 'learning';
+
+interface CreateAgentPayload {
+  name: string;
+  description: string;
+  status: AgentStatus;
+}
+
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (agentData: any) => void;
+  onSubmit: (agentData: CreateAgentPayload) => void;
 }
 
 export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    status: 'active' | 'inactive' | 'learning';
-  }>({
+  const [formData, setFormData] = useState<CreateAgentPayload>({
     name: '',
     description: '',
     status: 'active'
@@ -63,9 +67,9 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
           
           <div className="space-y-2">
             <Label htmlFor="status">Initial Status</Label>
-            <Select 
-              value={formData.status} 
-              onValueChange={(value: 'active' | 'inactive' | 'learning') => 
+            <Select
+              value={formData.status}
+              onValueChange={(value: AgentStatus) =>
                 setFormData({ ...formData, status: value })
               }
             >

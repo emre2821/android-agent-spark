@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AgentCard } from './AgentCard';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
 export const AgentDashboard: React.FC = () => {
-  const { agents, setAgents } = useAgents();
+  const { agents, createAgent, connectionState } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -20,42 +20,36 @@ export const AgentDashboard: React.FC = () => {
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const filteredAgents = agents.filter(agent =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        [agent.name, agent.description].some((value) =>
+          value.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ),
+    [agents, searchQuery]
   );
 
-  const handleCreateAgent = (agentData: any) => {
-    const newAgent = {
-      id: Date.now().toString(),
-      ...agentData,
-      tasksCompleted: 0,
-      memoryItems: 0,
-      lastActive: 'Just created'
-    };
-    setAgents([...agents, newAgent]);
-    setShowCreateDialog(false);
-    toast({
-      title: "Agent Created",
-      description: `${agentData.name} has been successfully created.`,
-    });
-  };
-
-  const handleConfigureAgent = (agentId: string, config: any) => {
-    setAgents(agents.map(agent => 
-      agent.id === agentId 
-        ? { ...agent, name: config.name, description: config.description, status: config.status }
-        : agent
-    ));
-    setSelectedAgentConfig(null);
-    toast({
-      title: "Agent Updated",
-      description: "Agent configuration has been saved successfully.",
-    });
-  };
-
-  const getSelectedAgent = () => {
-    return agents.find(agent => agent.id === selectedAgentConfig) || null;
+  const handleCreateAgent = async (agentData: {
+    name: string;
+    description: string;
+    status: 'active' | 'inactive' | 'learning';
+  }) => {
+    try {
+      await createAgent(agentData);
+      setShowCreateDialog(false);
+      toast({
+        title: 'Agent Created',
+        description: `${agentData.name} has been successfully created.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create agent';
+      toast({
+        title: 'Create agent failed',
+        description: message,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -70,10 +64,22 @@ export const AgentDashboard: React.FC = () => {
             <p className="text-muted-foreground mt-1">
               Manage your intelligent automation agents
             </p>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  connectionState === 'open'
+                    ? 'bg-green-500'
+                    : connectionState === 'connecting'
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                }`}
+              />
+              <span className="capitalize">{connectionState} connection</span>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowWorkflowDialog(true)}
             >
@@ -171,8 +177,7 @@ export const AgentDashboard: React.FC = () => {
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
-        agent={getSelectedAgent()}
-        onSave={handleConfigureAgent}
+        agentId={selectedAgentConfig}
       />
 
       <AgentMemoryDialog

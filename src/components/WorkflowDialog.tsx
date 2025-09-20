@@ -37,11 +37,13 @@ interface WorkflowDialogProps {
   agentId?: string;
 }
 
+type WorkflowConfig = Record<string, unknown>;
+
 interface WorkflowStep {
   id: string;
   type: string;
   name: string;
-  config: any;
+  config: WorkflowConfig;
 }
 
 interface WorkflowTemplate {
@@ -49,7 +51,7 @@ interface WorkflowTemplate {
   name: string;
   description: string;
   category: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   steps: WorkflowStep[];
 }
 
