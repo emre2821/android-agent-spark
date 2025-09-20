@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface AgentCardProps {
   agent: Agent;
@@ -11,6 +13,7 @@ interface AgentCardProps {
   onViewMemory: (agentId: string) => void;
   onBuildWorkflow: (agentId: string) => void;
 }
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -43,7 +46,12 @@ interface AgentCardProps {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div
+          className={cn(
+            'grid grid-cols-2 gap-4 text-sm',
+            isMobile && 'grid-cols-1 gap-3'
+          )}
+        >
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-agent-task" />
             <span className="text-muted-foreground">Tasks:</span>
@@ -60,10 +68,7 @@ interface AgentCardProps {
           Last active: {agent.lastActive}
         </div>
 
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
+
           >
             <Link
               to={`/agents/${agent.id}`}
@@ -75,16 +80,18 @@ interface AgentCardProps {
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size={isMobile ? 'default' : 'sm'}
             onClick={() => onEdit(agent.id)}
+
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
           </Button>
           <Button
             variant="secondary"
-            size="sm"
+            size={isMobile ? 'default' : 'sm'}
             onClick={() => onViewMemory(agent.id)}
+
           >
             <Database className="h-4 w-4 mr-1" />
             Memory

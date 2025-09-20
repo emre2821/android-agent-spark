@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
+
 
 }
 
@@ -35,8 +29,7 @@ async function request(path: string, init: RequestInit = {}) {
 }
 
 const fetchAgents = async (): Promise<Agent[]> => {
-  const data = await request('/agents');
-  return Array.isArray(data) ? data : [];
+
 };
 
 function deriveWebSocketUrl(baseUrl: string) {
@@ -67,47 +60,6 @@ function removeAgent(current: Agent[], agentId: string) {
 
 export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
 
-    queryFn: fetchAgents,
-    enabled: isOnline && !hasPendingSync,
-    staleTime: 1000 * 60,
-    retry: 1,
-  });
-
-
-  );
-
-  const deleteTaskFn = useCallback(
-    async (agentId: string, taskId: string) => {
-      const result = await request(`/agents/${agentId}/tasks/${taskId}`, {
-        method: 'DELETE',
-      });
-      if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
-      }
-    },
-    [updateAgentFromServer]
-  );
-
-  const fetchAgentMemory = useCallback(
-    async (agentId: string) => {
-      const data = await request(`/agents/${agentId}/memory`);
-      return Array.isArray(data) ? (data as AgentMemory[]) : [];
-    },
-    []
-  );
-
-  const addMemoryItem = useCallback(
-    async (agentId: string, payload: MemoryInput) => {
-      const result = await request(`/agents/${agentId}/memory`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
-      }
-      return result?.memory as AgentMemory;
-    },
-    [updateAgentFromServer]
   );
 
   const updateMemoryItem = useCallback(

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAgents } from '@/hooks/use-agents';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -24,44 +25,7 @@ import { useAgents } from '@/hooks/use-agents';
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const filteredAgents = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return agents;
-    return agents.filter(
-      (agent) =>
-        agent.name.toLowerCase().includes(query) ||
-        agent.description.toLowerCase().includes(query)
-    );
-  }, [agents, searchQuery]);
-  const handleCreateAgent = async (agentData: any) => {
-    setIsCreating(true);
-    try {
-      await createAgent(agentData);
-      setShowCreateDialog(false);
-      toast({
-        title: 'Agent Created',
-        description: `${agentData.name} has been successfully created.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Unable to create agent',
-        description: error?.message ?? 'An unexpected error occurred while creating the agent.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  return (
-    <div className={cn('min-h-screen bg-background', isMobile ? 'p-4' : 'p-6')}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className={cn('flex justify-between gap-4', isMobile ? 'flex-col' : 'flex-col sm:flex-row sm:items-center')}>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               AI Agent Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -73,23 +37,21 @@ import { useAgents } from '@/hooks/use-agents';
               </p>
             )}
           </div>
+
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              onClick={() => setShowSettingsDialog(true)}
-              className={cn(isMobile && 'w-full justify-center')}
+
             >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
             <Button
               onClick={() => setShowCreateDialog(true)}
-              className={cn('bg-gradient-primary hover:opacity-90 transition-opacity', isMobile && 'w-full justify-center')}
-              size={isMobile ? 'sm' : 'default'}
+
             >
               <Plus className="h-4 w-4 mr-2" />
               New Agent
@@ -120,9 +82,7 @@ import { useAgents } from '@/hooks/use-agents';
         </div>
 
         {/* Search and Filters */}
-        <div className={cn('flex gap-4', isMobile ? 'flex-col' : 'flex-row items-center')}>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
             <Input
               placeholder="Search agents..."
               value={searchQuery}
@@ -131,6 +91,7 @@ import { useAgents } from '@/hooks/use-agents';
             />
           </div>
         </div>
+
         )}
       </div>
 

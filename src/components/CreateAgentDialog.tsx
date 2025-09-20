@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import type { Agent } from '@/types/agent';
+
 
 interface CreateAgentDialogProps {
   open: boolean;
@@ -17,6 +17,7 @@ interface CreateAgentDialogProps {
     description: '',
     status: 'active',
   });
+  const isMobile = useIsMobile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,12 +34,12 @@ interface CreateAgentDialogProps {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className={cn('sm:max-w-md', isMobile && 'max-w-[calc(100vw-2rem)] p-4')}>
+
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create New Agent</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+
           <div className="space-y-2">
             <Label htmlFor="name">Agent Name</Label>
             <Input
@@ -81,6 +82,7 @@ interface CreateAgentDialogProps {
               </SelectContent>
             </Select>
           </div>
+
             </Button>
           </DialogFooter>
         </form>

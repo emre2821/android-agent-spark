@@ -16,37 +16,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
 
-type AgentStatus = Agent['status'];
-type AgentPriority = 'low' | 'medium' | 'high' | 'critical';
-
-export interface AgentConfiguration {
-  name: string;
-  description: string;
-  status: AgentStatus;
-  autoStart: boolean;
-  learningMode: boolean;
-  maxTasks: number;
-  priority: AgentPriority;
-  tags: string[];
-  systemPrompt: string;
-  memoryLimit: number;
-}
 
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
   agent: Agent | null;
-<  name: agent?.name ?? '',
-  description: agent?.description ?? '',
-  status: agent?.status ?? 'inactive',
-  autoStart: true,
-  learningMode: true,
-  maxTasks: 100,
-  priority: 'medium',
-  tags: ['automation', 'ai'],
-  systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
-  memoryLimit: 1000,
-});
+
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
@@ -54,35 +29,9 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   agent,
 }) => {
 
-  const [newTag, setNewTag] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setConfig(defaultConfig(agent ?? undefined));
-  }, [agent]);
 
     if (!agent) return;
-    setIsSaving(true);
-    try {
-      await updateAgent(agent.id, {
-        name: config.name,
-        description: config.description,
-        status: config.status,
-      });
-      toast({
-        title: 'Agent Updated',
-        description: 'Agent configuration has been saved successfully.',
-      });
-      onClose();
-    } catch (error: any) {
-      toast({
-        title: 'Unable to update agent',
-        description: error?.message ?? 'Something went wrong while updating the agent.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
+
   };
 
   const addTag = () => {
@@ -109,7 +58,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
       <DialogContent
         className={cn(
           'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
-          isMobile && 'max-w-[calc(100vw-1.5rem)] p-4'
+
         )}
       >
         <DialogHeader>
@@ -122,7 +71,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -148,14 +97,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
+
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={config.status}
-                  onValueChange={(value) =>
-                    setConfig({ ...config, status: value as AgentStatus })
-                  }
+
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -172,9 +119,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={config.priority}
-                  onValueChange={(value) =>
-                    setConfig({ ...config, priority: value as AgentPriority })
-                  }
+
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -208,7 +153,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className={cn('flex items-center justify-between', isMobile && 'flex-col items-start gap-3')}>
+
               <div className="space-y-0.5">
                 <Label className="text-sm">Learning mode</Label>
                 <p className="text-xs text-muted-foreground">
@@ -221,7 +166,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
+
               <div className="space-y-2">
                 <Label htmlFor="maxTasks">Max concurrent tasks</Label>
                 <Input
@@ -263,14 +208,14 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               ))}
             </div>
 
-            <div className={cn('flex gap-2', isMobile && 'flex-col')}>
+
               <Input
                 placeholder="Add new tag"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTag()}
               />
-              <Button size="sm" onClick={addTag} className={cn(isMobile && 'w-full justify-center')}>
+
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -293,12 +238,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
           {/* Workflows */}
           <div className="space-y-4">
-            <div className={cn('flex items-center justify-between', isMobile && 'flex-col gap-3 items-start')}>
-              <h4 className="text-sm font-medium text-foreground">Workflows</h4>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(isMobile && 'w-full justify-center')}
+
               >
                 <Workflow className="h-4 w-4 mr-2" />
                 Manage Workflows
@@ -309,6 +249,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             </p>
           </div>
         </div>
+
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>

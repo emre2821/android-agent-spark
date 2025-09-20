@@ -29,7 +29,18 @@ import {
   Calendar,
   Shield,
   X,
+
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { useWorkflowCache } from '@/hooks/use-workflows';
+import {
+  getRuntimePlatform,
+  isDesktopRuntime,
+  isNativeMobileRuntime,
+  supportsNativeNotifications,
+} from '@/lib/platform';
+import type { StoredWorkflow } from '@/types/workflow';
 
 
 interface WorkflowDialogProps {
@@ -38,9 +49,9 @@ interface WorkflowDialogProps {
   agentId?: string;
 }
 
-interface WorkflowTemplateStep {
+
   id: string;
-  type: string;
+  type: WorkflowStepType;
   name: string;
   config: Record<string, unknown>;
 }
@@ -143,6 +154,23 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
     trigger: '',
     steps: [] as WorkflowStep[],
   });
+  const isMobile = useIsMobile();
+  const { workflows: savedWorkflows, addWorkflow, removeWorkflow } = useWorkflowCache();
+  const runtimePlatform = getRuntimePlatform();
+  const isDesktop = isDesktopRuntime();
+  const isNativeMobile = isNativeMobileRuntime();
+  const canNotify = supportsNativeNotifications();
+  const [enableFilesystemBridge, setEnableFilesystemBridge] = useState(isDesktop);
+  const [enableBackgroundSync, setEnableBackgroundSync] = useState(isNativeMobile);
+  const [enableNotifications, setEnableNotifications] = useState(canNotify);
+
+  const resetCustomWorkflow = () =>
+    setCustomWorkflow({
+      name: '',
+      description: '',
+      trigger: '',
+      steps: [] as WorkflowStep[],
+    });
 
   const buildSteps = (steps: WorkflowTemplateStep[]): WorkflowStep[] =>
     steps.map((step, index) => {
@@ -215,12 +243,17 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
     });
   };
 
+  const handleApplySaved = (workflow: StoredWorkflow) => {
+    console.log('Applying saved workflow:', workflow.name, 'to agent:', agentId);
+    onClose();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
         className={cn(
           'sm:max-w-[800px] max-h-[80vh] overflow-y-auto',
-          isMobile && 'max-w-[calc(100vw-1.5rem)] p-4'
+
         )}
       >
         <DialogHeader>
@@ -234,9 +267,10 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={cn('grid w-full grid-cols-2', isMobile && 'grid-cols-1')}>
+
             <TabsTrigger value="prebuilt">Prebuilt Workflows</TabsTrigger>
             <TabsTrigger value="custom">Custom Workflow</TabsTrigger>
+            <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
 
           <TabsContent value="prebuilt" className="space-y-4">
@@ -244,12 +278,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
               {prebuiltWorkflows.map((workflow) => (
                 <Card
                   key={workflow.id}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() =>
-                    setSelectedWorkflow(
-                      selectedWorkflow?.id === workflow.id ? null : workflow,
-                    )
-                  }
+
                 >
                   <CardHeader className="pb-3">
                     <div className={cn('flex items-center justify-between', isMobile && 'flex-col gap-3 items-start')}>
@@ -283,9 +312,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                           ))}
                         </div>
                       </div>
-                      <div className={cn('flex justify-end gap-2', isMobile && 'flex-col')}>
-                        <Button
-                          size="sm"
+
                           onClick={(e) => {
                             e.stopPropagation();
                             handleApplyPrebuilt(workflow);
@@ -305,7 +332,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
 
           <TabsContent value="custom" className="space-y-4">
             <div className="space-y-4">
-              <div className={cn('grid gap-4', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
+
                 <div className="space-y-2">
                   <Label htmlFor="workflowName">Workflow Name</Label>
                   <Input
@@ -349,26 +376,20 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
               <Separator />
 
               <div className="space-y-4">
-                <div className={cn('flex items-center justify-between', isMobile && 'flex-col gap-3 items-start')}>
-                  <h4 className="text-sm font-medium">Workflow Steps</h4>
-                  <Button size="sm" onClick={addCustomStep} className={cn(isMobile && 'w-full justify-center')}>
+
                     <Plus className="h-4 w-4 mr-2" />
                     Add Step
                   </Button>
                 </div>
 
                 {customWorkflow.steps.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="py-8 text-center text-sm text-muted-foreground">
                     No steps added yet. Click "Add Step" to create your workflow.
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {customWorkflow.steps.map((step, index) => (
-                      <Card key={step.id} className="p-4 space-y-3">
-                        <div className={cn('flex items-center justify-between gap-3', isMobile && 'flex-col items-start')}>
-                          <div className="flex items-center gap-3 w-full">
-                            <Badge>{index + 1}</Badge>
-                            <div className={cn('grid gap-2 flex-1', isMobile ? 'grid-cols-1' : 'grid-cols-2')}>
+
                               <Input
                                 placeholder="Step name"
                                 value={step.name}
@@ -381,9 +402,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                               />
                               <Select
                                 value={step.type}
-                                onValueChange={(value) => {
-                                  const updatedSteps = customWorkflow.steps.map((s) =>
-                                    s.id === step.id ? { ...s, type: value } : s,
+
                                   );
                                   setCustomWorkflow({ ...customWorkflow, steps: updatedSteps });
                                 }}
@@ -402,7 +421,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size={isMobile ? 'default' : 'sm'}
                             onClick={() => removeCustomStep(step.id)}
                             className={cn(isMobile && 'self-stretch w-full justify-center')}
                           >
@@ -415,8 +434,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                 )}
               </div>
 
-              <div className={cn('flex justify-end gap-2', isMobile && 'flex-col-reverse')}>
-                <Button variant="outline" onClick={onClose} className={cn(isMobile && 'w-full justify-center')}>
+
                   Cancel
                 </Button>
                 <Button
@@ -429,6 +447,67 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                 </Button>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="saved" className="space-y-4">
+            {savedWorkflows.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Saved workflows will appear here for offline reuse.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {savedWorkflows.map((workflow) => (
+                  <Card key={workflow.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base">{workflow.name}</CardTitle>
+                          <CardDescription className="text-sm">
+                            {workflow.description || 'No description provided.'}
+                          </CardDescription>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline">{workflow.trigger || 'manual'}</Badge>
+                            <span>
+                              {workflow.steps.length} step{workflow.steps.length === 1 ? '' : 's'}
+                            </span>
+                            <span>
+                              Saved {new Date(workflow.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size={isMobile ? 'default' : 'sm'}
+                            onClick={() => removeWorkflow(workflow.id)}
+                            aria-label={`Delete ${workflow.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div
+                        className={cn(
+                          'flex justify-end gap-2',
+                          isMobile && 'flex-col gap-3'
+                        )}
+                      >
+                        <Button
+                          size={isMobile ? 'default' : 'sm'}
+                          className={cn(isMobile && 'w-full justify-center text-base')}
+                          onClick={() => handleApplySaved(workflow)}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Apply Workflow
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

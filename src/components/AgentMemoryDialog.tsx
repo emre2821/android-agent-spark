@@ -8,8 +8,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 
-type MemoryType = MemoryItem['type'];
-
 interface AgentMemoryDialogProps {
   open: boolean;
   onClose: () => void;
@@ -22,27 +20,6 @@ const emptyDraft: MemoryDraft = { key: '', value: '', type: 'fact' };
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<MemoryDraft>(emptyDraft);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  useEffect(() => {
-    if (!open || !agentId) {
-      return;
-    }
-    setIsLoading(true);
-    fetchAgentMemory(agentId)
-      .then((items) => setMemoryItems(items))
-      .catch((error: any) => {
-        toast({
-          title: 'Unable to load memory',
-          description: error?.message ?? 'Something went wrong while loading memory entries.',
-          variant: 'destructive',
-        });
-      })
-      .finally(() => setIsLoading(false));
-  }, [open, agentId, fetchAgentMemory, toast]);
 
   const resetEditor = () => {
     setEditingId(null);
@@ -140,7 +117,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className={cn('sm:max-w-2xl max-h-[80vh]', isMobile && 'max-w-[calc(100vw-1.5rem)] p-4')}>
+
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             Agent Memory Store
@@ -150,11 +127,11 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+
           {/* Add new memory item */}
           <div className="gradient-card p-4 rounded-lg border border-border/50 space-y-3">
             <h3 className="text-sm font-medium">Add Memory Item</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Input
                 placeholder="Memory key (e.g., user_preference)"
                 value={newItem.key}
@@ -164,6 +141,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
               <select
                 className="px-3 py-2 bg-input border border-border rounded-md text-sm"
                 value={newItem.type}
+
               >
                 <option value="fact">Fact</option>
                 <option value="preference">Preference</option>
@@ -180,9 +158,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
             />
             <Button
               onClick={handleAddMemory}
-              size="sm"
-              className="w-full bg-gradient-primary"
-              disabled={isSubmitting}
+
             >
               <Plus className="h-4 w-4 mr-1" />
               {isSubmitting ? 'Saving...' : 'Add Memory'}
@@ -190,18 +166,12 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
           </div>
 
           {/* Memory items list */}
-          <ScrollArea className="h-96">
-            <div className="space-y-3 pr-3">
 
                       </div>
                     </div>
                     {index < memoryItems.length - 1 && <Separator />}
                   </div>
-                ))
-              )}
 
-              {!isLoading && memoryItems.length === 0 && (
-                <div className="text-center py-8">
                   <p className="text-muted-foreground">No memory items yet.</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Add your first memory item above to get started.
