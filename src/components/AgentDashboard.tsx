@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AgentCard } from './AgentCard';
@@ -9,53 +9,51 @@ import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
-import { useNavigate } from 'react-router-dom';
+
 export const AgentDashboard: React.FC = () => {
-  const { agents, setAgents } = useAgents();
+  const { agents, isLoading, createAgent } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const filteredAgents = agents.filter(agent =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredAgents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return agents;
+    return agents.filter(
+      (agent) =>
+        agent.name.toLowerCase().includes(query) ||
+        agent.description.toLowerCase().includes(query)
+    );
+  }, [agents, searchQuery]);
+
+  const selectedAgent = useMemo(
+    () => agents.find((agent) => agent.id === selectedAgentConfig) ?? null,
+    [agents, selectedAgentConfig]
   );
 
-  const handleCreateAgent = (agentData: any) => {
-    const newAgent = {
-      id: Date.now().toString(),
-      ...agentData,
-      tasksCompleted: 0,
-      memoryItems: 0,
-      lastActive: 'Just created'
-    };
-    setAgents([...agents, newAgent]);
-    setShowCreateDialog(false);
-    toast({
-      title: "Agent Created",
-      description: `${agentData.name} has been successfully created.`,
-    });
-  };
-
-  const handleConfigureAgent = (agentId: string, config: any) => {
-    setAgents(agents.map(agent => 
-      agent.id === agentId 
-        ? { ...agent, name: config.name, description: config.description, status: config.status }
-        : agent
-    ));
-    setSelectedAgentConfig(null);
-    toast({
-      title: "Agent Updated",
-      description: "Agent configuration has been saved successfully.",
-    });
-  };
-
-  const getSelectedAgent = () => {
-    return agents.find(agent => agent.id === selectedAgentConfig) || null;
+  const handleCreateAgent = async (agentData: any) => {
+    setIsCreating(true);
+    try {
+      await createAgent(agentData);
+      setShowCreateDialog(false);
+      toast({
+        title: 'Agent Created',
+        description: `${agentData.name} has been successfully created.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Unable to create agent',
+        description: error?.message ?? 'An unexpected error occurred while creating the agent.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -80,15 +78,15 @@ export const AgentDashboard: React.FC = () => {
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowSettingsDialog(true)}
             >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowCreateDialog(true)}
               className="bg-gradient-primary hover:opacity-90 transition-opacity"
             >
@@ -111,52 +109,40 @@ export const AgentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-active">
-              {agents.filter(a => a.status === 'active').length}
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading agents...</div>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="gradient-card rounded-lg p-4 border border-border/50">
+                <div className="text-2xl font-bold text-agent-active">
+                  {agents.filter((a) => a.status === 'active').length}
+                </div>
+                <div className="text-sm text-muted-foreground">Active Agents</div>
+              </div>
+              <div className="gradient-card rounded-lg p-4 border border-border/50">
+                <div className="text-2xl font-bold text-agent-task">
+                  {agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Tasks</div>
+              </div>
+              <div className="gradient-card rounded-lg p-4 border border-border/50">
+                <div className="text-2xl font-bold text-agent-memory">
+                  {agents.reduce((sum, agent) => sum + agent.memoryItems, 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Memory Items</div>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">Active Agents</div>
-          </div>
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-task">
-              {agents.reduce((sum, agent) => sum + agent.tasksCompleted, 0)}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Tasks</div>
-          </div>
-          <div className="gradient-card rounded-lg p-4 border border-border/50">
-            <div className="text-2xl font-bold text-agent-memory">
-              {agents.reduce((sum, agent) => sum + agent.memoryItems, 0)}
-            </div>
-            <div className="text-sm text-muted-foreground">Memory Items</div>
-          </div>
-        </div>
 
-        {/* Agents Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onEdit={(id) => setSelectedAgentConfig(id)}
-              onViewMemory={(id) => setSelectedAgentMemory(id)}
-              onBuildWorkflow={(id) => navigate(`/workflows?agentId=${id}`)}
-            />
-          ))}
-        </div>
-
-        {filteredAgents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No agents found matching your search.</p>
-          </div>
         )}
       </div>
 
-      <CreateAgentDialog 
+      <CreateAgentDialog
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateAgent}
+        isSubmitting={isCreating}
       />
 
       <AgentSettingsDialog
@@ -167,8 +153,7 @@ export const AgentDashboard: React.FC = () => {
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
-        agent={getSelectedAgent()}
-        onSave={handleConfigureAgent}
+        agent={selectedAgent}
       />
 
       <AgentMemoryDialog
