@@ -9,10 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (agentData: any) => void;
+  onSubmit: (agentData: any) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
-export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onClose, onSubmit }) => {
+export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
+  open,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+}) => {
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -20,15 +26,20 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
   }>({
     name: '',
     description: '',
-    status: 'active'
+    status: 'active',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    
-    onSubmit(formData);
-    setFormData({ name: '', description: '', status: 'active' });
+
+    try {
+      await onSubmit(formData);
+      setFormData({ name: '', description: '', status: 'active' });
+    } catch (error) {
+      // Leave the form populated so the user can retry.
+      console.error('Failed to create agent', error);
+    }
   };
 
   return (
@@ -37,7 +48,7 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Create New Agent</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Agent Name</Label>
@@ -47,9 +58,10 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter agent name..."
               required
+              disabled={isSubmitting}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -58,16 +70,18 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe what this agent will do..."
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="status">Initial Status</Label>
-            <Select 
-              value={formData.status} 
-              onValueChange={(value: 'active' | 'inactive' | 'learning') => 
+            <Select
+              value={formData.status}
+              onValueChange={(value: 'active' | 'inactive' | 'learning') =>
                 setFormData({ ...formData, status: value })
               }
+              disabled={isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -79,13 +93,13 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onCl
               </SelectContent>
             </Select>
           </div>
-          
+
           <DialogFooter className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-gradient-primary">
-              Create Agent
+            <Button type="submit" className="bg-gradient-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Agent'}
             </Button>
           </DialogFooter>
         </form>
