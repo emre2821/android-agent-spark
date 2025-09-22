@@ -7,8 +7,9 @@ import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { WorkflowDialog } from './WorkflowDialog';
+import { CredentialsManagerDialog } from './credentials/CredentialsManagerDialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, Settings, Workflow } from 'lucide-react';
+import { Key, Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
 export const AgentDashboard: React.FC = () => {
   const { agents, setAgents } = useAgents();
@@ -16,6 +17,7 @@ export const AgentDashboard: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const { toast } = useToast();
@@ -58,6 +60,9 @@ export const AgentDashboard: React.FC = () => {
     return agents.find(agent => agent.id === selectedAgentConfig) || null;
   };
 
+  const userId = 'demo-user';
+  const workspaceId = 'default-workspace';
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -72,16 +77,24 @@ export const AgentDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowWorkflowDialog(true)}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCredentialsDialog(true)}
+            >
+              <Key className="h-4 w-4 mr-2" />
+              Credentials
+            </Button>
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setShowSettingsDialog(true)}
             >
@@ -166,6 +179,8 @@ export const AgentDashboard: React.FC = () => {
       <WorkflowDialog
         open={showWorkflowDialog}
         onClose={() => setShowWorkflowDialog(false)}
+        userId={userId}
+        workspaceId={workspaceId}
       />
 
       <AgentConfigureDialog
@@ -179,6 +194,13 @@ export const AgentDashboard: React.FC = () => {
         open={selectedAgentMemory !== null}
         onClose={() => setSelectedAgentMemory(null)}
         agentId={selectedAgentMemory || ''}
+      />
+
+      <CredentialsManagerDialog
+        open={showCredentialsDialog}
+        onClose={() => setShowCredentialsDialog(false)}
+        userId={userId}
+        workspaceId={workspaceId}
       />
     </div>
   );
