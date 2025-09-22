@@ -16,7 +16,7 @@ describe('AgentCard', () => {
   it('renders agent information', () => {
     render(
       <BrowserRouter>
-        <AgentCard agent={agent} onEdit={() => {}} onViewMemory={() => {}} />
+        <AgentCard agent={agent} onEdit={() => {}} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
       </BrowserRouter>
     );
     expect(screen.getByText('Test Agent')).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe('AgentCard', () => {
     const onEdit = vi.fn();
     render(
       <BrowserRouter>
-        <AgentCard agent={agent} onEdit={onEdit} onViewMemory={() => {}} />
+        <AgentCard agent={agent} onEdit={onEdit} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
       </BrowserRouter>
     );
     fireEvent.click(screen.getByText('Configure'));

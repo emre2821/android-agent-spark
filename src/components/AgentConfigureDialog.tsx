@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAgents } from '@/hooks/use-agents';
 import type { Agent, AgentStatus } from '@/types/agent';
 
 interface AgentConfigureDialogProps {
@@ -41,9 +42,15 @@ type AgentConfigurationState = {
   tags: string[];
 };
 
-type AgentWithConfiguration = Agent & Partial<
-  Pick<AgentConfigurationState, 'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'>
->;
+type AgentWithConfiguration = Agent &
+  Partial<
+    Pick<
+      AgentConfigurationState,
+      'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'
+    >
+  >;
+
+type AgentUpdatePayload = Partial<Agent> & Partial<AgentConfigurationState>;
 
 const DEFAULT_CONFIG: AgentConfigurationState = {
   name: '',
@@ -99,14 +106,24 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   agent,
 }) => {
   const isMobile = useIsMobile();
+  const { updateAgent } = useAgents();
   const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
+
   useEffect(() => {
-    setConfig(deriveConfigFromAgent(agent));
+    setConfig(initialConfig);
     setNewTag('');
-  }, [agent, open]);
+    setIsSaving(false);
+  }, [initialConfig, open]);
+
+  const handleDialogChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onClose();
+    }
+  };
 
   const addTag = () => {
     const trimmed = newTag.trim();
@@ -126,19 +143,39 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!agent || !config.name.trim() || isSaving) {
+      return;
+    }
+
     setIsSaving(true);
-    // Placeholder save implementation - in a real app we'd persist the config here.
-    setTimeout(() => {
-      setIsSaving(false);
+    const payload: AgentUpdatePayload = {
+      name: config.name.trim(),
+      description: config.description.trim(),
+      status: config.status,
+      priority: config.priority,
+      autoStart: config.autoStart,
+      learningMode: config.learningMode,
+      maxTasks: config.maxTasks,
+      memoryLimit: config.memoryLimit,
+      systemPrompt: config.systemPrompt,
+      tags: config.tags,
+    };
+
+    try {
+      await updateAgent(agent.id, payload);
       onClose();
-    }, 300);
+    } catch (error) {
+      console.error('Failed to save agent configuration', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent
         className={cn(
           'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
@@ -368,7 +405,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
         </div>
 
         <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
+          <Button type="button" onClick={handleSave} disabled={isSaving || !config.name.trim()}>
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>

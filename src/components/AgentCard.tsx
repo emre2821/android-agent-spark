@@ -6,14 +6,22 @@ import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import type { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
-  onBuildWorkflow: (agentId: string) => void;
+  onBuildWorkflow?: (agentId: string) => void;
 }
 
+export const AgentCard: React.FC<AgentCardProps> = ({
+  agent,
+  onEdit,
+  onViewMemory,
+  onBuildWorkflow,
+}) => {
+  const isMobile = useIsMobile();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -28,6 +36,14 @@ interface AgentCardProps {
     }
   };
 
+  const actionLayout = cn(
+    'flex flex-wrap items-center gap-2',
+    isMobile ? 'flex-col w-full' : 'justify-end'
+  );
+
+  const actionButtonSize = isMobile ? 'default' : 'sm';
+  const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
+
   return (
     <Card className="agent-card border-border/50 hover:border-primary/30 group">
       <CardHeader className="pb-3">
@@ -36,15 +52,13 @@ interface AgentCardProps {
             <Brain className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{agent.name}</CardTitle>
           </div>
-          <Badge className={getStatusColor(agent.status)}>
-            {agent.status}
-          </Badge>
+          <Badge className={getStatusColor(agent.status)}>{agent.status}</Badge>
         </div>
         <CardDescription className="text-muted-foreground">
           {agent.description}
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         <div
           className={cn(
@@ -63,48 +77,50 @@ interface AgentCardProps {
             <span className="font-medium text-foreground">{agent.memoryItems}</span>
           </div>
         </div>
-        
-        <div className="text-xs text-muted-foreground">
-          Last active: {agent.lastActive}
-        </div>
 
+        <div className="text-xs text-muted-foreground">Last active: {agent.lastActive}</div>
 
+        <div className={actionLayout}>
+          <Button
+            asChild
+            variant="outline"
+            size={actionButtonSize}
+            className={actionButtonClasses}
           >
-            <Link
-              to={`/agents/${agent.id}`}
-              className={cn('flex items-center justify-center gap-1', isMobile && 'w-full')}
-            >
-              <Eye className="h-4 w-4 mr-1" />
+            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center gap-1">
+              <Eye className="h-4 w-4" />
               View
             </Link>
           </Button>
           <Button
             variant="outline"
-            size={isMobile ? 'default' : 'sm'}
+            size={actionButtonSize}
             onClick={() => onEdit(agent.id)}
-
+            className={actionButtonClasses}
           >
-            <Settings className="h-4 w-4 mr-1" />
+            <Settings className="h-4 w-4" />
             Configure
           </Button>
           <Button
             variant="secondary"
-            size={isMobile ? 'default' : 'sm'}
+            size={actionButtonSize}
             onClick={() => onViewMemory(agent.id)}
-
+            className={actionButtonClasses}
           >
-            <Database className="h-4 w-4 mr-1" />
+            <Database className="h-4 w-4" />
             Memory
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onBuildWorkflow(agent.id)}
-            className="w-full"
-          >
-            <Workflow className="h-4 w-4 mr-1" />
-            Workflows
-          </Button>
+          {onBuildWorkflow && (
+            <Button
+              variant="outline"
+              size={actionButtonSize}
+              onClick={() => onBuildWorkflow(agent.id)}
+              className={actionButtonClasses}
+            >
+              <Workflow className="h-4 w-4" />
+              Workflows
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
