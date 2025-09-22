@@ -27,6 +27,12 @@ npm run dev
 npm run server
 ```
 
+### Environment variables
+- `VITE_API_URL` &mdash; optional HTTP base URL for the agent API. When unset the
+  app issues requests against the relative `/agents` path on the current
+  origin, making local development and packaged builds work without extra
+  configuration.
+
 ### Production build
 ```bash
 npm run build
