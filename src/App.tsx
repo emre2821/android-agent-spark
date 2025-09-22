@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AgentDetail from "./pages/AgentDetail";
+import WorkflowBuilder from "./pages/WorkflowBuilder";
 import { AgentsProvider } from "@/hooks/use-agents";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/agents/:id" element={<AgentDetail />} />
+            <Route path="/workflows/builder" element={<WorkflowBuilder />} />
             {/* Place custom routes above the catch-all "*" route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
