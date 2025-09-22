@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,11 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useCollaboration } from '@/hooks/use-collaboration';
+import { useToast } from '@/hooks/use-toast';
+import { Settings, Save, X, Plus, Workflow, Users, Lock, Unlock, RefreshCw } from 'lucide-react';
 
 interface Agent {
   id: string;
@@ -39,6 +43,13 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   agent,
   onSave,
 }) => {
+  const { toast } = useToast();
+  const user = useCurrentUser();
+  const collaboration = useCollaboration({
+    resourceId: agent ? `agent:${agent.id}:config` : null,
+    user,
+  });
+  const { isLockedByCurrentUser, isLockedByAnother, lock, presence, conflictMessage, conflictLock } = collaboration;
   const [config, setConfig] = useState({
     name: agent?.name || '',
     description: agent?.description || '',
@@ -54,10 +65,104 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   const [newTag, setNewTag] = useState('');
 
-  const handleSave = () => {
+  useEffect(() => {
     if (!agent) return;
+    setConfig({
+      name: agent.name,
+      description: agent.description,
+      status: agent.status,
+      autoStart: true,
+      learningMode: true,
+      maxTasks: 100,
+      priority: 'medium',
+      tags: ['automation', 'ai'],
+      systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
+      memoryLimit: 1000,
+    });
+  }, [agent]);
+
+  useEffect(() => {
+    if (!open && isLockedByCurrentUser && agent) {
+      collaboration.releaseLock({ reason: 'Dialog closed' });
+    }
+  }, [open, isLockedByCurrentUser, collaboration.releaseLock, agent?.id]);
+
+  const handleSave = async () => {
+    if (!agent) return;
+
+    if (isLockedByAnother) {
+      toast({
+        title: 'Configuration locked',
+        description: `Currently edited by ${lock?.userName}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!isLockedByCurrentUser) {
+      const lockAttempt = await collaboration.requestLock({ reason: 'Updating agent configuration' });
+      if (!lockAttempt.ok) {
+        toast({
+          title: 'Unable to acquire lock',
+          description: lockAttempt.message || 'Try again once the current editor finishes.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    const changedFields = Object.entries(config)
+      .filter(([key, value]) => {
+        if (!(key in (agent as any))) return true;
+        return (agent as any)[key] !== value;
+      })
+      .map(([key]) => key);
+
+    const saveResult = await collaboration.saveChanges('Agent configuration updated', {
+      changedFields,
+    });
+
+    if (!saveResult.ok) {
+      toast({
+        title: 'Save conflict',
+        description: saveResult.message || 'Another collaborator saved conflicting changes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     onSave(agent.id, config);
+    toast({ title: 'Configuration saved', description: 'Changes recorded in the activity feed.' });
     onClose();
+  };
+
+  const handleRequestLock = async () => {
+    const result = await collaboration.requestLock({ reason: 'Editing agent configuration' });
+    if (!result.ok) {
+      toast({
+        title: 'Unable to acquire lock',
+        description: result.message || 'Another collaborator currently holds the lock.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Lock acquired', description: 'You now control this configuration.' });
+    }
+  };
+
+  const handleReleaseLock = async () => {
+    const result = await collaboration.releaseLock({ reason: 'Finished editing configuration' });
+    if (result.ok) {
+      toast({ title: 'Lock released', description: 'Others can now edit this configuration.' });
+    }
+  };
+
+  const handleForceUnlock = async () => {
+    const reason = window.prompt('Enter a reason for force unlocking this configuration.');
+    if (reason === null) return;
+    const result = await collaboration.forceUnlock(reason || 'Force unlock requested');
+    if (result.ok) {
+      toast({ title: 'Lock overridden', description: 'You now control this configuration.' });
+    }
   };
 
   const addTag = () => {
@@ -93,10 +198,87 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          <div className="space-y-3 rounded-lg border border-dashed border-border bg-muted/20 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span className="font-medium text-foreground">Active collaborators</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {presence.length === 0 ? (
+                  <Badge variant="outline">Only you</Badge>
+                ) : (
+                  presence.map((participant) => (
+                    <Badge
+                      key={participant.id}
+                      variant={participant.isCurrentUser ? 'secondary' : 'outline'}
+                    >
+                      {participant.isCurrentUser ? 'You' : participant.name}
+                    </Badge>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {isLockedByCurrentUser ? (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Lock className="h-3.5 w-3.5" />
+                  You hold the lock
+                </Badge>
+              ) : isLockedByAnother ? (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <Lock className="h-3.5 w-3.5" />
+                  Locked by {lock?.userName}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Unlock className="h-3.5 w-3.5" />
+                  Available for editing
+                </Badge>
+              )}
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {!isLockedByCurrentUser && (
+                  <Button variant="outline" size="sm" onClick={handleRequestLock}>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Request control
+                  </Button>
+                )}
+                {isLockedByCurrentUser && (
+                  <Button variant="outline" size="sm" onClick={handleReleaseLock}>
+                    <Unlock className="mr-2 h-4 w-4" />
+                    Release lock
+                  </Button>
+                )}
+                {isLockedByAnother && (
+                  <Button variant="destructive" size="sm" onClick={handleForceUnlock}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Force unlock
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {conflictMessage && (
+            <Alert variant="destructive">
+              <AlertTitle>Save conflict detected</AlertTitle>
+              <AlertDescription>
+                {conflictMessage}
+                {conflictLock && (
+                  <span className="block text-xs text-muted-foreground">
+                    Current lock owner: {conflictLock.userName}
+                  </span>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
               <Input

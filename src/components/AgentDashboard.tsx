@@ -7,6 +7,7 @@ import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { WorkflowDialog } from './WorkflowDialog';
+import { ActivityFeed } from './ActivityFeed';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Settings, Workflow } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
@@ -133,23 +134,28 @@ export const AgentDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Agents Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onEdit={(id) => setSelectedAgentConfig(id)}
-              onViewMemory={(id) => setSelectedAgentMemory(id)}
-            />
-          ))}
-        </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredAgents.map((agent) => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  onEdit={(id) => setSelectedAgentConfig(id)}
+                  onViewMemory={(id) => setSelectedAgentMemory(id)}
+                />
+              ))}
+            </div>
 
-        {filteredAgents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No agents found matching your search.</p>
+            {filteredAgents.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No agents found matching your search.</p>
+              </div>
+            )}
           </div>
-        )}
+
+          <ActivityFeed />
+        </div>
       </div>
 
       <CreateAgentDialog 

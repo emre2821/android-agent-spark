@@ -6,4 +6,6 @@ export interface Agent {
   tasksCompleted: number;
   memoryItems: number;
   lastActive: string;
+  activeLocks?: Record<string, string>;
+  collaborators?: string[];
 }
