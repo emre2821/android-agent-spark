@@ -230,6 +230,10 @@ wss.on('connection', (socket) => {
   });
 });
 
+wss.on('error', (error) => {
+  console.error('WebSocket server error', error);
+});
+
 server.on('error', (error) => {
   console.error('Server error', error);
 });
@@ -237,11 +241,26 @@ server.on('error', (error) => {
 const DEFAULT_PORT = Number.parseInt(process.env.PORT ?? '3001', 10);
 
 export function startServer(port = DEFAULT_PORT) {
-  return new Promise((resolve) => {
-    server.listen(port, () => {
+  return new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve(server);
+      return;
+    }
+
+    const handleListening = () => {
+      server.off('error', handleError);
       console.log(`API server running on http://localhost:${port}`);
       resolve(server);
-    });
+    };
+
+    const handleError = (error) => {
+      server.off('listening', handleListening);
+      reject(error);
+    };
+
+    server.once('error', handleError);
+    server.once('listening', handleListening);
+    server.listen(port);
   });
 }
 
