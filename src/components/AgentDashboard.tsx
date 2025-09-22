@@ -5,26 +5,18 @@ import { AgentCard } from './AgentCard';
 import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
-import { useToast } from '@/hooks/use-toast';
-import {
-  AlertCircle,
-  Plus,
-  RefreshCcw,
-  Search,
-  Settings,
-  WifiOff,
-  Workflow,
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+
 import { useAgents } from '@/hooks/use-agents';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+
 
               AI Agent Dashboard
             </h1>
@@ -107,6 +99,7 @@ import { useAgents } from '@/hooks/use-agents';
         onClose={() => setShowSettingsDialog(false)}
       />
 
+
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
@@ -117,6 +110,13 @@ import { useAgents } from '@/hooks/use-agents';
         open={selectedAgentMemory !== null}
         onClose={() => setSelectedAgentMemory(null)}
         agentId={selectedAgentMemory || ''}
+      />
+
+      <CredentialsManagerDialog
+        open={showCredentialsDialog}
+        onClose={() => setShowCredentialsDialog(false)}
+        userId={userId}
+        workspaceId={workspaceId}
       />
     </div>
   );

@@ -1,5 +1,3 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -22,38 +20,20 @@ import {
   Save,
   Play,
 
-  Mail,
-  FileText,
-  Database,
-  Globe,
-  Calendar,
-  Shield,
-  X,
-
-} from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { useWorkflowCache } from '@/hooks/use-workflows';
-import {
-  getRuntimePlatform,
-  isDesktopRuntime,
-  isNativeMobileRuntime,
-  supportsNativeNotifications,
-} from '@/lib/platform';
-import type { StoredWorkflow } from '@/types/workflow';
-
 
 interface WorkflowDialogProps {
   open: boolean;
   onClose: () => void;
   agentId?: string;
+  userId: string;
+  workspaceId: string;
 }
 
 
   id: string;
   type: WorkflowStepType;
   name: string;
-  config: Record<string, unknown>;
+
 }
 
 interface WorkflowTemplate {
@@ -66,84 +46,16 @@ interface WorkflowTemplate {
 
 const prebuiltWorkflows: WorkflowTemplate[] = [
   {
-    id: 'email-automation',
-    name: 'Email Response Automation',
-    description: 'Automatically respond to emails based on content analysis',
-    category: 'Communication',
-    icon: Mail,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Email Received', config: { folder: 'inbox' } },
-      { id: '2', type: 'analyze', name: 'Analyze Content', config: { sentiment: true } },
-      { id: '3', type: 'action', name: 'Generate Response', config: { template: 'professional' } },
-      { id: '4', type: 'action', name: 'Send Reply', config: { delay: 300 } },
+
     ],
   },
   {
-    id: 'data-processing',
-    name: 'Data Collection & Processing',
-    description: 'Collect data from multiple sources and process it automatically',
-    category: 'Data',
-    icon: Database,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Schedule Trigger', config: { interval: '1h' } },
-      { id: '2', type: 'action', name: 'Fetch Data', config: { sources: ['api1', 'api2'] } },
-      { id: '3', type: 'process', name: 'Clean Data', config: { rules: ['remove_duplicates'] } },
-      { id: '4', type: 'action', name: 'Store Results', config: { destination: 'database' } },
-    ],
-  },
-  {
-    id: 'content-generation',
-    name: 'Content Generation Pipeline',
-    description: 'Generate and publish content across multiple platforms',
-    category: 'Content',
-    icon: FileText,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Content Request', config: { topic: 'dynamic' } },
-      { id: '2', type: 'action', name: 'Research Topic', config: { sources: 3 } },
-      { id: '3', type: 'generate', name: 'Create Content', config: { type: 'blog_post' } },
-      { id: '4', type: 'action', name: 'Publish Content', config: { platforms: ['blog', 'social'] } },
-    ],
-  },
-  {
-    id: 'web-monitoring',
-    name: 'Website Monitoring',
-    description: 'Monitor websites for changes and send notifications',
-    category: 'Monitoring',
+    id: 'scheduled-http-sync',
+    name: 'HTTP Data Sync',
+    description: 'Fetch data from an API endpoint on a schedule and stage it for storage.',
+    category: 'Integration',
     icon: Globe,
     steps: [
-      { id: '1', type: 'trigger', name: 'Schedule Check', config: { interval: '30m' } },
-      { id: '2', type: 'action', name: 'Check Website', config: { url: 'dynamic' } },
-      { id: '3', type: 'condition', name: 'Detect Changes', config: { threshold: 0.1 } },
-      { id: '4', type: 'action', name: 'Send Alert', config: { method: 'email' } },
-    ],
-  },
-  {
-    id: 'meeting-assistant',
-    name: 'Meeting Assistant',
-    description: 'Automatically schedule meetings and send reminders',
-    category: 'Productivity',
-    icon: Calendar,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Meeting Request', config: { source: 'email' } },
-      { id: '2', type: 'action', name: 'Check Availability', config: { calendar: 'primary' } },
-      { id: '3', type: 'action', name: 'Schedule Meeting', config: { duration: 60 } },
-      { id: '4', type: 'action', name: 'Send Confirmation', config: { template: 'default' } },
-    ],
-  },
-  {
-    id: 'security-monitor',
-    name: 'Security Monitoring',
-    description: 'Monitor system security and respond to threats',
-    category: 'Security',
-    icon: Shield,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Security Event', config: { level: 'medium' } },
-      { id: '2', type: 'analyze', name: 'Threat Analysis', config: { severity: true } },
-      { id: '3', type: 'condition', name: 'Risk Assessment', config: { threshold: 'high' } },
-      { id: '4', type: 'action', name: 'Initiate Response', config: { protocol: 'standard' } },
-    ],
-  },
-];
 
 
   const [activeTab, setActiveTab] = useState('prebuilt');
@@ -154,65 +66,6 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
     trigger: '',
     steps: [] as WorkflowStep[],
   });
-  const isMobile = useIsMobile();
-  const { workflows: savedWorkflows, addWorkflow, removeWorkflow } = useWorkflowCache();
-  const runtimePlatform = getRuntimePlatform();
-  const isDesktop = isDesktopRuntime();
-  const isNativeMobile = isNativeMobileRuntime();
-  const canNotify = supportsNativeNotifications();
-  const [enableFilesystemBridge, setEnableFilesystemBridge] = useState(isDesktop);
-  const [enableBackgroundSync, setEnableBackgroundSync] = useState(isNativeMobile);
-  const [enableNotifications, setEnableNotifications] = useState(canNotify);
-
-  const resetCustomWorkflow = () =>
-    setCustomWorkflow({
-      name: '',
-      description: '',
-      trigger: '',
-      steps: [] as WorkflowStep[],
-    });
-
-  const buildSteps = (steps: WorkflowTemplateStep[]): WorkflowStep[] =>
-    steps.map((step, index) => {
-      const base = createEmptyStep({
-        name: step.name,
-        type: step.type,
-        config: step.config,
-        position: { x: 160, y: 120 + index * 140 },
-      });
-
-      if (step.type === 'condition') {
-        return {
-          ...base,
-          outputs: [
-            { id: crypto.randomUUID(), label: 'Yes', dataType: 'boolean' },
-            { id: crypto.randomUUID(), label: 'No', dataType: 'boolean' },
-          ],
-          branches: [
-            { id: crypto.randomUUID(), label: 'On true', condition: 'true' },
-            { id: crypto.randomUUID(), label: 'On false', condition: 'false' },
-          ],
-        };
-      }
-
-      return {
-        ...base,
-        outputs: base.outputs.length > 0 ? base.outputs : [{
-          id: crypto.randomUUID(),
-          label: 'Result',
-          dataType: 'json',
-        }],
-      };
-    });
-
-  const redirectToBuilder = (workflowId: string) => {
-    const params = new URLSearchParams();
-    params.set('workflowId', workflowId);
-    if (agentId) params.set('agentId', agentId);
-    navigate({ pathname: '/workflows', search: params.toString() });
-  };
-
-  const handleApplyPrebuilt = (workflow: WorkflowTemplate) => {
 
     onClose();
   };
@@ -229,7 +82,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
   };
 
   const addCustomStep = () => {
-    const newStep = createEmptyStep({ name: 'New Step', type: 'action' });
+
     setCustomWorkflow({
       ...customWorkflow,
       steps: [...customWorkflow.steps, newStep],
@@ -243,26 +96,19 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
     });
   };
 
-  const handleApplySaved = (workflow: StoredWorkflow) => {
-    console.log('Applying saved workflow:', workflow.name, 'to agent:', agentId);
-    onClose();
+
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent
-        className={cn(
-          'sm:max-w-[800px] max-h-[80vh] overflow-y-auto',
 
-        )}
-      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Workflow className="h-5 w-5" />
             Workflow Management
           </DialogTitle>
           <DialogDescription>
-            Choose from prebuilt workflows or create custom automation sequences.
+            Configure reusable workflows with typed nodes. Test runs validate configuration and stream live logs below.
           </DialogDescription>
         </DialogHeader>
 
@@ -299,7 +145,10 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                     <CardContent className="pt-0 space-y-4">
                       <Separator />
                       <div>
-                        <h5 className="text-sm font-medium mb-2">Workflow Steps:</h5>
+                        <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                          <ListChecks className="h-4 w-4" />
+                          Workflow Steps
+                        </h5>
                         <div className="space-y-2">
                           {workflow.steps.map((step, index) => (
                             <div key={step.id} className="flex items-center gap-2 text-sm">
@@ -307,19 +156,26 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                                 {index + 1}
                               </Badge>
                               <span className="font-medium">{step.name}</span>
-                              <Badge variant="outline" className="text-xs">{step.type}</Badge>
+
                             </div>
                           ))}
                         </div>
                       </div>
 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleApplyPrebuilt(workflow);
                           }}
                           className={cn(isMobile && 'w-full justify-center')}
                         >
                           <Play className="h-4 w-4 mr-2" />
+                          Test Run
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleApplyPrebuilt(workflow);
+                          }}
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
                           Apply Workflow
                         </Button>
                       </div>
@@ -353,9 +209,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="schedule">Schedule</SelectItem>
-                      <SelectItem value="email">Email Received</SelectItem>
                       <SelectItem value="webhook">Webhook</SelectItem>
-                      <SelectItem value="file">File Change</SelectItem>
                       <SelectItem value="manual">Manual</SelectItem>
                     </SelectContent>
                   </Select>
@@ -390,34 +244,6 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                   <div className="space-y-3">
                     {customWorkflow.steps.map((step, index) => (
 
-                              <Input
-                                placeholder="Step name"
-                                value={step.name}
-                                onChange={(e) => {
-                                  const updatedSteps = customWorkflow.steps.map((s) =>
-                                    s.id === step.id ? { ...s, name: e.target.value } : s,
-                                  );
-                                  setCustomWorkflow({ ...customWorkflow, steps: updatedSteps });
-                                }}
-                              />
-                              <Select
-                                value={step.type}
-
-                                  );
-                                  setCustomWorkflow({ ...customWorkflow, steps: updatedSteps });
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="action">Action</SelectItem>
-                                  <SelectItem value="condition">Condition</SelectItem>
-                                  <SelectItem value="delay">Delay</SelectItem>
-                                  <SelectItem value="loop">Loop</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
                           </div>
                           <Button
                             variant="ghost"
@@ -428,6 +254,42 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Select
+                            value={step.nodeType}
+                            onValueChange={(value) =>
+                              updateCustomStep(step.id, (current) => ({
+                                ...current,
+                                nodeType: value,
+                                type:
+                                  availableNodes.find((node) => node.type === value)?.displayName ?? current.type,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableNodes.map((node) => (
+                                <SelectItem key={node.type} value={node.type}>
+                                  {node.displayName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Textarea
+                            placeholder="JSON configuration"
+                            value={stringifyConfig(step.config)}
+                            onChange={(event) =>
+                              updateCustomStep(step.id, (current) => ({
+                                ...current,
+                                config: event.target.value,
+                              }))
+                            }
+                            className="font-mono text-xs"
+                            rows={4}
+                          />
+                        </div>
                       </Card>
                     ))}
                   </div>
@@ -435,16 +297,6 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
               </div>
 
 
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveCustom}
-                  disabled={!customWorkflow.name.trim()}
-                  className={cn(isMobile && 'w-full justify-center')}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Workflow
-                </Button>
               </div>
             </div>
           </TabsContent>
@@ -510,6 +362,76 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
             )}
           </TabsContent>
         </Tabs>
+
+        <Separator className="my-4" />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Execution Logs
+              </CardTitle>
+              <CardDescription className="text-xs flex items-center gap-2">
+                Status:
+                <Badge variant={lastRunStatus === 'completed' ? 'secondary' : lastRunStatus === 'failed' ? 'destructive' : 'outline'}>
+                  {lastRunStatus.toUpperCase()}
+                </Badge>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-2 text-xs">
+                  {executionLogs.length === 0 ? (
+                    <p className="text-muted-foreground">Execute a workflow to stream logs here.</p>
+                  ) : (
+                    executionLogs.map((log, index) => (
+                      <div key={`${log.timestamp}-${index}`} className="flex items-start gap-2">
+                        <Badge className={`mt-0.5 ${levelStyles[log.level] ?? levelStyles.info}`}>
+                          {log.level.toUpperCase()}
+                        </Badge>
+                        <div className="space-y-1">
+                          <div className="font-medium text-muted-foreground">Step: {log.stepId}</div>
+                          <div>{log.message}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Available Credentials
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Reference IDs when configuring nodes that require secure secrets.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs">
+              {credentialMetadata.length === 0 ? (
+                <p className="text-muted-foreground">No credentials stored yet. Create them from the dashboard.</p>
+              ) : (
+                <div className="space-y-1">
+                  {credentialMetadata.map((credential) => (
+                    <div key={credential.id} className="rounded border border-dashed border-muted p-2">
+                      <div className="font-medium text-sm">{credential.name}</div>
+                      <div className="text-muted-foreground">ID: {credential.id}</div>
+                      <div className="text-muted-foreground">Type: {credential.type}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </DialogContent>
     </Dialog>
   );
