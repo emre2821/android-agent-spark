@@ -110,9 +110,18 @@ const createId = (): string => {
 
 const clonePort = (port: WorkflowPort): WorkflowPort => ({ ...port });
 
+const clonePorts = (ports: WorkflowPort[] | undefined): WorkflowPort[] =>
+  (ports ?? []).map(clonePort);
+
 const cloneBranch = (branch: WorkflowBranch): WorkflowBranch => ({ ...branch });
 
+const cloneBranches = (branches: WorkflowBranch[] | undefined): WorkflowBranch[] =>
+  (branches ?? []).map(cloneBranch);
+
 const cloneLog = (log: WorkflowExecutionLog): WorkflowExecutionLog => ({ ...log });
+
+const cloneLogs = (logs: WorkflowExecutionLog[] | undefined): WorkflowExecutionLog[] =>
+  (logs ?? []).map(cloneLog);
 
 const clonePosition = (position: WorkflowPosition | undefined): WorkflowPosition => ({
   x: position?.x ?? DEFAULT_STEP_POSITION.x,
@@ -131,20 +140,12 @@ export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowSt
   nodeType: partial.nodeType,
   position: clonePosition(partial.position),
   config: cloneConfig(partial.config),
-  inputs: (partial.inputs ?? []).map(clonePort),
-  outputs: (partial.outputs ?? []).map(clonePort),
-  branches: (partial.branches ?? []).map(cloneBranch),
-  logs: (partial.logs ?? []).map(cloneLog),
+  inputs: clonePorts(partial.inputs),
+  outputs: clonePorts(partial.outputs),
+  branches: cloneBranches(partial.branches),
+  logs: cloneLogs(partial.logs),
 });
 
 export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
-  steps.map((step) => ({
-    ...step,
-    position: clonePosition(step.position),
-    config: cloneConfig(step.config),
-    inputs: step.inputs.map(clonePort),
-    outputs: step.outputs.map(clonePort),
-    branches: step.branches.map(cloneBranch),
-    logs: step.logs.map(cloneLog),
-  }));
+  steps.map((step) => createEmptyStep(step));
 
