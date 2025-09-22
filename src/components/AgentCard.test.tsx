@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { AgentCard } from './AgentCard';
 
@@ -16,7 +17,12 @@ describe('AgentCard', () => {
   it('renders agent information', () => {
     render(
       <BrowserRouter>
-        <AgentCard agent={agent} onEdit={() => {}} onViewMemory={() => {}} />
+        <AgentCard
+          agent={agent}
+          onEdit={() => {}}
+          onViewMemory={() => {}}
+          onBuildWorkflow={() => {}}
+        />
       </BrowserRouter>
     );
     expect(screen.getByText('Test Agent')).toBeInTheDocument();
@@ -27,10 +33,31 @@ describe('AgentCard', () => {
     const onEdit = vi.fn();
     render(
       <BrowserRouter>
-        <AgentCard agent={agent} onEdit={onEdit} onViewMemory={() => {}} />
+        <AgentCard
+          agent={agent}
+          onEdit={onEdit}
+          onViewMemory={() => {}}
+          onBuildWorkflow={() => {}}
+        />
       </BrowserRouter>
     );
     fireEvent.click(screen.getByText('Configure'));
     expect(onEdit).toHaveBeenCalledWith('1');
+  });
+
+  it('calls onBuildWorkflow when Workflows button clicked', () => {
+    const onBuildWorkflow = vi.fn();
+    render(
+      <BrowserRouter>
+        <AgentCard
+          agent={agent}
+          onEdit={() => {}}
+          onViewMemory={() => {}}
+          onBuildWorkflow={onBuildWorkflow}
+        />
+      </BrowserRouter>
+    );
+    fireEvent.click(screen.getByText('Workflows'));
+    expect(onBuildWorkflow).toHaveBeenCalledWith('1');
   });
 });

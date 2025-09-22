@@ -18,7 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAgents } from '@/hooks/use-agents';
 import type { Agent, AgentStatus } from '@/types/agent';
+import type { AgentUpdateInput } from '@/hooks/use-agents';
 
 interface AgentConfigureDialogProps {
   open: boolean;
@@ -99,11 +101,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   agent,
 }) => {
   const isMobile = useIsMobile();
+  const { updateAgent } = useAgents();
   const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (!open) {
+      setConfig(DEFAULT_CONFIG);
+      setNewTag('');
+      setIsSaving(false);
+      return;
+    }
+
     setConfig(deriveConfigFromAgent(agent));
     setNewTag('');
   }, [agent, open]);
@@ -126,19 +136,60 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!agent) return;
+
+    const trimmedName = config.name.trim();
+    if (!trimmedName) {
+      return;
+    }
+
     setIsSaving(true);
-    // Placeholder save implementation - in a real app we'd persist the config here.
-    setTimeout(() => {
+
+    try {
+      const updates: AgentUpdateInput = {};
+
+      if (agent.name !== trimmedName) {
+        updates.name = trimmedName;
+      }
+
+      if (agent.description !== config.description) {
+        updates.description = config.description;
+      }
+
+      if (agent.status !== config.status) {
+        updates.status = config.status;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        onClose();
+        return;
+      }
+
+      await updateAgent(agent.id, updates);
+      onClose();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to update agent configuration', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenChange = (value: boolean) => {
+    if (!value) {
+      setConfig(DEFAULT_CONFIG);
+      setNewTag('');
       setIsSaving(false);
       onClose();
-    }, 300);
+    }
   };
 
   if (!agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
           'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
@@ -146,17 +197,18 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
         )}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Configure Agent: {agent.name}
-          </DialogTitle>
-          <DialogDescription>
-            Customize your agent's behavior, settings, and workflows.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleSubmit} className="contents">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configure Agent: {agent.name}
+            </DialogTitle>
+            <DialogDescription>
+              Customize your agent's behavior, settings, and workflows.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
+          <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -365,14 +417,15 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               No workflows configured for this agent. Click "Manage Workflows" to add automation workflows.
             </p>
           </div>
-        </div>
+          </div>
 
-        <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="submit" disabled={isSaving}>
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
