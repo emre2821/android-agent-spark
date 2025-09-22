@@ -2,26 +2,19 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
+import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface AgentCardProps {
   agent: Agent;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
+  onBuildWorkflow: (agentId: string) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemory }) => {
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -53,7 +46,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div
+          className={cn(
+            'grid grid-cols-2 gap-4 text-sm',
+            isMobile && 'grid-cols-1 gap-3'
+          )}
+        >
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-agent-task" />
             <span className="text-muted-foreground">Tasks:</span>
@@ -70,35 +68,42 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           Last active: {agent.lastActive}
         </div>
 
-        <div className="flex gap-2 pt-2">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="flex-1"
+
           >
-            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center">
+            <Link
+              to={`/agents/${agent.id}`}
+              className={cn('flex items-center justify-center gap-1', isMobile && 'w-full')}
+            >
               <Eye className="h-4 w-4 mr-1" />
               View
             </Link>
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size={isMobile ? 'default' : 'sm'}
             onClick={() => onEdit(agent.id)}
-            className="flex-1"
+
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
           </Button>
           <Button
             variant="secondary"
-            size="sm"
+            size={isMobile ? 'default' : 'sm'}
             onClick={() => onViewMemory(agent.id)}
-            className="flex-1"
+
           >
             <Database className="h-4 w-4 mr-1" />
             Memory
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onBuildWorkflow(agent.id)}
+            className="w-full"
+          >
+            <Workflow className="h-4 w-4 mr-1" />
+            Workflows
           </Button>
         </div>
       </CardContent>

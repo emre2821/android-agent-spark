@@ -1,22 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { mockAgents } from './mockAgents.js';
-import {
-  createCredential,
-  listCredentials,
-  deleteCredential,
-  accessCredential,
-} from './credentialStore.js';
 
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '1mb' }));
-
-app.get('/agents', (req, res) => {
-  res.json(mockAgents);
-});
-
-app.get('/api/credentials', (req, res) => {
+intials', (req, res) => {
   const { userId, workspaceId } = req.query;
   if (!userId || !workspaceId) {
     res.status(400).json({ message: 'userId and workspaceId are required' });
@@ -84,7 +69,7 @@ app.post('/api/credentials/:id/access', async (req, res) => {
 });
 
 const port = process.env.PORT || 3001;
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`API server running on http://localhost:${port}`);
 });
 

@@ -5,15 +5,24 @@ const config: CapacitorConfig = {
   appName: 'android-agent-spark',
   webDir: 'dist',
   server: {
-    url: 'https://0a957d43-03c4-41f5-9216-7d605b188b38.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+    androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      backgroundColor: "#1a1a2e",
+      launchShowDuration: 1500,
+      backgroundColor: '#1a1a2e',
       showSpinner: false
+    },
+
     }
+  },
+  android: {
+    allowMixedContent: true,
+    backgroundColor: '#0f172a'
+  },
+  ios: {
+    backgroundColor: '#0f172a',
+    contentInset: 'always'
   }
 };
 

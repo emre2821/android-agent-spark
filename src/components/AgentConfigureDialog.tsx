@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,48 +16,22 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
 
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
 
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
   agent: Agent | null;
-  onSave: (agentId: string, config: any) => void;
-}
+
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
   onClose,
   agent,
-  onSave,
 }) => {
-  const [config, setConfig] = useState({
-    name: agent?.name || '',
-    description: agent?.description || '',
-    status: agent?.status || 'inactive',
-    autoStart: true,
-    learningMode: true,
-    maxTasks: 100,
-    priority: 'medium',
-    tags: ['automation', 'ai'],
-    systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
-    memoryLimit: 1000,
-  });
 
-  const [newTag, setNewTag] = useState('');
 
-  const handleSave = () => {
     if (!agent) return;
-    onSave(agent.id, config);
-    onClose();
+
   };
 
   const addTag = () => {
@@ -73,7 +47,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const removeTag = (tagToRemove: string) => {
     setConfig({
       ...config,
-      tags: config.tags.filter(tag => tag !== tagToRemove),
+      tags: config.tags.filter((tag) => tag !== tagToRemove),
     });
   };
 
@@ -81,7 +55,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
+
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -92,11 +71,11 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
               <Input
@@ -118,10 +97,13 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={config.status} onValueChange={(value: any) => setConfig({ ...config, status: value })}>
+                <Select
+                  value={config.status}
+
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -135,7 +117,10 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={config.priority} onValueChange={(value) => setConfig({ ...config, priority: value })}>
+                <Select
+                  value={config.priority}
+
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -155,8 +140,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Behavior Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
-            
-            <div className="flex items-center justify-between">
+
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
                 <p className="text-xs text-muted-foreground">
@@ -169,7 +153,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+
               <div className="space-y-0.5">
                 <Label className="text-sm">Learning mode</Label>
                 <p className="text-xs text-muted-foreground">
@@ -182,7 +166,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+
               <div className="space-y-2">
                 <Label htmlFor="maxTasks">Max concurrent tasks</Label>
                 <Input
@@ -214,7 +198,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           {/* Tags */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Tags</h4>
-            
+
             <div className="flex flex-wrap gap-2">
               {config.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="flex items-center gap-1">
@@ -224,14 +208,14 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               ))}
             </div>
 
-            <div className="flex gap-2">
+
               <Input
                 placeholder="Add new tag"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTag()}
               />
-              <Button size="sm" onClick={addTag}>
+
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -254,9 +238,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
           {/* Workflows */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground">Workflows</h4>
-              <Button variant="outline" size="sm">
+
+              >
                 <Workflow className="h-4 w-4 mr-2" />
                 Manage Workflows
               </Button>
@@ -267,13 +250,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
             <Save className="h-4 w-4 mr-2" />
-            Save Configuration
+            {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
       </DialogContent>
