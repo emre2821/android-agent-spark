@@ -4,24 +4,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Zap, Settings, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  status: 'active' | 'inactive' | 'learning';
-  tasksCompleted: number;
-  memoryItems: number;
-  lastActive: string;
-}
+import { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;
+  canConfigure: boolean;
+  canViewMemory: boolean;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemory }) => {
+export const AgentCard: React.FC<AgentCardProps> = ({
+  agent,
+  canConfigure,
+  canViewMemory,
+  onEdit,
+  onViewMemory,
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -85,8 +84,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onEdit(agent.id)}
+            onClick={() => canConfigure && onEdit(agent.id)}
             className="flex-1"
+            disabled={!canConfigure}
+            title={canConfigure ? undefined : 'Requires editor access'}
           >
             <Settings className="h-4 w-4 mr-1" />
             Configure
@@ -94,8 +95,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onEdit, onViewMemor
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => onViewMemory(agent.id)}
+            onClick={() => canViewMemory && onViewMemory(agent.id)}
             className="flex-1"
+            disabled={!canViewMemory}
+            title={canViewMemory ? undefined : 'Only admins can review memory'}
           >
             <Database className="h-4 w-4 mr-1" />
             Memory
