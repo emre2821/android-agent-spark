@@ -58,12 +58,18 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     setEditDraft(emptyDraft);
   }, []);
 
+  const resetDrafts = useCallback(() => {
+    setMemoryItems([]);
+    setNewItem(emptyDraft);
+    setIsLoading(false);
+    setIsSubmitting(false);
+    setIsUpdating(false);
+    resetEditor();
+  }, [resetEditor]);
+
   useEffect(() => {
     if (!open) {
-      setMemoryItems([]);
-      resetEditor();
-      setNewItem(emptyDraft);
-      setIsLoading(false);
+      resetDrafts();
       return;
     }
 
@@ -109,7 +115,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     return () => {
       active = false;
     };
-  }, [agentId, open, fetchAgentMemory, resetEditor, toast]);
+  }, [agentId, open, fetchAgentMemory, resetDrafts, resetEditor, toast]);
 
   const handleAddMemory = async () => {
     if (!agentId || !newItem.key.trim() || !newItem.value.trim()) return;
@@ -228,8 +234,15 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const memoryCount = useMemo(() => memoryItems.length, [memoryItems]);
 
+  const handleOpenChange = (value: boolean) => {
+    if (!value) {
+      resetDrafts();
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         <div className="space-y-6">
           <DialogHeader>
