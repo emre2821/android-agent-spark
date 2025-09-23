@@ -36,20 +36,14 @@ const offlineDefault = typeof navigator !== 'undefined' ? navigator.onLine : tru
 export const AgentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const agentsApi = useAgents();
-
   const {
     agents,
     createAgent,
     updateAgent,
     deleteAgent,
     isLoading,
-  } = agentsApi;
-
-  const agentLoadError = (agentsApi as { error?: unknown }).error as
-    | Error
-    | null
-    | undefined;
+    error: agentLoadError,
+  } = useAgents();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);

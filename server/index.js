@@ -23,8 +23,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const apiRouter = express.Router();
+
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/ws' });
 
 function broadcast(event, payload) {
   if (!event) return;
@@ -46,7 +48,7 @@ function asyncHandler(handler) {
   };
 }
 
-app.get(
+apiRouter.get(
   '/agents',
   asyncHandler(async (req, res) => {
     const agents = await listAgents();
@@ -54,7 +56,7 @@ app.get(
   }),
 );
 
-app.post(
+apiRouter.post(
   '/agents',
   asyncHandler(async (req, res) => {
     const agent = await createAgent(req.body ?? {});
@@ -63,7 +65,7 @@ app.post(
   }),
 );
 
-app.get(
+apiRouter.get(
   '/agents/:id',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.id);
@@ -75,7 +77,7 @@ app.get(
   }),
 );
 
-app.patch(
+apiRouter.patch(
   '/agents/:id',
   asyncHandler(async (req, res) => {
     const agent = await updateAgent(req.params.id, req.body ?? {});
@@ -88,7 +90,7 @@ app.patch(
   }),
 );
 
-app.delete(
+apiRouter.delete(
   '/agents/:id',
   asyncHandler(async (req, res) => {
     const deleted = await deleteAgent(req.params.id);
@@ -101,7 +103,7 @@ app.delete(
   }),
 );
 
-app.get(
+apiRouter.get(
   '/agents/:agentId/tasks',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -114,7 +116,7 @@ app.get(
   }),
 );
 
-app.post(
+apiRouter.post(
   '/agents/:agentId/tasks',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -128,7 +130,7 @@ app.post(
   }),
 );
 
-app.patch(
+apiRouter.patch(
   '/agents/:agentId/tasks/:taskId',
   asyncHandler(async (req, res) => {
     const result = await updateTask(req.params.agentId, req.params.taskId, req.body ?? {});
@@ -141,7 +143,7 @@ app.patch(
   }),
 );
 
-app.delete(
+apiRouter.delete(
   '/agents/:agentId/tasks/:taskId',
   asyncHandler(async (req, res) => {
     const result = await deleteTask(req.params.agentId, req.params.taskId);
@@ -154,7 +156,7 @@ app.delete(
   }),
 );
 
-app.get(
+apiRouter.get(
   '/agents/:agentId/memory',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -167,7 +169,7 @@ app.get(
   }),
 );
 
-app.post(
+apiRouter.post(
   '/agents/:agentId/memory',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -181,7 +183,7 @@ app.post(
   }),
 );
 
-app.patch(
+apiRouter.patch(
   '/agents/:agentId/memory/:memoryId',
   asyncHandler(async (req, res) => {
     const result = await updateMemory(req.params.agentId, req.params.memoryId, req.body ?? {});
@@ -194,7 +196,7 @@ app.patch(
   }),
 );
 
-app.delete(
+apiRouter.delete(
   '/agents/:agentId/memory/:memoryId',
   asyncHandler(async (req, res) => {
     const result = await deleteMemory(req.params.agentId, req.params.memoryId);
@@ -206,6 +208,8 @@ app.delete(
     res.status(204).send();
   }),
 );
+
+app.use('/api', apiRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
