@@ -7,17 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { useAgents } from '@/hooks/use-agents';
+import { useAgents, type AgentMemory } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
-
-interface AgentMemory {
-  id: string;
-  key: string;
-  value: string;
-  type: 'fact' | 'preference' | 'skill' | 'context';
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 interface AgentMemoryDialogProps {
   open: boolean;
@@ -27,23 +18,16 @@ interface AgentMemoryDialogProps {
 
 type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 
-interface AgentMemoryApi {
-  fetchAgentMemory?: (agentId: string) => Promise<AgentMemory[]>;
-  addMemoryItem?: (agentId: string, payload: MemoryDraft) => Promise<AgentMemory>;
-  updateMemoryItem?: (
-    agentId: string,
-    memoryId: string,
-    payload: MemoryDraft
-  ) => Promise<AgentMemory>;
-  deleteMemoryItem?: (agentId: string, memoryId: string) => Promise<void>;
-}
-
 const emptyDraft: MemoryDraft = { key: '', value: '', type: 'fact' };
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
   const { toast } = useToast();
-  const { fetchAgentMemory, addMemoryItem, updateMemoryItem, deleteMemoryItem } =
-    useAgents() as AgentMemoryApi;
+  const {
+    fetchAgentMemory,
+    addMemoryItem,
+    updateMemoryItem,
+    deleteMemoryItem,
+  } = useAgents();
 
   const [memoryItems, setMemoryItems] = useState<AgentMemory[]>([]);
   const [newItem, setNewItem] = useState<MemoryDraft>(emptyDraft);
@@ -76,7 +60,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     let active = true;
 
     const loadMemory = async () => {
-      if (!agentId || !fetchAgentMemory) {
+      if (!agentId) {
         setMemoryItems([]);
         setIsLoading(false);
         return;
@@ -119,14 +103,6 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const handleAddMemory = async () => {
     if (!agentId || !newItem.key.trim() || !newItem.value.trim()) return;
-    if (!addMemoryItem) {
-      toast({
-        title: 'Unable to add memory',
-        description: 'Memory service is not available.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
     setIsSubmitting(true);
     try {
@@ -153,15 +129,6 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const handleDeleteMemory = async (id: string) => {
     if (!agentId) return;
-    if (!deleteMemoryItem) {
-      toast({
-        title: 'Unable to remove memory',
-        description: 'Memory service is not available.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
       await deleteMemoryItem(agentId, id);
       setMemoryItems((items) => items.filter((item) => item.id !== id));
@@ -185,14 +152,6 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const handleUpdateMemory = async () => {
     if (!agentId || !editingId || !editDraft.key.trim() || !editDraft.value.trim()) return;
-    if (!updateMemoryItem) {
-      toast({
-        title: 'Unable to update memory',
-        description: 'Memory service is not available.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
     setIsUpdating(true);
     try {

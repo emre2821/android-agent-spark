@@ -27,6 +27,16 @@ npm run dev
 npm run server
 ```
 
+### Environment configuration
+
+The frontend reads API locations from the `VITE_API_URL` environment variable. When omitted, it falls back to relative `/api`
+requests which are proxied to `http://localhost:3001` during local development (see `vite.config.ts`). Set `VITE_API_URL`
+when deploying the UI separately from the API, e.g.:
+
+```bash
+VITE_API_URL="https://spark.example.com/api" npm run build
+```
+
 ### Production build
 ```bash
 npm run build
@@ -72,7 +82,7 @@ src/
 ```
 
 ## Next Steps
-- Persist agent updates back to the API and expand endpoints.
+- Expand the orchestration API with authentication, multi-tenant workspaces, and execution metrics.
 - Connect the desktop bridge toggles to native filesystem/webhook handlers.
 - Add tests and expand routing beyond the dashboard.
 

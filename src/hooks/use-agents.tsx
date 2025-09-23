@@ -68,6 +68,7 @@ export type MemoryInput = {
 export interface AgentsContextValue {
   agents: Agent[];
   isLoading: boolean;
+  error: Error | null;
   createAgent: (payload: AgentInput) => Promise<Agent>;
   updateAgent: (agentId: string, updates: AgentUpdateInput) => Promise<Agent>;
   deleteAgent: (agentId: string) => Promise<void>;
@@ -98,7 +99,9 @@ export const API_BASE = normalizedBase;
 
 const AgentsContext = createContext<AgentsContextValue | undefined>(undefined);
 
-async function request(path: string, init: RequestInit = {}) {
+type RequestResult<T> = { data?: T } & Record<string, unknown>;
+
+async function request<T = unknown>(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers ?? {});
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -124,12 +127,33 @@ async function request(path: string, init: RequestInit = {}) {
     throw new Error(message || 'Request failed');
   }
 
-  return data;
+  if (data && typeof data === 'object' && 'data' in (data as Record<string, unknown>)) {
+    return (data as RequestResult<T>).data as T;
+  }
+
+  return data as T;
 }
 
 const fetchAgents = async (): Promise<Agent[]> => {
-  const result = await request('/agents');
-  return Array.isArray(result) ? (result as Agent[]) : [];
+  const result = await request<Agent[] | RequestResult<Agent[]> | { agents?: Agent[] }>(
+    '/agents',
+  );
+
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  const fromData = (result as RequestResult<Agent[]> | undefined)?.data;
+  if (Array.isArray(fromData)) {
+    return fromData;
+  }
+
+  const fromAgents = (result as { agents?: Agent[] } | undefined)?.agents;
+  if (Array.isArray(fromAgents)) {
+    return fromAgents;
+  }
+
+  return [];
 };
 
 function deriveWebSocketUrl(baseUrl: string) {
@@ -140,7 +164,8 @@ function deriveWebSocketUrl(baseUrl: string) {
     url.search = '';
     return url.toString();
   } catch {
-    return baseUrl.replace(/^http/, 'ws') + '/ws';
+    const normalized = baseUrl.replace(/^http/, 'ws');
+    return `${normalized.replace(/\/+$/, '')}/ws`;
   }
 }
 
@@ -162,7 +187,11 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const [agents, setAgents] = useState<Agent[]>([]);
 
-  const { data: agentsData = [], isLoading } = useQuery<Agent[]>({
+  const {
+    data: agentsData = [],
+    isLoading,
+    error,
+  } = useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: fetchAgents,
   });
@@ -195,10 +224,10 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
 
   const createAgentMutation = useMutation<Agent, Error, AgentInput>({
     mutationFn: async (payload) => {
-      const result = (await request('/agents', {
+      const result = await request<Agent>('/agents', {
         method: 'POST',
         body: JSON.stringify(payload),
-      })) as Agent;
+      });
       return result;
     },
     onMutate: async (payload) => {
@@ -234,10 +263,10 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateAgentMutation = useMutation<Agent, Error, { agentId: string; updates: AgentUpdateInput }>({
     mutationFn: async ({ agentId, updates }) => {
-      const result = (await request(`/agents/${agentId}`, {
-        method: 'PUT',
+      const result = await request<Agent>(`/agents/${agentId}`, {
+        method: 'PATCH',
         body: JSON.stringify(updates),
-      })) as Agent;
+      });
       return result;
     },
     onMutate: async ({ agentId, updates }) => {
@@ -290,48 +319,97 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   const fetchAgentTasks = useCallback(async (agentId: string) => {
-    const result = await request(`/agents/${agentId}/tasks`);
-    return Array.isArray(result) ? (result as AgentTask[]) : [];
+    const result = await request<
+      AgentTask[] | RequestResult<AgentTask[]> | { tasks?: AgentTask[] }
+    >(`/agents/${agentId}/tasks`);
+
+    if (Array.isArray(result)) {
+      return result;
+    }
+
+    const fromData = (result as RequestResult<AgentTask[]> | undefined)?.data;
+    if (Array.isArray(fromData)) {
+      return fromData;
+    }
+
+    const fromTasks = (result as { tasks?: AgentTask[] } | undefined)?.tasks;
+    if (Array.isArray(fromTasks)) {
+      return fromTasks;
+    }
+
+    return [];
   }, []);
 
   const fetchAgentMemory = useCallback(async (agentId: string) => {
-    const result = await request(`/agents/${agentId}/memory`);
-    return Array.isArray(result) ? (result as AgentMemory[]) : [];
+    const result = await request<
+      AgentMemory[] | RequestResult<AgentMemory[]> | { memories?: AgentMemory[] }
+    >(`/agents/${agentId}/memory`);
+
+    if (Array.isArray(result)) {
+      return result;
+    }
+
+    const fromData = (result as RequestResult<AgentMemory[]> | undefined)?.data;
+    if (Array.isArray(fromData)) {
+      return fromData;
+    }
+
+    const fromMemories = (result as { memories?: AgentMemory[] } | undefined)?.memories;
+    if (Array.isArray(fromMemories)) {
+      return fromMemories;
+    }
+
+    return [];
   }, []);
 
   const createTaskMutation = useMutation<AgentTask, Error, { agentId: string; payload: TaskInput }>({
     mutationFn: async ({ agentId, payload }) => {
-      const result = await request(`/agents/${agentId}/tasks`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const result = await request<{ task: AgentTask; agent?: Agent }>(
+        `/agents/${agentId}/tasks`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
-      return result?.task as AgentTask;
+      if (!result?.task) {
+        throw new Error('Task creation response missing task payload');
+      }
+      return result.task;
     },
   });
 
   const updateTaskMutation = useMutation<AgentTask, Error, { agentId: string; taskId: string; payload: TaskUpdateInput }>({
     mutationFn: async ({ agentId, taskId, payload }) => {
-      const result = await request(`/agents/${agentId}/tasks/${taskId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
+      const result = await request<{ task: AgentTask; agent?: Agent }>(
+        `/agents/${agentId}/tasks/${taskId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
-      return result?.task as AgentTask;
+      if (!result?.task) {
+        throw new Error('Task update response missing task payload');
+      }
+      return result.task;
     },
   });
 
   const deleteTaskMutation = useMutation<void, Error, { agentId: string; taskId: string }>({
     mutationFn: async ({ agentId, taskId }) => {
-      const result = await request(`/agents/${agentId}/tasks/${taskId}`, {
-        method: 'DELETE',
-      });
+      const result = await request<{ agent?: Agent } | null>(
+        `/agents/${agentId}/tasks/${taskId}`,
+        {
+          method: 'DELETE',
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
     },
   });
@@ -356,39 +434,54 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addMemoryItem = useCallback(
     async (agentId: string, payload: MemoryInput) => {
-      const result = await request(`/agents/${agentId}/memory`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const result = await request<{ memory: AgentMemory; agent?: Agent }>(
+        `/agents/${agentId}/memory`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
-      return result?.memory as AgentMemory;
+      if (!result?.memory) {
+        throw new Error('Memory creation response missing memory payload');
+      }
+      return result.memory;
     },
     [updateAgentFromServer]
   );
 
   const updateMemoryItem = useCallback(
     async (agentId: string, memoryId: string, payload: MemoryInput) => {
-      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
+      const result = await request<{ memory: AgentMemory; agent?: Agent }>(
+        `/agents/${agentId}/memory/${memoryId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
-      return result?.memory as AgentMemory;
+      if (!result?.memory) {
+        throw new Error('Memory update response missing memory payload');
+      }
+      return result.memory;
     },
     [updateAgentFromServer]
   );
 
   const deleteMemoryItem = useCallback(
     async (agentId: string, memoryId: string) => {
-      const result = await request(`/agents/${agentId}/memory/${memoryId}`, {
-        method: 'DELETE',
-      });
+      const result = await request<{ agent?: Agent } | null>(
+        `/agents/${agentId}/memory/${memoryId}`,
+        {
+          method: 'DELETE',
+        },
+      );
       if (result?.agent) {
-        updateAgentFromServer(result.agent as Agent);
+        updateAgentFromServer(result.agent);
       }
     },
     [updateAgentFromServer]
@@ -452,11 +545,59 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const activeSocket = socket;
-    activeSocket.addEventListener('message', handleMessage);
+    const cleanupCallbacks: Array<() => void> = [];
+
+    const typedSocket = activeSocket as {
+      addEventListener?: (type: string, listener: (event: MessageEvent) => void) => void;
+      removeEventListener?: (type: string, listener: (event: MessageEvent) => void) => void;
+      on?: (event: string, listener: (data: unknown) => void) => void;
+      off?: (event: string, listener: (data: unknown) => void) => void;
+      removeListener?: (event: string, listener: (data: unknown) => void) => void;
+      onmessage?: ((event: MessageEvent) => void) | null;
+      close: () => void;
+    };
+
+    if (typeof typedSocket.addEventListener === 'function') {
+      typedSocket.addEventListener('message', handleMessage);
+      cleanupCallbacks.push(() => {
+        typedSocket.removeEventListener?.('message', handleMessage);
+      });
+    } else if (typeof typedSocket.on === 'function') {
+      const listener = (data: unknown) => {
+        handleMessage({ data } as MessageEvent);
+      };
+      typedSocket.on('message', listener);
+      cleanupCallbacks.push(() => {
+        if (typeof typedSocket.off === 'function') {
+          typedSocket.off('message', listener);
+        } else if (typeof typedSocket.removeListener === 'function') {
+          typedSocket.removeListener('message', listener);
+        }
+      });
+    } else {
+      const previousHandler = typedSocket.onmessage;
+      typedSocket.onmessage = handleMessage;
+      cleanupCallbacks.push(() => {
+        typedSocket.onmessage = previousHandler ?? null;
+      });
+    }
+
+    cleanupCallbacks.push(() => {
+      try {
+        typedSocket.close();
+      } catch {
+        /* noop */
+      }
+    });
 
     return () => {
-      activeSocket.removeEventListener('message', handleMessage);
-      activeSocket.close();
+      cleanupCallbacks.forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch {
+          /* noop */
+        }
+      });
     };
   }, [removeAgentFromServer, updateAgentFromServer]);
 
@@ -464,6 +605,7 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
     () => ({
       agents,
       isLoading,
+      error: (error as Error) ?? null,
       createAgent: (payload) => createAgentMutation.mutateAsync(payload),
       updateAgent: (agentId, updates) =>
         updateAgentMutation.mutateAsync({ agentId, updates }),
@@ -479,6 +621,7 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
     }), [
       agents,
       isLoading,
+      error,
       createAgentMutation,
       updateAgentMutation,
       deleteAgentMutation,

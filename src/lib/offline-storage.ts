@@ -1,49 +1,45 @@
-import { del, get, set } from 'idb-keyval'
-
-import type { StoredWorkflow } from '@/types/workflow'
-
-const WORKFLOW_CACHE_KEY = 'android-agent-spark:workflows'
+const WORKFLOW_CACHE_KEY = 'android-agent-spark:workflows';
 
 const hasIndexedDbSupport = (): boolean => {
   if (typeof window === 'undefined') {
-    return false
+    return false;
   }
 
   try {
-    return typeof indexedDB !== 'undefined'
+    return typeof indexedDB !== 'undefined';
   } catch (error) {
-    console.warn('[offline-storage] IndexedDB detection failed', error)
-    return false
+    console.warn('[offline-storage] IndexedDB detection failed', error);
+    return false;
   }
-}
+};
 
 const hasLocalStorageSupport = (): boolean => {
   if (typeof window === 'undefined') {
-    return false
+    return false;
   }
 
   try {
-    return typeof window.localStorage !== 'undefined'
+    return typeof window.localStorage !== 'undefined';
   } catch (error) {
-    console.warn('[offline-storage] localStorage detection failed', error)
-    return false
+    console.warn('[offline-storage] localStorage detection failed', error);
+    return false;
   }
-}
+};
 
 const deserializeWorkflows = (
-  raw: string | null | undefined
+  raw: string | null | undefined,
 ): StoredWorkflow[] | null => {
   if (!raw) {
-    return null
+    return null;
   }
 
   try {
-    return JSON.parse(raw) as StoredWorkflow[]
+    return JSON.parse(raw) as StoredWorkflow[];
   } catch (error) {
-    console.warn('[offline-storage] Failed to parse cached workflows', error)
-    return null
+    console.warn('[offline-storage] Failed to parse cached workflows', error);
+    return null;
   }
-}
+};
 
 const readFromLocalStorage = (): string | null => {
   if (!hasLocalStorageSupport()) {
@@ -85,58 +81,39 @@ const removeFromLocalStorage = (): void => {
 export const getCachedWorkflows = async (): Promise<StoredWorkflow[] | null> => {
   if (hasIndexedDbSupport()) {
     try {
-      const serialized = await get<string | null>(WORKFLOW_CACHE_KEY)
-      const parsed = deserializeWorkflows(serialized ?? null)
-
-      if (parsed) {
-        return parsed
-      }
-    } catch (error) {
-      console.warn('[offline-storage] Failed to read workflows from IndexedDB', error)
-    }
-  }
-
-  const fallback = readFromLocalStorage()
-  return deserializeWorkflows(fallback)
-}
 
 export const persistWorkflows = async (
-  workflows: StoredWorkflow[]
+  workflows: StoredWorkflow[],
 ): Promise<void> => {
-  const serialized = JSON.stringify(workflows)
+  const serialized = JSON.stringify(workflows);
 
   if (hasIndexedDbSupport()) {
     try {
-      await set(WORKFLOW_CACHE_KEY, serialized)
-      return
+      await set(WORKFLOW_CACHE_KEY, serialized);
+      return;
     } catch (error) {
-      console.warn('[offline-storage] Failed to write workflows to IndexedDB', error)
+      console.warn('[offline-storage] Failed to write workflows to IndexedDB', error);
     }
   }
 
-  writeToLocalStorage(serialized)
-}
 
 export const clearWorkflows = async (): Promise<void> => {
   if (hasIndexedDbSupport()) {
     try {
-      await del(WORKFLOW_CACHE_KEY)
+      await del(WORKFLOW_CACHE_KEY);
     } catch (error) {
-      console.warn('[offline-storage] Failed to clear workflows from IndexedDB', error)
+      console.warn('[offline-storage] Failed to clear workflows from IndexedDB', error);
     }
   }
-
-  removeFromLocalStorage()
-}
 
 export const isCacheExpired = (
   cachedAt: number,
   ttlMs: number,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): boolean => {
   if (ttlMs <= 0) {
-    return true
+    return true;
   }
 
-  return now - cachedAt >= ttlMs
-}
+  return now - cachedAt >= ttlMs;
+};
