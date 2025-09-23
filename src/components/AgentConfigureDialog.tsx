@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAgents } from '@/hooks/use-agents';
 import type { Agent, AgentStatus } from '@/types/agent';
+import type { AgentUpdateInput } from '@/hooks/use-agents';
 
 interface AgentConfigureDialogProps {
   open: boolean;
@@ -114,7 +115,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
 
   useEffect(() => {
-    setConfig(initialConfig);
+
     setNewTag('');
     setIsSaving(false);
   }, [initialConfig, open]);
@@ -143,39 +144,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
-  const handleSave = async () => {
-    if (!agent || !config.name.trim() || isSaving) {
+
       return;
     }
 
     setIsSaving(true);
-    const payload: AgentUpdatePayload = {
-      name: config.name.trim(),
-      description: config.description.trim(),
-      status: config.status,
-      priority: config.priority,
-      autoStart: config.autoStart,
-      learningMode: config.learningMode,
-      maxTasks: config.maxTasks,
-      memoryLimit: config.memoryLimit,
-      systemPrompt: config.systemPrompt,
-      tags: config.tags,
-    };
 
-    try {
-      await updateAgent(agent.id, payload);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save agent configuration', error);
-    } finally {
-      setIsSaving(false);
     }
   };
 
   if (!agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogChange}>
+
       <DialogContent
         className={cn(
           'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
@@ -183,17 +164,18 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
         )}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Configure Agent: {agent.name}
-          </DialogTitle>
-          <DialogDescription>
-            Customize your agent's behavior, settings, and workflows.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleSubmit} className="contents">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configure Agent: {agent.name}
+            </DialogTitle>
+            <DialogDescription>
+              Customize your agent's behavior, settings, and workflows.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
+          <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -402,14 +384,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               No workflows configured for this agent. Click "Manage Workflows" to add automation workflows.
             </p>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving || !config.name.trim()}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,8 +1,8 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import React, { useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Brain, Database, Zap, Settings, Eye, Workflow } from 'lucide-react';
+import { Brain, Database, Eye, Settings, Workflow, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,8 @@ interface AgentCardProps {
   onBuildWorkflow?: (agentId: string) => void;
 }
 
+
+
 export const AgentCard: React.FC<AgentCardProps> = ({
   agent,
   onEdit,
@@ -23,18 +25,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 }) => {
   const isMobile = useIsMobile();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-agent-active/20 text-agent-active border-agent-active/30';
-      case 'inactive':
-        return 'bg-agent-inactive/20 text-agent-inactive border-agent-inactive/30';
-      case 'learning':
-        return 'bg-agent-memory/20 text-agent-memory border-agent-memory/30';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
-  };
+  const statusColor = useMemo(() => statusColorMap[agent.status] ?? 'bg-muted text-muted-foreground', [
+    agent.status,
+  ]);
+
+  const actionButtonSize = isMobile ? 'default' : 'sm';
 
   const actionLayout = cn(
     'flex flex-wrap items-center gap-2',
@@ -45,14 +40,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
 
   return (
-    <Card className="agent-card border-border/50 hover:border-primary/30 group">
+    <Card className="agent-card border-border/50 hover:border-primary/30 transition-colors">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{agent.name}</CardTitle>
           </div>
-          <Badge className={getStatusColor(agent.status)}>{agent.status}</Badge>
+
         </div>
         <CardDescription className="text-muted-foreground">
           {agent.description}
@@ -62,65 +57,50 @@ export const AgentCard: React.FC<AgentCardProps> = ({
       <CardContent className="space-y-4">
         <div
           className={cn(
-            'grid grid-cols-2 gap-4 text-sm',
+            'grid grid-cols-2 gap-4 text-sm text-foreground',
             isMobile && 'grid-cols-1 gap-3'
           )}
         >
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-agent-task" />
             <span className="text-muted-foreground">Tasks:</span>
-            <span className="font-medium text-foreground">{agent.tasksCompleted}</span>
+            <span className="font-medium">{agent.tasksCompleted}</span>
           </div>
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-agent-memory" />
             <span className="text-muted-foreground">Memory:</span>
-            <span className="font-medium text-foreground">{agent.memoryItems}</span>
+            <span className="font-medium">{agent.memoryItems}</span>
           </div>
         </div>
 
         <div className="text-xs text-muted-foreground">Last active: {agent.lastActive}</div>
 
-        <div className={actionLayout}>
-          <Button
-            asChild
-            variant="outline"
-            size={actionButtonSize}
-            className={actionButtonClasses}
-          >
-            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center gap-1">
+
               <Eye className="h-4 w-4" />
               View
             </Link>
           </Button>
+
           <Button
             variant="outline"
             size={actionButtonSize}
             onClick={() => onEdit(agent.id)}
-            className={actionButtonClasses}
+
           >
             <Settings className="h-4 w-4" />
             Configure
           </Button>
+
           <Button
             variant="secondary"
             size={actionButtonSize}
             onClick={() => onViewMemory(agent.id)}
-            className={actionButtonClasses}
+
           >
             <Database className="h-4 w-4" />
             Memory
           </Button>
-          {onBuildWorkflow && (
-            <Button
-              variant="outline"
-              size={actionButtonSize}
-              onClick={() => onBuildWorkflow(agent.id)}
-              className={actionButtonClasses}
-            >
-              <Workflow className="h-4 w-4" />
-              Workflows
-            </Button>
-          )}
+
         </div>
       </CardContent>
     </Card>
