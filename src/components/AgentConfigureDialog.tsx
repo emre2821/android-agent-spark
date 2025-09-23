@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,9 +43,15 @@ type AgentConfigurationState = {
   tags: string[];
 };
 
-type AgentWithConfiguration = Agent & Partial<
-  Pick<AgentConfigurationState, 'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'>
->;
+type AgentWithConfiguration = Agent &
+  Partial<
+    Pick<
+      AgentConfigurationState,
+      'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'
+    >
+  >;
+
+type AgentUpdatePayload = Partial<Agent> & Partial<AgentConfigurationState>;
 
 const DEFAULT_CONFIG: AgentConfigurationState = {
   name: '',
@@ -106,17 +112,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setConfig(DEFAULT_CONFIG);
-      setNewTag('');
-      setIsSaving(false);
-      return;
-    }
+  const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
 
-    setConfig(deriveConfigFromAgent(agent));
+  useEffect(() => {
+
     setNewTag('');
-  }, [agent, open]);
+    setIsSaving(false);
+  }, [initialConfig, open]);
+
+  const handleDialogChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onClose();
+    }
+  };
 
   const addTag = () => {
     const trimmed = newTag.trim();
@@ -136,60 +144,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!agent) return;
 
-    const trimmedName = config.name.trim();
-    if (!trimmedName) {
       return;
     }
 
     setIsSaving(true);
 
-    try {
-      const updates: AgentUpdateInput = {};
-
-      if (agent.name !== trimmedName) {
-        updates.name = trimmedName;
-      }
-
-      if (agent.description !== config.description) {
-        updates.description = config.description;
-      }
-
-      if (agent.status !== config.status) {
-        updates.status = config.status;
-      }
-
-      if (Object.keys(updates).length === 0) {
-        onClose();
-        return;
-      }
-
-      await updateAgent(agent.id, updates);
-      onClose();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to update agent configuration', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleOpenChange = (value: boolean) => {
-    if (!value) {
-      setConfig(DEFAULT_CONFIG);
-      setNewTag('');
-      setIsSaving(false);
-      onClose();
     }
   };
 
   if (!agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+
       <DialogContent
         className={cn(
           'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
@@ -417,15 +384,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               No workflows configured for this agent. Click "Manage Workflows" to add automation workflows.
             </p>
           </div>
-          </div>
 
-          <DialogFooter>
-            <Button type="submit" disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </Button>
-          </DialogFooter>
-        </form>
       </DialogContent>
     </Dialog>
   );

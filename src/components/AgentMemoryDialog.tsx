@@ -18,7 +18,7 @@ interface AgentMemoryDialogProps {
 
 type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 
-const emptyDraft: MemoryDraft = { key: '', value: '', type: 'fact' };
+
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
   const { toast } = useToast();
@@ -30,8 +30,8 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   } = useAgents();
 
   const [memoryItems, setMemoryItems] = useState<AgentMemory[]>([]);
-  const [newItem, setNewItem] = useState<MemoryDraft>(emptyDraft);
-  const [editDraft, setEditDraft] = useState<MemoryDraft>(emptyDraft);
+  const [newItem, setNewItem] = useState<MemoryDraft>(createEmptyDraft());
+  const [editDraft, setEditDraft] = useState<MemoryDraft>(createEmptyDraft());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,16 +39,12 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const resetEditor = useCallback(() => {
     setEditingId(null);
-    setEditDraft(emptyDraft);
+    setEditDraft(createEmptyDraft());
   }, []);
 
   const resetDrafts = useCallback(() => {
     setMemoryItems([]);
-    setNewItem(emptyDraft);
-    setIsLoading(false);
-    setIsSubmitting(false);
-    setIsUpdating(false);
-    resetEditor();
+
   }, [resetEditor]);
 
   useEffect(() => {
@@ -69,7 +65,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
       setIsLoading(true);
       setMemoryItems([]);
       resetEditor();
-      setNewItem(emptyDraft);
+      setNewItem(createEmptyDraft());
 
       try {
         const items = await fetchAgentMemory(agentId);
@@ -99,7 +95,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     return () => {
       active = false;
     };
-  }, [agentId, open, fetchAgentMemory, resetDrafts, resetEditor, toast]);
+<
 
   const handleAddMemory = async () => {
     if (!agentId || !newItem.key.trim() || !newItem.value.trim()) return;
@@ -113,7 +109,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
       });
       if (memory) {
         setMemoryItems((items) => [memory, ...items]);
-        setNewItem(emptyDraft);
+        setNewItem(createEmptyDraft());
         toast({ title: 'Memory added', description: 'The memory item has been stored successfully.' });
       }
     } catch (error: any) {
@@ -201,7 +197,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+
       <DialogContent className="max-w-2xl">
         <div className="space-y-6">
           <DialogHeader>

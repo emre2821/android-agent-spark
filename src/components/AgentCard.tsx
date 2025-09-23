@@ -12,14 +12,10 @@ interface AgentCardProps {
   agent: Agent;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
-  onBuildWorkflow: (agentId: string) => void;
+  onBuildWorkflow?: (agentId: string) => void;
 }
 
-const statusColorMap: Record<Agent['status'], string> = {
-  active: 'bg-agent-active/20 text-agent-active border-agent-active/30',
-  inactive: 'bg-agent-inactive/20 text-agent-inactive border-agent-inactive/30',
-  learning: 'bg-agent-memory/20 text-agent-memory border-agent-memory/30',
-};
+
 
 export const AgentCard: React.FC<AgentCardProps> = ({
   agent,
@@ -35,6 +31,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
   const actionButtonSize = isMobile ? 'default' : 'sm';
 
+  const actionLayout = cn(
+    'flex flex-wrap items-center gap-2',
+    isMobile ? 'flex-col w-full' : 'justify-end'
+  );
+
+  const actionButtonSize = isMobile ? 'default' : 'sm';
+  const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
+
   return (
     <Card className="agent-card border-border/50 hover:border-primary/30 transition-colors">
       <CardHeader className="pb-3">
@@ -43,7 +47,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             <Brain className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{agent.name}</CardTitle>
           </div>
-          <Badge className={statusColor}>{agent.status}</Badge>
+
         </div>
         <CardDescription className="text-muted-foreground">
           {agent.description}
@@ -71,19 +75,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
         <div className="text-xs text-muted-foreground">Last active: {agent.lastActive}</div>
 
-        <div
-          className={cn(
-            'flex flex-wrap items-center gap-2',
-            isMobile ? 'flex-col' : 'justify-between'
-          )}
-        >
-          <Button
-            variant="ghost"
-            size={actionButtonSize}
-            className={cn('px-3', isMobile && 'w-full justify-center')}
-            asChild
-          >
-            <Link to={`/agents/${agent.id}`} className="flex items-center gap-2">
+
               <Eye className="h-4 w-4" />
               View
             </Link>
@@ -93,9 +85,9 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             variant="outline"
             size={actionButtonSize}
             onClick={() => onEdit(agent.id)}
-            className={cn(isMobile && 'w-full justify-center')}
+
           >
-            <Settings className="h-4 w-4 mr-1" />
+            <Settings className="h-4 w-4" />
             Configure
           </Button>
 
@@ -103,21 +95,12 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             variant="secondary"
             size={actionButtonSize}
             onClick={() => onViewMemory(agent.id)}
-            className={cn(isMobile && 'w-full justify-center')}
+
           >
-            <Database className="h-4 w-4 mr-1" />
+            <Database className="h-4 w-4" />
             Memory
           </Button>
 
-          <Button
-            variant="outline"
-            size={actionButtonSize}
-            onClick={() => onBuildWorkflow?.(agent.id)}
-            className={cn('flex-1', isMobile && 'w-full justify-center')}
-          >
-            <Workflow className="h-4 w-4 mr-1" />
-            Workflows
-          </Button>
         </div>
       </CardContent>
     </Card>
