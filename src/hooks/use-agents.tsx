@@ -105,7 +105,7 @@ async function request(path: string, init: RequestInit = {}) {
   }
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   const text = await response.text();
-  let data: any = null;
+  let data: unknown = null;
   if (text) {
     try {
       data = JSON.parse(text);
@@ -115,7 +115,12 @@ async function request(path: string, init: RequestInit = {}) {
   }
 
   if (!response.ok) {
-    const message = typeof data === 'string' ? data : data?.message;
+    const message =
+      typeof data === 'string'
+        ? data
+        : typeof data === 'object' && data !== null && 'message' in data
+        ? (data as { message?: string }).message
+        : undefined;
     throw new Error(message || 'Request failed');
   }
 
@@ -407,6 +412,10 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    if (!socket) {
+      return undefined;
+    }
+
     const handleMessage = (event: MessageEvent) => {
       try {
         const message = JSON.parse(event.data ?? '{}');
@@ -442,25 +451,12 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    const hasAddEventListener =
-      typeof (socket as any)?.addEventListener === 'function';
-
-    if (hasAddEventListener) {
-      (socket as any).addEventListener('message', handleMessage);
-    } else {
-      (socket as any).onmessage = handleMessage as any;
-    }
+    const activeSocket = socket;
+    activeSocket.addEventListener('message', handleMessage);
 
     return () => {
-      if (!socket) {
-        return;
-      }
-      if (hasAddEventListener) {
-        (socket as any).removeEventListener('message', handleMessage);
-      } else {
-        (socket as any).onmessage = null;
-      }
-      socket.close();
+      activeSocket.removeEventListener('message', handleMessage);
+      activeSocket.close();
     };
   }, [removeAgentFromServer, updateAgentFromServer]);
 
