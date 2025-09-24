@@ -19,7 +19,9 @@ import { Task, TaskStatus, TaskStreamEvent } from '@/types/task';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ??
   'http://localhost:3001';
-const WS_BASE = API_BASE.replace(/^http/i, (match) => (match === 'https' ? 'wss' : 'ws'));
+const WS_BASE = API_BASE.replace(/^https?:\/\//i, (protocol) =>
+  protocol.toLowerCase() === 'https://' ? 'wss://' : 'ws://'
+);
 
 const agentsKey: QueryKey = ['agents'];
 const memoryKey = (agentId: string): QueryKey => ['agents', agentId, 'memory'];
