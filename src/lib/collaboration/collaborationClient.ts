@@ -113,7 +113,7 @@ type ClientMessage = JoinMessage | LeaveMessage | AckClientMessage;
 interface PendingRequest {
   resolve: (value: AckMessage | ConflictMessage) => void;
   reject: (reason: Error) => void;
-  timeout: ReturnType<typeof setTimeout>;
+  timeout?: ReturnType<typeof setTimeout>;
 }
 
 export class CollaborationConflictError extends Error {
@@ -142,7 +142,7 @@ export class CollaborationClient {
   private socket: WebSocket | null = null;
   private listeners: Partial<{ [K in EventKey]: Set<Listener<CollaborationEventMap[K]>> }> = {};
   private pending: Map<string, PendingRequest> = new Map();
-  private queue: ClientMessage[] = [];
+  private queue: { message: ClientMessage; onSent?: () => void }[] = [];
   private shouldReconnect = false;
   private reconnectDelay = 1000;
 
@@ -199,18 +199,22 @@ export class CollaborationClient {
   private flushQueue() {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
     while (this.queue.length > 0) {
-      const message = this.queue.shift();
+      const queued = this.queue.shift();
+      if (!queued) continue;
+      const { message, onSent } = queued;
       this.socket.send(JSON.stringify(message));
+      onSent?.();
     }
   }
 
-  private send(message: ClientMessage) {
+  private send(message: ClientMessage, onSent?: () => void) {
     if (typeof window === 'undefined') return;
     this.connect();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
+      onSent?.();
     } else {
-      this.queue.push(message);
+      this.queue.push({ message, onSent });
     }
   }
 
@@ -220,19 +224,25 @@ export class CollaborationClient {
     }
     const ackId = message.ackId as string;
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.pending.delete(ackId);
-        reject(new Error('Request timed out'));
-      }, ACK_TIMEOUT);
-      this.pending.set(ackId, { resolve, reject, timeout });
-      this.send(message);
+      const pending: PendingRequest = { resolve, reject };
+      const startTimeout = () => {
+        if (pending.timeout) return;
+        pending.timeout = setTimeout(() => {
+          this.pending.delete(ackId);
+          reject(new Error('Request timed out'));
+        }, ACK_TIMEOUT);
+      };
+      this.pending.set(ackId, pending);
+      this.send(message, startTimeout);
     });
   }
 
   private completeRequest(ackId: string, payload: AckMessage | ConflictMessage, error?: CollaborationConflictError | Error) {
     const pending = this.pending.get(ackId);
     if (!pending) return;
-    clearTimeout(pending.timeout);
+    if (pending.timeout) {
+      clearTimeout(pending.timeout);
+    }
     this.pending.delete(ackId);
     if (error) {
       pending.reject(error);
