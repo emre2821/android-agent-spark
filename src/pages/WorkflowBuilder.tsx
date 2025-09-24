@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { workflowTemplates } from '@/lib/workflowTemplates';
-import { useWorkflows } from '@/hooks/use-workflows';
+import { useWorkflows, type WorkflowUpsert } from '@/hooks/use-workflows';
 import { Workflow, WorkflowNode, WorkflowEdge as WorkflowConnection, WorkflowPort } from '@/types/workflow';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Copy, Loader2, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
@@ -121,7 +121,6 @@ const WorkflowBuilderInner = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const workflowId = searchParams.get('workflowId');
   const {
-    workflows,
     getWorkflowById,
     saveWorkflow,
     publishWorkflow,
@@ -141,8 +140,12 @@ const WorkflowBuilderInner = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdge>([]);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [persistedWorkflow, setPersistedWorkflow] = useState<Workflow | undefined>(
+    workflowId ? getWorkflowById(workflowId) : undefined,
+  );
 
   const selectedWorkflow = workflowId ? getWorkflowById(workflowId) : undefined;
+  const activeWorkflow = selectedWorkflow ?? persistedWorkflow;
 
   const hydrateFromWorkflow = useCallback(
     (workflow: Workflow) => {
@@ -155,6 +158,7 @@ const WorkflowBuilderInner = () => {
       const canvas = toCanvasState(workflow);
       setNodes(canvas.nodes);
       setEdges(canvas.edges);
+      setPersistedWorkflow(workflow);
       setHasHydrated(true);
     },
     [setNodes, setEdges],
@@ -169,8 +173,20 @@ const WorkflowBuilderInner = () => {
     setOutputs([]);
     setNodes([]);
     setEdges([]);
+    setPersistedWorkflow(undefined);
     setHasHydrated(true);
   }, [setNodes, setEdges]);
+
+  useEffect(() => {
+    if (!workflowId) {
+      setPersistedWorkflow(undefined);
+      return;
+    }
+
+    if (persistedWorkflow && persistedWorkflow.id !== workflowId) {
+      setPersistedWorkflow(undefined);
+    }
+  }, [workflowId, persistedWorkflow]);
 
   useEffect(() => {
     if (workflowId && selectedWorkflow) {
@@ -252,29 +268,29 @@ const WorkflowBuilderInner = () => {
     [setEdges],
   );
 
-  const toWorkflowPayload = (): Workflow => {
+  const toWorkflowPayload = (): WorkflowUpsert => {
     const tags = tagsInput
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean);
 
-    const baseExecution = selectedWorkflow?.execution ?? {
+    const baseExecution = activeWorkflow?.execution ?? {
       runCount: 0,
       lastRunStatus: 'idle' as const,
     };
 
     return {
-      id: selectedWorkflow?.id ?? '',
+      id: activeWorkflow?.id,
       name,
       description,
-      status: selectedWorkflow?.status ?? 'draft',
-      version: selectedWorkflow?.version ?? 1,
+      status: activeWorkflow?.status ?? 'draft',
+      version: activeWorkflow?.version ?? 1,
       triggerId: nodes[0]?.id,
       nodes: nodes.map(toWorkflowNode),
       edges: edges.map(toWorkflowEdge),
       inputs,
       outputs,
-      createdAt: selectedWorkflow?.createdAt ?? new Date().toISOString(),
+      createdAt: activeWorkflow?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       execution: {
         ...baseExecution,
@@ -282,8 +298,8 @@ const WorkflowBuilderInner = () => {
       },
       metadata: {
         tags,
-        owner: selectedWorkflow?.metadata.owner,
-        category: selectedWorkflow?.metadata.category,
+        owner: activeWorkflow?.metadata.owner,
+        category: activeWorkflow?.metadata.category,
       },
     };
   };
@@ -291,7 +307,7 @@ const WorkflowBuilderInner = () => {
   const handleSave = async () => {
     try {
       const payload = toWorkflowPayload();
-      const saved = await saveWorkflow({ ...payload, id: selectedWorkflow?.id || undefined });
+      const saved = await saveWorkflow(payload);
       hydrateFromWorkflow(saved);
       const params = new URLSearchParams(searchParams);
       params.set('workflowId', saved.id);
@@ -311,9 +327,9 @@ const WorkflowBuilderInner = () => {
   };
 
   const handlePublish = async () => {
-    if (!selectedWorkflow?.id) return;
+    if (!activeWorkflow?.id) return;
     try {
-      const result = await publishWorkflow(selectedWorkflow.id);
+      const result = await publishWorkflow(activeWorkflow.id);
       hydrateFromWorkflow(result);
       toast({
         title: 'Workflow published',
@@ -329,9 +345,9 @@ const WorkflowBuilderInner = () => {
   };
 
   const handleDuplicate = async () => {
-    if (!selectedWorkflow?.id) return;
+    if (!activeWorkflow?.id) return;
     try {
-      const duplicate = await duplicateWorkflow(selectedWorkflow.id);
+      const duplicate = await duplicateWorkflow(activeWorkflow.id);
       hydrateFromWorkflow(duplicate);
       const params = new URLSearchParams(searchParams);
       params.set('workflowId', duplicate.id);
@@ -417,7 +433,7 @@ const WorkflowBuilderInner = () => {
     setter((current) => current.filter((port) => port.id !== id));
   };
 
-  const isPublishDisabled = !selectedWorkflow?.id || isPublishing;
+  const isPublishDisabled = !activeWorkflow?.id || isPublishing;
   const saveDisabled = !name.trim() || nodes.length === 0 || isSaving;
 
   return (
@@ -429,9 +445,9 @@ const WorkflowBuilderInner = () => {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            {selectedWorkflow?.status && (
-              <Badge variant={selectedWorkflow.status === 'published' ? 'default' : 'outline'}>
-                {selectedWorkflow.status}
+            {activeWorkflow?.status && (
+              <Badge variant={activeWorkflow.status === 'published' ? 'default' : 'outline'}>
+                {activeWorkflow.status}
               </Badge>
             )}
           </div>
@@ -441,7 +457,7 @@ const WorkflowBuilderInner = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {selectedWorkflow?.id && (
+          {activeWorkflow?.id && (
             <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={isDuplicating}>
               {isDuplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
               Duplicate
