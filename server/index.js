@@ -18,6 +18,27 @@ import {
   updateMemory,
   deleteMemory,
 } from './dataStore.js';
+import {
+  listWorkflows,
+  getWorkflow as getStoredWorkflow,
+  createWorkflow as createStoredWorkflow,
+  updateWorkflow as updateStoredWorkflow,
+  deleteWorkflow as deleteStoredWorkflow,
+  upsertWorkflow,
+  listWorkflowTriggers,
+  createWorkflowTrigger,
+  updateWorkflowTrigger,
+  deleteWorkflowTrigger,
+  listWorkflowRuns,
+} from './workflowStore.js';
+import { triggerEngine } from './triggerEngine.js';
+import {
+  triggerInputSchema,
+  triggerUpdateSchema,
+  workflowInputSchema,
+  workflowUpdateSchema,
+  queuePublishSchema,
+} from './validation/workflowSchemas.js';
 
 const app = express();
 app.use(cors());
@@ -53,6 +74,130 @@ apiRouter.get(
   asyncHandler(async (req, res) => {
     const agents = await listAgents();
     res.json({ data: agents });
+  }),
+);
+
+apiRouter.get(
+  '/workflows',
+  asyncHandler(async (req, res) => {
+    const workflows = await listWorkflows();
+    res.json({ data: workflows });
+  }),
+);
+
+apiRouter.post(
+  '/workflows',
+  asyncHandler(async (req, res) => {
+    const payload = workflowInputSchema.parse(req.body ?? {});
+    const workflow = await createStoredWorkflow(payload);
+    await triggerEngine.syncWorkflow(workflow);
+    res.status(201).json({ data: workflow });
+  }),
+);
+
+apiRouter.put(
+  '/workflows/:workflowId',
+  asyncHandler(async (req, res) => {
+    const payload = workflowInputSchema.parse({ ...req.body, id: req.params.workflowId });
+    const workflow = await upsertWorkflow(req.params.workflowId, payload);
+    await triggerEngine.syncWorkflow(workflow);
+    res.status(200).json({ data: workflow });
+  }),
+);
+
+apiRouter.get(
+  '/workflows/:workflowId',
+  asyncHandler(async (req, res) => {
+    const workflow = await getStoredWorkflow(req.params.workflowId);
+    if (!workflow) {
+      res.status(404).json({ message: 'Workflow not found' });
+      return;
+    }
+    res.json({ data: workflow });
+  }),
+);
+
+apiRouter.patch(
+  '/workflows/:workflowId',
+  asyncHandler(async (req, res) => {
+    const payload = workflowUpdateSchema.parse(req.body ?? {});
+    const workflow = await updateStoredWorkflow(req.params.workflowId, payload);
+    if (!workflow) {
+      res.status(404).json({ message: 'Workflow not found' });
+      return;
+    }
+    await triggerEngine.syncWorkflow(workflow);
+    res.json({ data: workflow });
+  }),
+);
+
+apiRouter.delete(
+  '/workflows/:workflowId',
+  asyncHandler(async (req, res) => {
+    const deleted = await deleteStoredWorkflow(req.params.workflowId);
+    if (!deleted) {
+      res.status(404).json({ message: 'Workflow not found' });
+      return;
+    }
+    await triggerEngine.unregisterWorkflow(req.params.workflowId);
+    res.status(204).send();
+  }),
+);
+
+apiRouter.get(
+  '/workflows/:workflowId/triggers',
+  asyncHandler(async (req, res) => {
+    const triggers = await listWorkflowTriggers(req.params.workflowId);
+    res.json({ data: triggers });
+  }),
+);
+
+apiRouter.post(
+  '/workflows/:workflowId/triggers',
+  asyncHandler(async (req, res) => {
+    const payload = triggerInputSchema.parse(req.body ?? {});
+    const trigger = await createWorkflowTrigger(req.params.workflowId, payload);
+    const workflow = await getStoredWorkflow(req.params.workflowId);
+    if (workflow) {
+      await triggerEngine.refreshTrigger(req.params.workflowId, trigger);
+    }
+    res.status(201).json({ data: trigger });
+  }),
+);
+
+apiRouter.patch(
+  '/workflows/:workflowId/triggers/:triggerId',
+  asyncHandler(async (req, res) => {
+    const payload = triggerUpdateSchema.parse(req.body ?? {});
+    const trigger = await updateWorkflowTrigger(req.params.workflowId, req.params.triggerId, payload);
+    await triggerEngine.refreshTrigger(req.params.workflowId, trigger);
+    res.json({ data: trigger });
+  }),
+);
+
+apiRouter.delete(
+  '/workflows/:workflowId/triggers/:triggerId',
+  asyncHandler(async (req, res) => {
+    await deleteWorkflowTrigger(req.params.workflowId, req.params.triggerId);
+    await triggerEngine.unregisterTrigger(req.params.triggerId);
+    res.status(204).send();
+  }),
+);
+
+apiRouter.get(
+  '/workflows/:workflowId/runs',
+  asyncHandler(async (req, res) => {
+    const runs = await listWorkflowRuns(req.params.workflowId);
+    res.json({ data: runs });
+  }),
+);
+
+apiRouter.post(
+  '/triggers/queue/:queueName/publish',
+  asyncHandler(async (req, res) => {
+    const payload = queuePublishSchema.parse(req.body ?? {});
+    await triggerEngine.publishToQueue(req.params.queueName, payload.payload ?? null);
+    res.status(202).json({ message: 'Message enqueued' });
   }),
 );
 
@@ -211,6 +356,18 @@ apiRouter.delete(
 
 app.use('/api', apiRouter);
 
+app.post(
+  '/triggers/webhook/:triggerId',
+  asyncHandler(async (req, res) => {
+    await triggerEngine.handleWebhook(req.params.triggerId, {
+      headers: req.headers,
+      body: req.body,
+      query: req.query,
+    });
+    res.status(202).json({ message: 'Webhook accepted' });
+  }),
+);
+
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
@@ -251,8 +408,13 @@ export function startServer(port = DEFAULT_PORT) {
       return;
     }
 
-    const handleListening = () => {
+    const handleListening = async () => {
       server.off('error', handleError);
+      try {
+        await triggerEngine.initialize();
+      } catch (error) {
+        console.error('Failed to initialize trigger engine', error);
+      }
       console.log(`API server running on http://localhost:${port}`);
       resolve(server);
     };

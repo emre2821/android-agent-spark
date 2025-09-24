@@ -1,4 +1,4 @@
-export type WorkflowStatus = 'draft' | 'active' | 'archived';
+export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived';
 export type WorkflowRunStatus = 'idle' | 'running' | 'success' | 'error';
 export type WorkflowStepType =
   | 'trigger'
@@ -7,6 +7,9 @@ export type WorkflowStepType =
   | 'integration'
   | 'output'
   | (string & {});
+
+export type WorkflowTriggerType = 'cron' | 'webhook' | 'queue';
+export type WorkflowTriggerStatus = 'active' | 'paused';
 
 export type WorkflowPortType = 'text' | 'number' | 'boolean' | 'json' | 'file' | (string & {});
 
@@ -21,6 +24,58 @@ export interface WorkflowPort {
   dataType: WorkflowPortType;
   description?: string;
 }
+
+export interface WorkflowTriggerMetadata {
+  nextRunAt?: string | null;
+  preview?: string[];
+}
+
+interface WorkflowTriggerBase<Config> {
+  id: string;
+  workflowId: string;
+  name: string;
+  type: WorkflowTriggerType;
+  status: WorkflowTriggerStatus;
+  config: Config;
+  metadata?: WorkflowTriggerMetadata | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CronTriggerConfig = {
+  expression: string;
+  timezone: string;
+  payload?: Record<string, unknown> | null;
+};
+
+export interface CronWorkflowTrigger extends WorkflowTriggerBase<CronTriggerConfig> {
+  type: 'cron';
+  metadata?: (WorkflowTriggerMetadata & { preview?: string[] }) | null;
+}
+
+export interface WebhookTriggerConfig {
+  secret?: string | null;
+  path?: string | null;
+}
+
+export interface WebhookWorkflowTrigger extends WorkflowTriggerBase<WebhookTriggerConfig> {
+  type: 'webhook';
+}
+
+export interface QueueTriggerConfig {
+  queueName: string;
+  batchSize?: number;
+}
+
+export interface QueueWorkflowTrigger extends WorkflowTriggerBase<QueueTriggerConfig> {
+  type: 'queue';
+}
+
+export type WorkflowTrigger =
+  | CronWorkflowTrigger
+  | WebhookWorkflowTrigger
+  | QueueWorkflowTrigger
+  | (WorkflowTriggerBase<Record<string, unknown>> & { type: string });
 
 export interface WorkflowBranch {
   id: string;
@@ -37,6 +92,20 @@ export interface WorkflowExecutionLog {
   status: WorkflowLogStatus;
   message: string;
   metadata?: Record<string, unknown>;
+}
+
+export type WorkflowRunRecordStatus = 'pending' | 'success' | 'error';
+
+export interface WorkflowRunRecord {
+  id: string;
+  workflowId: string;
+  triggerId: string;
+  status: WorkflowRunRecordStatus;
+  context?: Record<string, unknown> | null;
+  result?: Record<string, unknown> | null;
+  error?: string | null;
+  startedAt: string;
+  finishedAt?: string | null;
 }
 
 export type WorkflowStepConfig = Record<string, unknown>;
@@ -72,6 +141,8 @@ export interface Workflow {
   status: WorkflowStatus;
   steps: WorkflowStep[];
   versions: WorkflowVersion[];
+  triggers?: WorkflowTrigger[];
+  runs?: WorkflowRunRecord[];
   createdAt: string;
   updatedAt: string;
   lastRunAt?: string;
@@ -89,6 +160,8 @@ export interface StoredWorkflow {
   status?: WorkflowStatus;
   lastRunStatus?: WorkflowRunStatus;
   agentId?: string | null;
+  triggers?: WorkflowTrigger[];
+  runs?: WorkflowRunRecord[];
 }
 
 export const DEFAULT_STEP_POSITION: WorkflowPosition = { x: 160, y: 160 };
