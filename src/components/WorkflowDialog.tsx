@@ -8,18 +8,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import {
-  Workflow,
-  Plus,
-  Save,
-  Play,
-
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -216,16 +209,13 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="workflowDescription">Description</Label>
-                <Textarea
-                  id="workflowDescription"
-                  value={customWorkflow.description}
-                  onChange={(e) => setCustomWorkflow({ ...customWorkflow, description: e.target.value })}
-                  placeholder="Describe what this workflow does"
-                  rows={3}
-                />
-              </div>
+              <WorkflowBuilder
+                resourceId={`workflow:${agentId ?? 'custom'}`}
+                initialDescription={customWorkflow.description}
+                onSave={(description) =>
+                  setCustomWorkflow((previous) => ({ ...previous, description }))
+                }
+              />
 
               <Separator />
 

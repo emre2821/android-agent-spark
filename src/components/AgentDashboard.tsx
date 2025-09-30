@@ -24,8 +24,6 @@ import { AgentCard } from './AgentCard';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
-import { CredentialsManagerDialog } from './credentials/CredentialsManagerDialog';
-import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
 
 import { useAgents } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
@@ -313,27 +311,6 @@ export const AgentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {agentLoadError ? (
-        renderErrorState(agentLoadError)
-      ) : isLoading && agents.length === 0 ? (
-        renderLoadingState()
-      ) : filteredAgents.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredAgents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onEdit={setSelectedAgentConfig}
-              onViewMemory={setSelectedAgentMemory}
-              onBuildWorkflow={handleBuildWorkflow}
-            />
-          ))}
-        </div>
-      ) : (
-        renderEmptyState()
-      )}
-
-      <CreateAgentDialog
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateAgent}

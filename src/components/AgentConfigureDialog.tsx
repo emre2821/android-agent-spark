@@ -1,4 +1,3 @@
-import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,12 +14,6 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useAgents } from '@/hooks/use-agents';
-import type { Agent, AgentStatus } from '@/types/agent';
-import type { AgentUpdateInput } from '@/hooks/use-agents';
 
 interface AgentConfigureDialogProps {
   open: boolean;
@@ -106,9 +99,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   onClose,
   agent,
 }) => {
-  const isMobile = useIsMobile();
-  const { updateAgent } = useAgents();
-  const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
+
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -116,13 +107,35 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   useEffect(() => {
 
-    setNewTag('');
-    setIsSaving(false);
-  }, [initialConfig, open]);
 
-  const handleDialogChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      onClose();
+  };
+
+  const handleRequestLock = async () => {
+    const result = await collaboration.requestLock({ reason: 'Editing agent configuration' });
+    if (!result.ok) {
+      toast({
+        title: 'Unable to acquire lock',
+        description: result.message || 'Another collaborator currently holds the lock.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Lock acquired', description: 'You now control this configuration.' });
+    }
+  };
+
+  const handleReleaseLock = async () => {
+    const result = await collaboration.releaseLock({ reason: 'Finished editing configuration' });
+    if (result.ok) {
+      toast({ title: 'Lock released', description: 'Others can now edit this configuration.' });
+    }
+  };
+
+  const handleForceUnlock = async () => {
+    const reason = window.prompt('Enter a reason for force unlocking this configuration.');
+    if (reason === null) return;
+    const result = await collaboration.forceUnlock(reason || 'Force unlock requested');
+    if (result.ok) {
+      toast({ title: 'Lock overridden', description: 'You now control this configuration.' });
     }
   };
 
@@ -157,25 +170,6 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   return (
 
-      <DialogContent
-        className={cn(
-          'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
-          isMobile &&
-            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
-        )}
-      >
-        <form onSubmit={handleSubmit} className="contents">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Configure Agent: {agent.name}
-            </DialogTitle>
-            <DialogDescription>
-              Customize your agent's behavior, settings, and workflows.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
