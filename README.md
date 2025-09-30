@@ -42,6 +42,27 @@ VITE_API_URL="https://spark.example.com/api" npm run build
 npm run build
 ```
 
+### Testing
+```bash
+npm run test
+```
+
+Run the Vitest suite once in CI/automation contexts. For watch mode during development use `npm run test:watch`.
+
+### Type checking
+```bash
+npm run typecheck
+```
+
+Performs a project-wide TypeScript compilation pass without emitting build artifacts.
+
+### Validation bundle
+```bash
+npm run validate
+```
+
+Chains linting, type checking, and the Vitest run to mirror the local checks expected before pushing changes.
+
 ### Mobile & desktop bundles
 - **Android:** `npm run bundle:android`
 - **iOS:** `npm run bundle:ios`
