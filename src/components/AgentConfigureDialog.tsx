@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,10 +14,6 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import type { Agent, AgentStatus } from '@/types/agent';
 
 interface AgentConfigureDialogProps {
   open: boolean;
@@ -41,9 +36,15 @@ type AgentConfigurationState = {
   tags: string[];
 };
 
-type AgentWithConfiguration = Agent & Partial<
-  Pick<AgentConfigurationState, 'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'>
->;
+type AgentWithConfiguration = Agent &
+  Partial<
+    Pick<
+      AgentConfigurationState,
+      'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'
+    >
+  >;
+
+type AgentUpdatePayload = Partial<Agent> & Partial<AgentConfigurationState>;
 
 const DEFAULT_CONFIG: AgentConfigurationState = {
   name: '',
@@ -98,15 +99,45 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   onClose,
   agent,
 }) => {
-  const isMobile = useIsMobile();
-  const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
+
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
+
   useEffect(() => {
-    setConfig(deriveConfigFromAgent(agent));
-    setNewTag('');
-  }, [agent, open]);
+
+
+  };
+
+  const handleRequestLock = async () => {
+    const result = await collaboration.requestLock({ reason: 'Editing agent configuration' });
+    if (!result.ok) {
+      toast({
+        title: 'Unable to acquire lock',
+        description: result.message || 'Another collaborator currently holds the lock.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Lock acquired', description: 'You now control this configuration.' });
+    }
+  };
+
+  const handleReleaseLock = async () => {
+    const result = await collaboration.releaseLock({ reason: 'Finished editing configuration' });
+    if (result.ok) {
+      toast({ title: 'Lock released', description: 'Others can now edit this configuration.' });
+    }
+  };
+
+  const handleForceUnlock = async () => {
+    const reason = window.prompt('Enter a reason for force unlocking this configuration.');
+    if (reason === null) return;
+    const result = await collaboration.forceUnlock(reason || 'Force unlock requested');
+    if (result.ok) {
+      toast({ title: 'Lock overridden', description: 'You now control this configuration.' });
+    }
+  };
 
   const addTag = () => {
     const trimmed = newTag.trim();
@@ -126,37 +157,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
-  const handleSave = () => {
+
+      return;
+    }
+
     setIsSaving(true);
-    // Placeholder save implementation - in a real app we'd persist the config here.
-    setTimeout(() => {
-      setIsSaving(false);
-      onClose();
-    }, 300);
+
+    }
   };
 
   if (!agent) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent
-        className={cn(
-          'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
-          isMobile &&
-            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
-        )}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Configure Agent: {agent.name}
-          </DialogTitle>
-          <DialogDescription>
-            Customize your agent's behavior, settings, and workflows.
-          </DialogDescription>
-        </DialogHeader>
 
-        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -365,14 +378,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               No workflows configured for this agent. Click "Manage Workflows" to add automation workflows.
             </p>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

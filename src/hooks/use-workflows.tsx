@@ -62,6 +62,8 @@ const cloneWorkflow = (workflow: Workflow): Workflow => ({
     ...version,
     steps: cloneSteps(version.steps),
   })),
+  triggers: workflow.triggers ? [...workflow.triggers] : [],
+  runs: workflow.runs ? [...workflow.runs] : [],
 });
 
 const buildWorkflow = (input: CreateWorkflowInput): Workflow => {
@@ -78,6 +80,8 @@ const buildWorkflow = (input: CreateWorkflowInput): Workflow => {
     updatedAt: now,
     versions: [],
     lastRunStatus: 'idle',
+    triggers: [],
+    runs: [],
   };
 };
 

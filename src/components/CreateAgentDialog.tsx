@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import React, { useEffect, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { AgentStatus } from '@/hooks/use-agents';
+import type { AgentStatus } from '@/types/agent';
+
 
 export interface CreateAgentFormValues {
   name: string;
@@ -55,6 +59,7 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
       setFormData(defaultForm);
     } catch (error) {
       // Leave the form populated so the user can retry if submission failed.
+
       console.error('Failed to create agent', error);
     }
   };
@@ -119,6 +124,13 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
+
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+
               {isSubmitting ? 'Creating...' : 'Create Agent'}
             </Button>
           </DialogFooter>

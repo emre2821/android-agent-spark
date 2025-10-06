@@ -1,120 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
-
-import {
-  listAgents,
-  getAgent,
-  createAgent,
-  updateAgent,
-  deleteAgent,
-  listTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-  listMemories,
-  createMemory,
-  updateMemory,
-  deleteMemory,
-} from './dataStore.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const server = createServer(app);
-const wss = new WebSocketServer({ server });
 
-function broadcast(event, payload) {
-  if (!event) return;
-  const message = JSON.stringify({ event, payload });
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      try {
-        client.send(message);
-      } catch (error) {
-        console.error('Failed to broadcast message', error);
-      }
-    }
-  });
-}
 
-function asyncHandler(handler) {
-  return (req, res, next) => {
-    Promise.resolve(handler(req, res, next)).catch(next);
-  };
-}
-
-app.get(
-  '/agents',
-  asyncHandler(async (req, res) => {
-    const agents = await listAgents();
-    res.json({ data: agents });
-  }),
-);
-
-app.post(
-  '/agents',
-  asyncHandler(async (req, res) => {
-    const agent = await createAgent(req.body ?? {});
-    broadcast('agent:created', { agent });
-    res.status(201).json({ data: agent });
-  }),
-);
-
-app.get(
-  '/agents/:id',
-  asyncHandler(async (req, res) => {
-    const agent = await getAgent(req.params.id);
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    res.json({ data: agent });
-  }),
-);
-
-app.patch(
-  '/agents/:id',
-  asyncHandler(async (req, res) => {
-    const agent = await updateAgent(req.params.id, req.body ?? {});
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    broadcast('agent:updated', { agent });
-    res.json({ data: agent });
-  }),
-);
-
-app.delete(
-  '/agents/:id',
-  asyncHandler(async (req, res) => {
-    const deleted = await deleteAgent(req.params.id);
-    if (!deleted) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    broadcast('agent:deleted', { id: req.params.id });
-    res.status(204).send();
-  }),
-);
-
-app.get(
-  '/agents/:agentId/tasks',
-  asyncHandler(async (req, res) => {
-    const agent = await getAgent(req.params.agentId);
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    const tasks = await listTasks(req.params.agentId);
-    res.json({ data: tasks });
-  }),
-);
-
-app.post(
+apiRouter.post(
   '/agents/:agentId/tasks',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -128,7 +22,7 @@ app.post(
   }),
 );
 
-app.patch(
+apiRouter.patch(
   '/agents/:agentId/tasks/:taskId',
   asyncHandler(async (req, res) => {
     const result = await updateTask(req.params.agentId, req.params.taskId, req.body ?? {});
@@ -141,7 +35,7 @@ app.patch(
   }),
 );
 
-app.delete(
+apiRouter.delete(
   '/agents/:agentId/tasks/:taskId',
   asyncHandler(async (req, res) => {
     const result = await deleteTask(req.params.agentId, req.params.taskId);
@@ -154,7 +48,7 @@ app.delete(
   }),
 );
 
-app.get(
+apiRouter.get(
   '/agents/:agentId/memory',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -167,7 +61,7 @@ app.get(
   }),
 );
 
-app.post(
+apiRouter.post(
   '/agents/:agentId/memory',
   asyncHandler(async (req, res) => {
     const agent = await getAgent(req.params.agentId);
@@ -181,7 +75,7 @@ app.post(
   }),
 );
 
-app.patch(
+apiRouter.patch(
   '/agents/:agentId/memory/:memoryId',
   asyncHandler(async (req, res) => {
     const result = await updateMemory(req.params.agentId, req.params.memoryId, req.body ?? {});
@@ -194,7 +88,7 @@ app.patch(
   }),
 );
 
-app.delete(
+apiRouter.delete(
   '/agents/:agentId/memory/:memoryId',
   asyncHandler(async (req, res) => {
     const result = await deleteMemory(req.params.agentId, req.params.memoryId);
@@ -204,6 +98,20 @@ app.delete(
     }
     broadcast('memory:deleted', { agentId: req.params.agentId, memoryId: req.params.memoryId, agent: result.agent });
     res.status(204).send();
+  }),
+);
+
+app.use('/api', apiRouter);
+
+app.post(
+  '/triggers/webhook/:triggerId',
+  asyncHandler(async (req, res) => {
+    await triggerEngine.handleWebhook(req.params.triggerId, {
+      headers: req.headers,
+      body: req.body,
+      query: req.query,
+    });
+    res.status(202).json({ message: 'Webhook accepted' });
   }),
 );
 
@@ -221,13 +129,11 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message: err.message || 'Internal server error' });
 });
 
-wss.on('connection', (socket) => {
-  socket.on('error', (error) => {
-    console.error('WebSocket error', error);
-  });
-  socket.on('close', () => {
-    console.log('WebSocket connection closed');
-  });
+
+});
+
+wss.on('error', (error) => {
+  console.error('WebSocket server error', error);
 });
 
 server.on('error', (error) => {
@@ -237,11 +143,31 @@ server.on('error', (error) => {
 const DEFAULT_PORT = Number.parseInt(process.env.PORT ?? '3001', 10);
 
 export function startServer(port = DEFAULT_PORT) {
-  return new Promise((resolve) => {
-    server.listen(port, () => {
+  return new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve(server);
+      return;
+    }
+
+    const handleListening = async () => {
+      server.off('error', handleError);
+      try {
+        await triggerEngine.initialize();
+      } catch (error) {
+        console.error('Failed to initialize trigger engine', error);
+      }
       console.log(`API server running on http://localhost:${port}`);
       resolve(server);
-    });
+    };
+
+    const handleError = (error) => {
+      server.off('listening', handleListening);
+      reject(error);
+    };
+
+    server.once('error', handleError);
+    server.once('listening', handleListening);
+    server.listen(port);
   });
 }
 

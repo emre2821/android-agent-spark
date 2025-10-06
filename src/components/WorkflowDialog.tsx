@@ -8,18 +8,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-  Workflow,
-  Plus,
-  Save,
-  Play,
-
 
 interface WorkflowDialogProps {
   open: boolean;
@@ -68,6 +61,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
   });
 
     onClose();
+    navigate(`/workflows/builder${buildSearchSuffix(options)}`);
   };
 
   const handleSaveCustom = () => {
@@ -104,8 +98,8 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            Workflow Management
+            <WorkflowIcon className="h-5 w-5" />
+            Workflow Library
           </DialogTitle>
           <DialogDescription>
             Configure reusable workflows with typed nodes. Test runs validate configuration and stream live logs below.
@@ -137,7 +131,22 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge variant="outline">{workflow.category}</Badge>
+                      <Badge variant={workflow.status === 'published' ? 'default' : 'outline'}>
+                        {workflow.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>v{workflow.version}</span>
+                      <span>•</span>
+                      <span>
+                        Updated {formatDistanceToNow(new Date(workflow.updatedAt), { addSuffix: true })}
+                      </span>
+                      {workflow.execution.schedule && (
+                        <>
+                          <span>•</span>
+                          <span>Schedule: {workflow.execution.schedule}</span>
+                        </>
+                      )}
                     </div>
                   </CardHeader>
 
@@ -216,16 +225,13 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="workflowDescription">Description</Label>
-                <Textarea
-                  id="workflowDescription"
-                  value={customWorkflow.description}
-                  onChange={(e) => setCustomWorkflow({ ...customWorkflow, description: e.target.value })}
-                  placeholder="Describe what this workflow does"
-                  rows={3}
-                />
-              </div>
+              <WorkflowBuilder
+                resourceId={`workflow:${agentId ?? 'custom'}`}
+                initialDescription={customWorkflow.description}
+                onSave={(description) =>
+                  setCustomWorkflow((previous) => ({ ...previous, description }))
+                }
+              />
 
               <Separator />
 

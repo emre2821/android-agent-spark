@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CronExpressionParser } from 'cron-parser';
 import {
   Tabs,
   TabsContent,
@@ -13,13 +17,19 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWorkflows } from '@/hooks/use-workflows';
 import { useAgents } from '@/hooks/use-agents';
+import { useWorkflowTriggers, type CreateTriggerInput } from '@/hooks/use-workflow-triggers';
 import {
   Workflow,
   WorkflowExecutionLog,
   WorkflowPort,
   WorkflowStep,
+  WorkflowTrigger,
 } from '@/types/workflow';
 import {
   GitBranch,
@@ -31,6 +41,13 @@ import {
   Rocket,
   Save,
   Share2,
+  AlarmClock,
+  Webhook as WebhookIcon,
+  Inbox,
+  PauseCircle,
+  PlayCircle,
+  PencilLine,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,6 +70,338 @@ const createPort = (label: string): WorkflowPort => ({
   dataType: 'text',
 });
 
+const isValidTimeZone = (value: string | undefined) => {
+  if (!value) return false;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const triggerFormSchema = z
+  .object({
+    name: z.string().min(1, 'Trigger name is required'),
+    type: z.enum(['cron', 'webhook', 'queue']),
+    isActive: z.boolean().default(true),
+    expression: z.string().optional(),
+    timezone: z.string().optional(),
+    queueName: z.string().optional(),
+    batchSize: z.coerce.number().int().min(1).max(50).default(1),
+    secret: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.type === 'cron') {
+      if (!values.expression || values.expression.trim().length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cron expression is required', path: ['expression'] });
+      } else if (!values.timezone || values.timezone.trim().length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Timezone is required', path: ['timezone'] });
+      } else if (!isValidTimeZone(values.timezone)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Timezone not recognized', path: ['timezone'] });
+      } else {
+        try {
+          CronExpressionParser.parse(values.expression, {
+            tz: values.timezone,
+            currentDate: new Date(),
+          });
+        } catch (error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: (error as Error).message, path: ['expression'] });
+        }
+      }
+    }
+    if (values.type === 'queue' && (!values.queueName || values.queueName.trim().length === 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Queue name is required', path: ['queueName'] });
+    }
+  });
+
+type TriggerFormValues = z.infer<typeof triggerFormSchema>;
+
+const getTriggerFormDefaults = (trigger?: WorkflowTrigger | null): TriggerFormValues => {
+  if (!trigger) {
+    return {
+      name: '',
+      type: 'cron',
+      isActive: true,
+      expression: '0 9 * * *',
+      timezone: 'UTC',
+      queueName: '',
+      batchSize: 1,
+      secret: '',
+    };
+  }
+
+  switch (trigger.type) {
+    case 'cron':
+      return {
+        name: trigger.name,
+        type: 'cron',
+        isActive: trigger.status === 'active',
+        expression: trigger.config.expression,
+        timezone: trigger.config.timezone,
+        queueName: '',
+        batchSize: 1,
+        secret: '',
+      };
+    case 'queue':
+      return {
+        name: trigger.name,
+        type: 'queue',
+        isActive: trigger.status === 'active',
+        expression: '0 9 * * *',
+        timezone: 'UTC',
+        queueName: trigger.config.queueName,
+        batchSize: trigger.config.batchSize ?? 1,
+        secret: '',
+      };
+    case 'webhook':
+    default:
+      return {
+        name: trigger.name,
+        type: 'webhook',
+        isActive: trigger.status === 'active',
+        expression: '0 9 * * *',
+        timezone: 'UTC',
+        queueName: '',
+        batchSize: 1,
+        secret: trigger.config.secret ?? '',
+      };
+  }
+};
+
+interface TriggerDialogProps {
+  workflowId?: string;
+  trigger?: WorkflowTrigger | null;
+  open: boolean;
+  isSubmitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (values: TriggerFormValues) => Promise<void>;
+}
+
+const TriggerDialog: React.FC<TriggerDialogProps> = ({
+  workflowId,
+  trigger,
+  open,
+  isSubmitting,
+  onOpenChange,
+  onSubmit,
+}) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const form = useForm<TriggerFormValues>({
+    resolver: zodResolver(triggerFormSchema),
+    defaultValues: getTriggerFormDefaults(trigger),
+  });
+
+  useEffect(() => {
+    if (open) {
+      form.reset(getTriggerFormDefaults(trigger));
+    }
+  }, [form, open, trigger]);
+
+  const [type, expression, timezone] = form.watch(['type', 'expression', 'timezone']);
+
+  const preview = useMemo(() => {
+    if (type !== 'cron' || !expression || !timezone) return [];
+    try {
+      const parsed = CronExpressionParser.parse(expression, { tz: timezone, currentDate: new Date() });
+      const occurrences: string[] = [];
+      for (let index = 0; index < 5; index += 1) {
+        occurrences.push(parsed.next().toDate().toISOString());
+      }
+      return occurrences;
+    } catch {
+      return [];
+    }
+  }, [expression, timezone, type]);
+
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit(values);
+    form.reset(getTriggerFormDefaults());
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{trigger ? 'Edit trigger' : 'Create trigger'}</DialogTitle>
+          <DialogDescription>
+            {trigger ? 'Update how this workflow should start executing.' : 'Define how this workflow wakes up and gets to work.'}
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Trigger name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Morning cron" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Trigger type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="cron">Cron schedule</SelectItem>
+                        <SelectItem value="webhook">Webhook</SelectItem>
+                        <SelectItem value="queue">Queue listener</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col justify-end space-y-1">
+                    <FormLabel>Status</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-2 rounded border px-3 py-2">
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        <span className="text-sm">{field.value ? 'Active' : 'Paused'}</span>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {type === 'cron' && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="expression"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cron expression</FormLabel>
+                      <FormControl>
+                        <Input placeholder="*/15 * * * *" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Timezone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="UTC" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {type === 'queue' && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="queueName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Queue name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="inbound-events" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="batchSize"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Batch size</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} max={50} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {type === 'webhook' && (
+              <FormField
+                control={form.control}
+                name="secret"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Verification secret</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Optional signing secret" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {type === 'cron' && preview.length > 0 && (
+              <div className="rounded-md border bg-muted/40 p-3 text-xs">
+                <div className="mb-1 font-medium text-sm">Upcoming runs (local time)</div>
+                <ul className="space-y-1">
+                  {preview.map((time) => (
+                    <li key={time}>{new Date(time).toLocaleString()}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {type === 'webhook' && (
+              <p className="rounded-md border bg-muted/40 p-3 text-xs font-mono">
+                {workflowId
+                  ? `${origin}/triggers/webhook/${trigger?.id ?? 'new-id'}`
+                  : '/triggers/webhook/<trigger-id>'}
+              </p>
+            )}
+
+            {type === 'queue' && (
+              <p className="rounded-md border bg-muted/40 p-3 text-xs font-mono">
+                {`POST ${origin}/api/triggers/queue/${form.getValues('queueName') || 'queue-name'}/publish`}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-gradient-primary">
+                {isSubmitting ? 'Saving…' : trigger ? 'Save changes' : 'Create trigger'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const Workflows: React.FC = () => {
   const { agents } = useAgents();
   const {
@@ -71,6 +420,16 @@ const Workflows: React.FC = () => {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(searchParams.get('workflowId'));
   const [activeTab, setActiveTab] = useState('design');
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
+  const [editingTrigger, setEditingTrigger] = useState<WorkflowTrigger | null>(null);
+  const [isSavingTrigger, setIsSavingTrigger] = useState(false);
+  const {
+    triggers,
+    isLoading: triggersLoading,
+    createTrigger,
+    updateTrigger,
+    deleteTrigger,
+  } = useWorkflowTriggers(selectedWorkflow ?? undefined);
 
   useEffect(() => {
     const workflowIdFromParams = searchParams.get('workflowId');
@@ -225,6 +584,158 @@ const Workflows: React.FC = () => {
     updateStep(selectedWorkflow.id, selectedStep.id, { branches: [...selectedStep.branches, newBranch] });
   };
 
+  const handleToggleWorkflowStatus = () => {
+    if (!selectedWorkflow) return;
+    const nextStatus = selectedWorkflow.status === 'active' ? 'paused' : 'active';
+    updateWorkflow(selectedWorkflow.id, { status: nextStatus });
+    toast({
+      title: nextStatus === 'active' ? 'Workflow activated' : 'Workflow paused',
+      description:
+        nextStatus === 'active'
+          ? `${selectedWorkflow.name} is now listening to its triggers.`
+          : `${selectedWorkflow.name} will ignore incoming triggers until resumed.`,
+    });
+  };
+
+  const openCreateTrigger = () => {
+    setEditingTrigger(null);
+    setTriggerDialogOpen(true);
+  };
+
+  const buildCreatePayload = (values: TriggerFormValues): CreateTriggerInput => {
+    if (values.type === 'cron') {
+      return {
+        type: 'cron',
+        name: values.name,
+        status: values.isActive ? 'active' : 'paused',
+        config: {
+          expression: values.expression ?? '0 9 * * *',
+          timezone: values.timezone ?? 'UTC',
+        },
+      };
+    }
+    if (values.type === 'queue') {
+      return {
+        type: 'queue',
+        name: values.name,
+        status: values.isActive ? 'active' : 'paused',
+        config: {
+          queueName: values.queueName ?? 'default',
+          batchSize: values.batchSize ?? 1,
+        },
+      };
+    }
+    return {
+      type: 'webhook',
+      name: values.name,
+      status: values.isActive ? 'active' : 'paused',
+      config: values.secret ? { secret: values.secret } : {},
+    };
+  };
+
+  const buildUpdatePayload = (values: TriggerFormValues) => {
+    const base = {
+      name: values.name,
+      status: values.isActive ? 'active' : 'paused',
+      type: values.type,
+    } as {
+      name: string;
+      status: 'active' | 'paused';
+      type: 'cron' | 'webhook' | 'queue';
+      config?: Record<string, unknown>;
+    };
+
+    if (values.type === 'cron') {
+      base.config = {
+        expression: values.expression ?? '0 9 * * *',
+        timezone: values.timezone ?? 'UTC',
+      };
+    } else if (values.type === 'queue') {
+      base.config = {
+        queueName: values.queueName ?? 'default',
+        batchSize: values.batchSize ?? 1,
+      };
+    } else if (values.type === 'webhook') {
+      base.config = values.secret ? { secret: values.secret } : {};
+    }
+
+    return base;
+  };
+
+  const handleTriggerSubmit = async (values: TriggerFormValues) => {
+    if (!selectedWorkflow) return;
+    setIsSavingTrigger(true);
+    try {
+      if (editingTrigger) {
+        await updateTrigger({ triggerId: editingTrigger.id, updates: buildUpdatePayload(values) });
+        toast({
+          title: 'Trigger updated',
+          description: `${editingTrigger.name} now reflects your latest changes.`,
+        });
+      } else {
+        await createTrigger(buildCreatePayload(values));
+        toast({
+          title: 'Trigger created',
+          description: `${values.name} is ready to wake the workflow.`,
+        });
+      }
+      setTriggerDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Unable to save trigger',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingTrigger(false);
+    }
+  };
+
+  const handleEditTrigger = (trigger: WorkflowTrigger) => {
+    setEditingTrigger(trigger);
+    setTriggerDialogOpen(true);
+  };
+
+  const handleToggleTrigger = async (trigger: WorkflowTrigger) => {
+    try {
+      await updateTrigger({
+        triggerId: trigger.id,
+        updates: { status: trigger.status === 'active' ? 'paused' : 'active' },
+      });
+      toast({
+        title: trigger.status === 'active' ? 'Trigger paused' : 'Trigger activated',
+        description:
+          trigger.status === 'active'
+            ? `${trigger.name} will ignore new events until reactivated.`
+            : `${trigger.name} is back on duty.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to update trigger',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteTrigger = async (trigger: WorkflowTrigger) => {
+    const confirmed = window.confirm(`Remove the ${trigger.name} trigger?`);
+    if (!confirmed) return;
+    try {
+      await deleteTrigger(trigger.id);
+      toast({
+        title: 'Trigger removed',
+        description: `${trigger.name} will no longer fire this workflow.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Failed to delete trigger',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedWorkflow) return;
     updateWorkflow(selectedWorkflow.id, { agentId: event.target.value || null });
@@ -340,6 +851,14 @@ const Workflows: React.FC = () => {
                     </Badge>
                   )}
                   <div className="ml-auto flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={handleToggleWorkflowStatus}>
+                      {selectedWorkflow.status === 'active' ? (
+                        <PauseCircle className="mr-2 h-4 w-4" />
+                      ) : (
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                      )}
+                      {selectedWorkflow.status === 'active' ? 'Pause' : 'Activate'}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleCreateVersion}>
                       <Save className="mr-2 h-4 w-4" />
                       Snapshot
@@ -552,6 +1071,117 @@ const Workflows: React.FC = () => {
 
                         <Card>
                           <CardHeader>
+                            <CardTitle className="text-lg">Automation triggers</CardTitle>
+                            <CardDescription>
+                              Connect schedules, webhooks, and queues to launch this workflow.
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <Button variant="secondary" className="w-full gap-2" onClick={openCreateTrigger}>
+                              <Plus className="h-4 w-4" /> Add trigger
+                            </Button>
+
+                            {triggersLoading && (
+                              <div className="space-y-2 text-xs text-muted-foreground">
+                                <p>Summoning trigger details…</p>
+                                <div className="h-2 w-full animate-pulse rounded bg-muted" />
+                              </div>
+                            )}
+
+                            {!triggersLoading && triggers.length === 0 && (
+                              <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                                No triggers yet. Add one to let this workflow respond to the world.
+                              </p>
+                            )}
+
+                            <div className="space-y-3">
+                              {triggers.map((trigger) => (
+                                <div key={trigger.id} className="space-y-2 rounded-lg border bg-background p-3 shadow-sm">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{trigger.name}</span>
+                                        <Badge variant="outline" className="flex items-center gap-1 text-xs capitalize">
+                                          {trigger.type === 'cron' && <AlarmClock className="h-3.5 w-3.5" />}
+                                          {trigger.type === 'webhook' && <WebhookIcon className="h-3.5 w-3.5" />}
+                                          {trigger.type === 'queue' && <Inbox className="h-3.5 w-3.5" />}
+                                          {trigger.type}
+                                        </Badge>
+                                        <Badge
+                                          variant={trigger.status === 'active' ? 'secondary' : 'outline'}
+                                          className={`text-xs ${
+                                            trigger.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'text-muted-foreground'
+                                          }`}
+                                        >
+                                          {trigger.status}
+                                        </Badge>
+                                      </div>
+                                      {trigger.type === 'cron' && trigger.metadata?.preview && trigger.metadata.preview.length > 0 && (
+                                        <div className="space-y-1 text-xs text-muted-foreground">
+                                          <div>Next up:</div>
+                                          <div className="flex flex-wrap gap-1">
+                                            {trigger.metadata.preview.slice(0, 3).map((time) => (
+                                              <span key={time} className="rounded bg-muted px-2 py-1">
+                                                {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {trigger.type === 'queue' && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Listening on <span className="font-mono">{trigger.config.queueName}</span>
+                                          {trigger.config.batchSize ? ` · batch ${trigger.config.batchSize}` : ''}
+                                        </p>
+                                      )}
+                                      {trigger.type === 'webhook' && (
+                                        <p className="break-all text-xs text-muted-foreground font-mono">
+                                          /triggers/webhook/{trigger.id}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => handleToggleTrigger(trigger)}
+                                        title={trigger.status === 'active' ? 'Pause trigger' : 'Activate trigger'}
+                                      >
+                                        {trigger.status === 'active' ? (
+                                          <PauseCircle className="h-4 w-4" />
+                                        ) : (
+                                          <PlayCircle className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => handleEditTrigger(trigger)}
+                                        title="Edit trigger"
+                                      >
+                                        <PencilLine className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={() => handleDeleteTrigger(trigger)}
+                                        title="Delete trigger"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
                             <CardTitle className="text-lg">Assignment</CardTitle>
                             <CardDescription>Scope the workflow to an agent to activate it quickly.</CardDescription>
                           </CardHeader>
@@ -701,6 +1331,20 @@ const Workflows: React.FC = () => {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+
+      <TriggerDialog
+        workflowId={selectedWorkflow?.id}
+        trigger={editingTrigger}
+        open={triggerDialogOpen}
+        isSubmitting={isSavingTrigger}
+        onOpenChange={(open) => {
+          setTriggerDialogOpen(open);
+          if (!open) {
+            setEditingTrigger(null);
+          }
+        }}
+        onSubmit={handleTriggerSubmit}
+      />
     </div>
   );
 };
