@@ -26,9 +26,33 @@ export interface CreateAgentFormValues {
   status: AgentStatus;
 }
 
+type AgentStatus = 'active' | 'inactive' | 'learning';
+
+interface CreateAgentPayload {
+  name: string;
+  description: string;
+  status: AgentStatus;
+}
+
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;
+  onSubmit: (agentData: CreateAgentPayload) => void;
+}
+
+export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({ open, onClose, onSubmit }) => {
+  const [formData, setFormData] = useState<CreateAgentPayload>({
+    name: '',
+    description: '',
+    status: 'active'
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
+    
+    onSubmit(formData);
+    setFormData({ name: '', description: '', status: 'active' });
   onSubmit: (values: CreateAgentFormValues) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -100,6 +124,7 @@ export const CreateAgentDialog: React.FC<CreateAgentDialogProps> = ({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="status">Initial Status</Label>
             <Label htmlFor="agent-status">Initial Status</Label>
             <Select
               value={formData.status}

@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAgents } from '@/hooks/use-agents';
+import { formatDistanceToNow } from 'date-fns';
 
 const AgentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,10 @@ const AgentDetail = () => {
           <div>Status: {agent.status}</div>
           <div>Tasks completed: {agent.tasksCompleted}</div>
           <div>Memory items: {agent.memoryItems}</div>
-          <div>Last active: {agent.lastActive}</div>
+          <div>
+            Last active:{' '}
+            {formatDistanceToNow(new Date(agent.lastActive), { addSuffix: true })}
+          </div>
         </div>
         <Button asChild>
           <Link to="/">Back</Link>

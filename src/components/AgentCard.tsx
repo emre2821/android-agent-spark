@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Eye, Settings, Workflow, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { Agent } from '@/types/agent';
@@ -46,6 +48,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   const actionButtonSize = isMobile ? 'default' : 'sm';
   const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
 
+  const lastActiveLabel = useMemo(() => {
+    try {
+      return formatDistanceToNow(new Date(agent.lastActive), { addSuffix: true });
+    } catch (error) {
+      return agent.lastActive;
+    }
+  }, [agent.lastActive]);
+
   return (
     <Card className="agent-card border-border/50 hover:border-primary/30 transition-colors">
       <CardHeader className="pb-3">
@@ -78,6 +88,10 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             <span className="text-muted-foreground">Memory:</span>
             <span className="font-medium">{agent.memoryItems}</span>
           </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground">
+          Last active: {lastActiveLabel}
         </div>
 
         <div className="text-xs text-muted-foreground">Last active: {agent.lastActive}</div>

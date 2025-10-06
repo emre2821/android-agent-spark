@@ -1,3 +1,4 @@
+import React, { useMemo, useState } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -42,6 +43,7 @@ import type { Agent } from '@/types/agent';
 const offlineDefault = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
 export const AgentDashboard: React.FC = () => {
+  const { agents, createAgent, connectionState } = useAgents();
   const navigate = useNavigate();
   const { toast } = useToast();
   const {
@@ -66,6 +68,36 @@ export const AgentDashboard: React.FC = () => {
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(offlineDefault);
 
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        [agent.name, agent.description].some((value) =>
+          value.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ),
+    [agents, searchQuery]
+  );
+
+  const handleCreateAgent = async (agentData: {
+    name: string;
+    description: string;
+    status: 'active' | 'inactive' | 'learning';
+  }) => {
+    try {
+      await createAgent(agentData);
+      setShowCreateDialog(false);
+      toast({
+        title: 'Agent Created',
+        description: `${agentData.name} has been successfully created.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create agent';
+      toast({
+        title: 'Create agent failed',
+        description: message,
+        variant: 'destructive',
+      });
+    }
   const env = import.meta.env as Record<string, string | undefined>;
   const userId = env?.VITE_USER_ID ?? 'demo-user';
   const workspaceId = env?.VITE_WORKSPACE_ID ?? 'demo-workspace';
@@ -241,6 +273,28 @@ export const AgentDashboard: React.FC = () => {
   );
 
   return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              AI Agent Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your intelligent automation agents
+            </p>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  connectionState === 'open'
+                    ? 'bg-green-500'
+                    : connectionState === 'connecting'
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                }`}
+              />
+              <span className="capitalize">{connectionState} connection</span>
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -533,6 +587,7 @@ export const AgentDashboard: React.FC = () => {
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
+        agentId={selectedAgentConfig}
         agent={selectedAgent}
       />
 
