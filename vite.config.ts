@@ -33,5 +33,23 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test/setup.ts",
+    environmentMatchGlobs: [["server/**/*.test.{ts,tsx}", "node"]],
+    coverage: {
+      enabled: true,
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      include: [
+        "src/components/AgentCard.tsx",
+        "src/components/AgentDashboard.tsx",
+        "src/components/CreateAgentDialog.tsx",
+        "server/**/*.js",
+      ],
+      thresholds: {
+        lines: 90,
+        functions: 60,
+        statements: 90,
+        branches: 60,
+      },
+    },
   },
 }));
