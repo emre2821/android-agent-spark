@@ -3,6 +3,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -26,6 +27,81 @@ interface AgentConfigureDialogProps {
 }
 
 const DEFAULT_TAGS = ['automation', 'ai'];
+  agent: Agent | null;
+}
+
+type AgentPriority = 'low' | 'medium' | 'high' | 'critical';
+
+type AgentConfigurationState = {
+  name: string;
+  description: string;
+  status: AgentStatus;
+  priority: AgentPriority;
+  autoStart: boolean;
+  learningMode: boolean;
+  maxTasks: number;
+  memoryLimit: number;
+  systemPrompt: string;
+  tags: string[];
+};
+
+type AgentWithConfiguration = Agent &
+  Partial<
+    Pick<
+      AgentConfigurationState,
+      'priority' | 'autoStart' | 'learningMode' | 'maxTasks' | 'memoryLimit' | 'systemPrompt' | 'tags'
+    >
+  >;
+
+type AgentUpdatePayload = Partial<Agent> & Partial<AgentConfigurationState>;
+
+const DEFAULT_CONFIG: AgentConfigurationState = {
+  name: '',
+  description: '',
+  status: 'active',
+  priority: 'medium',
+  autoStart: false,
+  learningMode: true,
+  maxTasks: 100,
+  memoryLimit: 1000,
+  systemPrompt: '',
+  tags: [],
+};
+
+const deriveConfigFromAgent = (agent: Agent | null): AgentConfigurationState => {
+  if (!agent) {
+    return { ...DEFAULT_CONFIG };
+  }
+
+  const configSource = agent as AgentWithConfiguration;
+
+  return {
+    ...DEFAULT_CONFIG,
+    name: agent.name,
+    description: agent.description,
+    status: agent.status ?? DEFAULT_CONFIG.status,
+    priority: (configSource.priority as AgentPriority | undefined) ?? DEFAULT_CONFIG.priority,
+    autoStart:
+      typeof configSource.autoStart === 'boolean' ? configSource.autoStart : DEFAULT_CONFIG.autoStart,
+    learningMode:
+      typeof configSource.learningMode === 'boolean'
+        ? configSource.learningMode
+        : DEFAULT_CONFIG.learningMode,
+    maxTasks:
+      typeof configSource.maxTasks === 'number' && !Number.isNaN(configSource.maxTasks)
+        ? configSource.maxTasks
+        : DEFAULT_CONFIG.maxTasks,
+    memoryLimit:
+      typeof configSource.memoryLimit === 'number' && !Number.isNaN(configSource.memoryLimit)
+        ? configSource.memoryLimit
+        : DEFAULT_CONFIG.memoryLimit,
+    systemPrompt:
+      typeof configSource.systemPrompt === 'string'
+        ? configSource.systemPrompt
+        : DEFAULT_CONFIG.systemPrompt,
+    tags: Array.isArray(configSource.tags) ? [...configSource.tags] : [...DEFAULT_CONFIG.tags],
+  };
+};
 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
@@ -48,7 +124,31 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
     memoryLimit: 1000,
   });
+  agent,
+}) => {
+
   const [newTag, setNewTag] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
+
+  useEffect(() => {
+
+
+  };
+
+  const handleRequestLock = async () => {
+    const result = await collaboration.requestLock({ reason: 'Editing agent configuration' });
+    if (!result.ok) {
+      toast({
+        title: 'Unable to acquire lock',
+        description: result.message || 'Another collaborator currently holds the lock.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Lock acquired', description: 'You now control this configuration.' });
+    }
+  };
 
   useEffect(() => {
     if (!agent) return;
@@ -84,14 +184,28 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
       });
     } finally {
       setIsSaving(false);
+  const handleReleaseLock = async () => {
+    const result = await collaboration.releaseLock({ reason: 'Finished editing configuration' });
+    if (result.ok) {
+      toast({ title: 'Lock released', description: 'Others can now edit this configuration.' });
+    }
+  };
+
+  const handleForceUnlock = async () => {
+    const reason = window.prompt('Enter a reason for force unlocking this configuration.');
+    if (reason === null) return;
+    const result = await collaboration.forceUnlock(reason || 'Force unlock requested');
+    if (result.ok) {
+      toast({ title: 'Lock overridden', description: 'You now control this configuration.' });
     }
   };
 
   const addTag = () => {
-    if (newTag.trim() && !config.tags.includes(newTag.trim())) {
+    const trimmed = newTag.trim();
+    if (trimmed && !config.tags.includes(trimmed)) {
       setConfig({
         ...config,
-        tags: [...config.tags, newTag.trim()],
+        tags: [...config.tags, trimmed],
       });
       setNewTag('');
     }
@@ -108,20 +222,18 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     return null;
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Configure Agent: {agent.name}
-          </DialogTitle>
-          <DialogDescription>
-            Customize your agent's behavior, settings, and workflows.
-          </DialogDescription>
-        </DialogHeader>
+      return;
+    }
 
-        <div className="space-y-6 py-4">
+    setIsSaving(true);
+
+    }
+  };
+
+  if (!agent) return null;
+
+  return (
+
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -147,7 +259,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select
@@ -155,6 +267,11 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   onValueChange={(value: AgentStatus) => setConfig({ ...config, status: value })}
                 >
                   <SelectTrigger>
+                  onValueChange={(value) =>
+                    setConfig({ ...config, status: value as AgentStatus })
+                  }
+                >
+                  <SelectTrigger id="status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -172,6 +289,11 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   onValueChange={(value) => setConfig({ ...config, priority: value })}
                 >
                   <SelectTrigger>
+                  onValueChange={(value) =>
+                    setConfig({ ...config, priority: value as AgentPriority })
+                  }
+                >
+                  <SelectTrigger id="priority">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -192,6 +314,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
 
             <div className="flex items-center justify-between">
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                isMobile && 'flex-col items-start gap-2 rounded-xl border border-border/60 p-3'
+              )}
+            >
               <div className="space-y-0.5">
                 <Label className="text-sm">Auto-start on system boot</Label>
                 <p className="text-xs text-muted-foreground">
@@ -204,7 +332,12 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div
+              className={cn(
+                'flex items-center justify-between',
+                isMobile && 'flex-col items-start gap-2 rounded-xl border border-border/60 p-3'
+              )}
+            >
               <div className="space-y-0.5">
                 <Label className="text-sm">Learning mode</Label>
                 <p className="text-xs text-muted-foreground">
@@ -217,7 +350,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="maxTasks">Max concurrent tasks</Label>
                 <Input
@@ -228,6 +361,10 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   value={config.maxTasks}
                   onChange={(e) =>
                     setConfig({ ...config, maxTasks: parseInt(e.target.value, 10) || 100 })
+                    setConfig({
+                      ...config,
+                      maxTasks: Number.parseInt(e.target.value, 10) || DEFAULT_CONFIG.maxTasks,
+                    })
                   }
                 />
               </div>
@@ -244,6 +381,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                     setConfig({
                       ...config,
                       memoryLimit: parseInt(e.target.value, 10) || 1000,
+                      memoryLimit:
+                        Number.parseInt(e.target.value, 10) || DEFAULT_CONFIG.memoryLimit,
                     })
                   }
                 />
@@ -266,14 +405,19 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Input
                 placeholder="Add new tag"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTag();
+                  }
+                }}
               />
-              <Button size="sm" onClick={addTag}>
+              <Button type="button" variant="outline" onClick={addTag}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -298,7 +442,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground">Workflows</h4>
-              <Button variant="outline" size="sm">
+              <Button type="button" variant="outline">
                 <Workflow className="h-4 w-4 mr-2" />
                 Manage Workflows
               </Button>
@@ -318,6 +462,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
             {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
         </div>
+
       </DialogContent>
     </Dialog>
   );

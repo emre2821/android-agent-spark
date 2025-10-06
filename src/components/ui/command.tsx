@@ -23,6 +23,7 @@ Command.displayName = CommandPrimitive.displayName
 
 type CommandDialogProps = DialogProps;
 
+
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
