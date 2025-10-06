@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AgentDetail from "./pages/AgentDetail";
+import WorkflowBuilder from "./pages/WorkflowBuilder";
 import { AgentsProvider } from "@/hooks/use-agents";
 import { WorkflowsProvider } from "@/hooks/use-workflows";
 import Workflows from "./pages/Workflows";
