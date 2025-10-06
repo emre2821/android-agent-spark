@@ -28,6 +28,9 @@ import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDial
 import { CredentialsManagerDialog } from './credentials/CredentialsManagerDialog';
 import { useAgents, type Agent } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
+import { Plus, Search, Settings, Workflow, History } from 'lucide-react';
+import { useAgents } from '@/hooks/use-agents';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_USER_ID = 'demo-user';
 const DEFAULT_WORKSPACE_ID = 'demo-workspace';
@@ -56,6 +59,8 @@ export const AgentDashboard: React.FC = () => {
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
   const [hasPendingSync, setHasPendingSync] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
@@ -308,6 +313,38 @@ export const AgentDashboard: React.FC = () => {
               <p>Your cached agents are available. Changes will sync when you reconnect.</p>
             </div>
           </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/workflow-runs')}
+            >
+              <History className="h-4 w-4 mr-2" />
+              Run History
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWorkflowDialog(true)}
+            >
+              <Workflow className="h-4 w-4 mr-2" />
+              Workflows
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowSettingsDialog(true)}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+            <Button 
+              onClick={() => setShowCreateDialog(true)}
+              className="bg-gradient-primary hover:opacity-90 transition-opacity"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Agent
+            </Button>
         )}
 
         {isOnline && hasPendingSync && (
