@@ -1,12 +1,14 @@
 import '@testing-library/jest-dom';
 
-class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-if (!('ResizeObserver' in window)) {
-  // @ts-expect-error - expose test implementation
-  window.ResizeObserver = ResizeObserverMock;
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
 }

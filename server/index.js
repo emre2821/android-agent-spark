@@ -1,166 +1,181 @@
 import express from 'express';
 import cors from 'cors';
-import { mockAgents } from './mockAgents.js';
-import { mockWorkflows } from './mockWorkflows.js';
+import { createServer } from 'http';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let workflows = [...mockWorkflows];
 
-app.get('/agents', (req, res) => {
-  res.json(mockAgents);
+
+apiRouter.post(
+  '/agents/:agentId/tasks',
+  asyncHandler(async (req, res) => {
+    const agent = await getAgent(req.params.agentId);
+    if (!agent) {
+      res.status(404).json({ message: 'Agent not found' });
+      return;
+    }
+    const result = await createTask(req.params.agentId, req.body ?? {});
+    broadcast('task:created', { agent: result.agent, task: result.task });
+    res.status(201).json({ data: result });
+  }),
+);
+
+apiRouter.patch(
+  '/agents/:agentId/tasks/:taskId',
+  asyncHandler(async (req, res) => {
+    const result = await updateTask(req.params.agentId, req.params.taskId, req.body ?? {});
+    if (!result) {
+      res.status(404).json({ message: 'Task not found' });
+      return;
+    }
+    broadcast('task:updated', { agent: result.agent, task: result.task });
+    res.json({ data: result });
+  }),
+);
+
+apiRouter.delete(
+  '/agents/:agentId/tasks/:taskId',
+  asyncHandler(async (req, res) => {
+    const result = await deleteTask(req.params.agentId, req.params.taskId);
+    if (!result) {
+      res.status(404).json({ message: 'Task not found' });
+      return;
+    }
+    broadcast('task:deleted', { agentId: req.params.agentId, taskId: req.params.taskId, agent: result.agent });
+    res.status(204).send();
+  }),
+);
+
+apiRouter.get(
+  '/agents/:agentId/memory',
+  asyncHandler(async (req, res) => {
+    const agent = await getAgent(req.params.agentId);
+    if (!agent) {
+      res.status(404).json({ message: 'Agent not found' });
+      return;
+    }
+    const memories = await listMemories(req.params.agentId);
+    res.json({ data: memories });
+  }),
+);
+
+apiRouter.post(
+  '/agents/:agentId/memory',
+  asyncHandler(async (req, res) => {
+    const agent = await getAgent(req.params.agentId);
+    if (!agent) {
+      res.status(404).json({ message: 'Agent not found' });
+      return;
+    }
+    const result = await createMemory(req.params.agentId, req.body ?? {});
+    broadcast('memory:created', { agent: result.agent, memory: result.memory });
+    res.status(201).json({ data: result });
+  }),
+);
+
+apiRouter.patch(
+  '/agents/:agentId/memory/:memoryId',
+  asyncHandler(async (req, res) => {
+    const result = await updateMemory(req.params.agentId, req.params.memoryId, req.body ?? {});
+    if (!result) {
+      res.status(404).json({ message: 'Memory not found' });
+      return;
+    }
+    broadcast('memory:updated', { agent: result.agent, memory: result.memory });
+    res.json({ data: result });
+  }),
+);
+
+apiRouter.delete(
+  '/agents/:agentId/memory/:memoryId',
+  asyncHandler(async (req, res) => {
+    const result = await deleteMemory(req.params.agentId, req.params.memoryId);
+    if (!result) {
+      res.status(404).json({ message: 'Memory not found' });
+      return;
+    }
+    broadcast('memory:deleted', { agentId: req.params.agentId, memoryId: req.params.memoryId, agent: result.agent });
+    res.status(204).send();
+  }),
+);
+
+app.use('/api', apiRouter);
+
+app.post(
+  '/triggers/webhook/:triggerId',
+  asyncHandler(async (req, res) => {
+    await triggerEngine.handleWebhook(req.params.triggerId, {
+      headers: req.headers,
+      body: req.body,
+      query: req.query,
+    });
+    res.status(202).json({ message: 'Webhook accepted' });
+  }),
+);
+
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
-app.get('/workflows', (req, res) => {
-  res.json(workflows);
-});
-
-app.get('/workflows/:id', (req, res) => {
-  const workflow = workflows.find((wf) => wf.id === req.params.id);
-  if (!workflow) {
-    res.status(404).json({ message: 'Workflow not found' });
+app.use((err, req, res, next) => {
+  console.error('Error processing request', err);
+  if (res.headersSent) {
+    next(err);
     return;
   }
-  res.json(workflow);
+  const status = err.statusCode || err.status || 500;
+  res.status(status).json({ message: err.message || 'Internal server error' });
 });
 
-app.post('/workflows', (req, res) => {
-  const payload = req.body || {};
-  const now = new Date().toISOString();
-  const newWorkflow = {
-    id: payload.id || `wf-${Date.now()}`,
-    name: payload.name,
-    description: payload.description || '',
-    status: payload.status || 'draft',
-    version: payload.version || 1,
-    triggerId: payload.triggerId || payload.nodes?.[0]?.id,
-    nodes: payload.nodes || [],
-    edges: payload.edges || [],
-    inputs: payload.inputs || [],
-    outputs: payload.outputs || [],
-    createdAt: payload.createdAt || now,
-    updatedAt: now,
-    execution: {
-      runCount: payload.execution?.runCount ?? 0,
-      lastRunAt: payload.execution?.lastRunAt,
-      nextRunAt: payload.execution?.nextRunAt,
-      schedule: payload.execution?.schedule,
-      lastRunStatus: payload.execution?.lastRunStatus || 'idle',
-    },
-    metadata: {
-      tags: payload.metadata?.tags || [],
-      owner: payload.metadata?.owner,
-      category: payload.metadata?.category,
-    },
-  };
 
-  workflows.push(newWorkflow);
-  res.status(201).json(newWorkflow);
 });
 
-app.put('/workflows/:id', (req, res) => {
-  const index = workflows.findIndex((wf) => wf.id === req.params.id);
-  if (index === -1) {
-    res.status(404).json({ message: 'Workflow not found' });
-    return;
-  }
-
-  const existing = workflows[index];
-  const payload = req.body || {};
-  const now = new Date().toISOString();
-
-  const updated = {
-    ...existing,
-    ...payload,
-    id: existing.id,
-    version: payload.version ?? existing.version,
-    updatedAt: now,
-    nodes: payload.nodes ?? existing.nodes,
-    edges: payload.edges ?? existing.edges,
-    inputs: payload.inputs ?? existing.inputs,
-    outputs: payload.outputs ?? existing.outputs,
-    execution: {
-      ...existing.execution,
-      ...payload.execution,
-    },
-    metadata: {
-      ...existing.metadata,
-      ...payload.metadata,
-      tags: payload.metadata?.tags ?? existing.metadata.tags,
-    },
-  };
-
-  workflows[index] = updated;
-  res.json(updated);
+wss.on('error', (error) => {
+  console.error('WebSocket server error', error);
 });
 
-app.post('/workflows/:id/publish', (req, res) => {
-  const index = workflows.findIndex((wf) => wf.id === req.params.id);
-  if (index === -1) {
-    res.status(404).json({ message: 'Workflow not found' });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const workflow = workflows[index];
-  const published = {
-    ...workflow,
-    status: 'published',
-    version: workflow.version + 1,
-    updatedAt: now,
-    execution: {
-      ...workflow.execution,
-      lastRunStatus: 'idle',
-    },
-  };
-
-  workflows[index] = published;
-  res.json(published);
+server.on('error', (error) => {
+  console.error('Server error', error);
 });
 
-app.post('/workflows/:id/duplicate', (req, res) => {
-  const workflow = workflows.find((wf) => wf.id === req.params.id);
-  if (!workflow) {
-    res.status(404).json({ message: 'Workflow not found' });
-    return;
-  }
+const DEFAULT_PORT = Number.parseInt(process.env.PORT ?? '3001', 10);
 
-  const now = new Date().toISOString();
-  const duplicate = {
-    ...workflow,
-    id: `wf-${Date.now()}`,
-    name: `${workflow.name} Copy`,
-    status: 'draft',
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-    execution: {
-      ...workflow.execution,
-      runCount: 0,
-      lastRunAt: undefined,
-      nextRunAt: undefined,
-      lastRunStatus: 'idle',
-    },
-  };
+export function startServer(port = DEFAULT_PORT) {
+  return new Promise((resolve, reject) => {
+    if (server.listening) {
+      resolve(server);
+      return;
+    }
 
-  workflows.push(duplicate);
-  res.status(201).json(duplicate);
-});
+    const handleListening = async () => {
+      server.off('error', handleError);
+      try {
+        await triggerEngine.initialize();
+      } catch (error) {
+        console.error('Failed to initialize trigger engine', error);
+      }
+      console.log(`API server running on http://localhost:${port}`);
+      resolve(server);
+    };
 
-app.delete('/workflows/:id', (req, res) => {
-  const index = workflows.findIndex((wf) => wf.id === req.params.id);
-  if (index === -1) {
-    res.status(404).json({ message: 'Workflow not found' });
-    return;
-  }
+    const handleError = (error) => {
+      server.off('listening', handleListening);
+      reject(error);
+    };
 
-  workflows.splice(index, 1);
-  res.status(204).end();
-});
+    server.once('error', handleError);
+    server.once('listening', handleListening);
+    server.listen(port);
+  });
+}
 
-const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`API server running on http://localhost:${port}`);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer().catch((error) => {
+    console.error('Failed to start server', error);
+    process.exitCode = 1;
+  });
+}
+
+export { app, server, wss };
