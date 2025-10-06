@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,39 +8,25 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Workflow, 
-  Plus, 
-  Save, 
-  Play, 
-  Clock, 
-  Mail, 
-  FileText, 
-  Database, 
-  Globe,
-  MessageSquare,
-  Calendar,
-  Shield,
-  X
-} from 'lucide-react';
 
 interface WorkflowDialogProps {
   open: boolean;
   onClose: () => void;
   agentId?: string;
+  userId: string;
+  workspaceId: string;
 }
 
-interface WorkflowStep {
+
   id: string;
-  type: string;
+  type: WorkflowStepType;
   name: string;
-  config: any;
+
 }
 
 interface WorkflowTemplate {
@@ -49,96 +34,23 @@ interface WorkflowTemplate {
   name: string;
   description: string;
   category: string;
-  icon: React.ComponentType<any>;
-  steps: WorkflowStep[];
+
 }
 
 const prebuiltWorkflows: WorkflowTemplate[] = [
   {
-    id: 'email-automation',
-    name: 'Email Response Automation',
-    description: 'Automatically respond to emails based on content analysis',
-    category: 'Communication',
-    icon: Mail,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Email Received', config: { folder: 'inbox' } },
-      { id: '2', type: 'analyze', name: 'Analyze Content', config: { sentiment: true } },
-      { id: '3', type: 'action', name: 'Generate Response', config: { template: 'professional' } },
-      { id: '4', type: 'action', name: 'Send Reply', config: { delay: 300 } }
-    ]
+
+    ],
   },
   {
-    id: 'data-processing',
-    name: 'Data Collection & Processing',
-    description: 'Collect data from multiple sources and process it automatically',
-    category: 'Data',
-    icon: Database,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Schedule Trigger', config: { interval: '1h' } },
-      { id: '2', type: 'action', name: 'Fetch Data', config: { sources: ['api1', 'api2'] } },
-      { id: '3', type: 'process', name: 'Clean Data', config: { rules: ['remove_duplicates'] } },
-      { id: '4', type: 'action', name: 'Store Results', config: { destination: 'database' } }
-    ]
-  },
-  {
-    id: 'content-generation',
-    name: 'Content Generation Pipeline',
-    description: 'Generate and publish content across multiple platforms',
-    category: 'Content',
-    icon: FileText,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Content Request', config: { topic: 'dynamic' } },
-      { id: '2', type: 'action', name: 'Research Topic', config: { sources: 3 } },
-      { id: '3', type: 'generate', name: 'Create Content', config: { type: 'blog_post' } },
-      { id: '4', type: 'action', name: 'Publish Content', config: { platforms: ['blog', 'social'] } }
-    ]
-  },
-  {
-    id: 'web-monitoring',
-    name: 'Website Monitoring',
-    description: 'Monitor websites for changes and send notifications',
-    category: 'Monitoring',
+    id: 'scheduled-http-sync',
+    name: 'HTTP Data Sync',
+    description: 'Fetch data from an API endpoint on a schedule and stage it for storage.',
+    category: 'Integration',
     icon: Globe,
     steps: [
-      { id: '1', type: 'trigger', name: 'Schedule Check', config: { interval: '30m' } },
-      { id: '2', type: 'action', name: 'Check Website', config: { url: 'dynamic' } },
-      { id: '3', type: 'condition', name: 'Detect Changes', config: { threshold: 0.1 } },
-      { id: '4', type: 'action', name: 'Send Alert', config: { method: 'email' } }
-    ]
-  },
-  {
-    id: 'meeting-assistant',
-    name: 'Meeting Assistant',
-    description: 'Automatically schedule meetings and send reminders',
-    category: 'Productivity',
-    icon: Calendar,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Meeting Request', config: { source: 'email' } },
-      { id: '2', type: 'action', name: 'Check Availability', config: { calendar: 'primary' } },
-      { id: '3', type: 'action', name: 'Schedule Meeting', config: { duration: 60 } },
-      { id: '4', type: 'action', name: 'Send Confirmation', config: { template: 'default' } }
-    ]
-  },
-  {
-    id: 'security-monitor',
-    name: 'Security Monitoring',
-    description: 'Monitor system security and respond to threats',
-    category: 'Security',
-    icon: Shield,
-    steps: [
-      { id: '1', type: 'trigger', name: 'Security Event', config: { level: 'medium' } },
-      { id: '2', type: 'analyze', name: 'Threat Analysis', config: { severity: true } },
-      { id: '3', type: 'condition', name: 'Risk Assessment', config: { threshold: 'high' } },
-      { id: '4', type: 'action', name: 'Initiate Response', config: { protocol: 'standard' } }
-    ]
-  }
-];
 
-export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
-  open,
-  onClose,
-  agentId,
-}) => {
+
   const [activeTab, setActiveTab] = useState('prebuilt');
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowTemplate | null>(null);
   const [customWorkflow, setCustomWorkflow] = useState({
@@ -148,25 +60,23 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
     steps: [] as WorkflowStep[],
   });
 
-  const handleApplyPrebuilt = (workflow: WorkflowTemplate) => {
-    console.log('Applying prebuilt workflow:', workflow.name, 'to agent:', agentId);
-    // Logic to apply workflow to agent would go here
     onClose();
+    navigate(`/workflows/builder${buildSearchSuffix(options)}`);
   };
 
   const handleSaveCustom = () => {
-    console.log('Saving custom workflow:', customWorkflow);
-    // Logic to save custom workflow would go here
+
     onClose();
+    setCustomWorkflow({
+      name: '',
+      description: '',
+      trigger: '',
+      steps: [],
+    });
   };
 
   const addCustomStep = () => {
-    const newStep: WorkflowStep = {
-      id: Date.now().toString(),
-      type: 'action',
-      name: 'New Step',
-      config: {},
-    };
+
     setCustomWorkflow({
       ...customWorkflow,
       steps: [...customWorkflow.steps, newStep],
@@ -176,39 +86,42 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
   const removeCustomStep = (stepId: string) => {
     setCustomWorkflow({
       ...customWorkflow,
-      steps: customWorkflow.steps.filter(step => step.id !== stepId),
+      steps: customWorkflow.steps.filter((step) => step.id !== stepId),
     });
+  };
+
+
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Workflow className="h-5 w-5" />
-            Workflow Management
+            <WorkflowIcon className="h-5 w-5" />
+            Workflow Library
           </DialogTitle>
           <DialogDescription>
-            Choose from prebuilt workflows or create custom automation sequences.
+            Configure reusable workflows with typed nodes. Test runs validate configuration and stream live logs below.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+
             <TabsTrigger value="prebuilt">Prebuilt Workflows</TabsTrigger>
             <TabsTrigger value="custom">Custom Workflow</TabsTrigger>
+            <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
 
           <TabsContent value="prebuilt" className="space-y-4">
             <div className="grid gap-4">
               {prebuiltWorkflows.map((workflow) => (
-                <Card 
-                  key={workflow.id} 
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => setSelectedWorkflow(selectedWorkflow?.id === workflow.id ? null : workflow)}
+                <Card
+                  key={workflow.id}
+
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+                    <div className={cn('flex items-center justify-between', isMobile && 'flex-col gap-3 items-start')}>
                       <div className="flex items-center gap-3">
                         <workflow.icon className="h-6 w-6 text-primary" />
                         <div>
@@ -218,15 +131,33 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge variant="outline">{workflow.category}</Badge>
+                      <Badge variant={workflow.status === 'published' ? 'default' : 'outline'}>
+                        {workflow.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>v{workflow.version}</span>
+                      <span>•</span>
+                      <span>
+                        Updated {formatDistanceToNow(new Date(workflow.updatedAt), { addSuffix: true })}
+                      </span>
+                      {workflow.execution.schedule && (
+                        <>
+                          <span>•</span>
+                          <span>Schedule: {workflow.execution.schedule}</span>
+                        </>
+                      )}
                     </div>
                   </CardHeader>
-                  
+
                   {selectedWorkflow?.id === workflow.id && (
                     <CardContent className="pt-0 space-y-4">
                       <Separator />
                       <div>
-                        <h5 className="text-sm font-medium mb-2">Workflow Steps:</h5>
+                        <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+                          <ListChecks className="h-4 w-4" />
+                          Workflow Steps
+                        </h5>
                         <div className="space-y-2">
                           {workflow.steps.map((step, index) => (
                             <div key={step.id} className="flex items-center gap-2 text-sm">
@@ -234,22 +165,26 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
                                 {index + 1}
                               </Badge>
                               <span className="font-medium">{step.name}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {step.type}
-                              </Badge>
+
                             </div>
                           ))}
                         </div>
                       </div>
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
+
+                          }}
+                          className={cn(isMobile && 'w-full justify-center')}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Test Run
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
                             handleApplyPrebuilt(workflow);
                           }}
                         >
-                          <Play className="h-4 w-4 mr-2" />
+                          <Zap className="h-4 w-4 mr-2" />
                           Apply Workflow
                         </Button>
                       </div>
@@ -262,7 +197,7 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
 
           <TabsContent value="custom" className="space-y-4">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+
                 <div className="space-y-2">
                   <Label htmlFor="workflowName">Workflow Name</Label>
                   <Input
@@ -274,8 +209,8 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="trigger">Trigger Type</Label>
-                  <Select 
-                    value={customWorkflow.trigger} 
+                  <Select
+                    value={customWorkflow.trigger}
                     onValueChange={(value) => setCustomWorkflow({ ...customWorkflow, trigger: value })}
                   >
                     <SelectTrigger>
@@ -283,87 +218,83 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="schedule">Schedule</SelectItem>
-                      <SelectItem value="email">Email Received</SelectItem>
                       <SelectItem value="webhook">Webhook</SelectItem>
-                      <SelectItem value="file">File Change</SelectItem>
                       <SelectItem value="manual">Manual</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="workflowDescription">Description</Label>
-                <Textarea
-                  id="workflowDescription"
-                  value={customWorkflow.description}
-                  onChange={(e) => setCustomWorkflow({ ...customWorkflow, description: e.target.value })}
-                  placeholder="Describe what this workflow does"
-                  rows={3}
-                />
-              </div>
+              <WorkflowBuilder
+                resourceId={`workflow:${agentId ?? 'custom'}`}
+                initialDescription={customWorkflow.description}
+                onSave={(description) =>
+                  setCustomWorkflow((previous) => ({ ...previous, description }))
+                }
+              />
 
               <Separator />
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Workflow Steps</h4>
-                  <Button size="sm" onClick={addCustomStep}>
+
                     <Plus className="h-4 w-4 mr-2" />
                     Add Step
                   </Button>
                 </div>
 
                 {customWorkflow.steps.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="py-8 text-center text-sm text-muted-foreground">
                     No steps added yet. Click "Add Step" to create your workflow.
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {customWorkflow.steps.map((step, index) => (
-                      <Card key={step.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Badge>{index + 1}</Badge>
-                            <div className="grid grid-cols-2 gap-2 flex-1">
-                              <Input
-                                placeholder="Step name"
-                                value={step.name}
-                                onChange={(e) => {
-                                  const updatedSteps = customWorkflow.steps.map(s =>
-                                    s.id === step.id ? { ...s, name: e.target.value } : s
-                                  );
-                                  setCustomWorkflow({ ...customWorkflow, steps: updatedSteps });
-                                }}
-                              />
-                              <Select 
-                                value={step.type} 
-                                onValueChange={(value) => {
-                                  const updatedSteps = customWorkflow.steps.map(s =>
-                                    s.id === step.id ? { ...s, type: value } : s
-                                  );
-                                  setCustomWorkflow({ ...customWorkflow, steps: updatedSteps });
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="action">Action</SelectItem>
-                                  <SelectItem value="condition">Condition</SelectItem>
-                                  <SelectItem value="delay">Delay</SelectItem>
-                                  <SelectItem value="loop">Loop</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+
                           </div>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size={isMobile ? 'default' : 'sm'}
                             onClick={() => removeCustomStep(step.id)}
+                            className={cn(isMobile && 'self-stretch w-full justify-center')}
                           >
                             <X className="h-4 w-4" />
                           </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Select
+                            value={step.nodeType}
+                            onValueChange={(value) =>
+                              updateCustomStep(step.id, (current) => ({
+                                ...current,
+                                nodeType: value,
+                                type:
+                                  availableNodes.find((node) => node.type === value)?.displayName ?? current.type,
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableNodes.map((node) => (
+                                <SelectItem key={node.type} value={node.type}>
+                                  {node.displayName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Textarea
+                            placeholder="JSON configuration"
+                            value={stringifyConfig(step.config)}
+                            onChange={(event) =>
+                              updateCustomStep(step.id, (current) => ({
+                                ...current,
+                                config: event.target.value,
+                              }))
+                            }
+                            className="font-mono text-xs"
+                            rows={4}
+                          />
                         </div>
                       </Card>
                     ))}
@@ -371,18 +302,142 @@ export const WorkflowDialog: React.FC<WorkflowDialogProps> = ({
                 )}
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveCustom} disabled={!customWorkflow.name.trim()}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Workflow
-                </Button>
+
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="saved" className="space-y-4">
+            {savedWorkflows.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Saved workflows will appear here for offline reuse.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {savedWorkflows.map((workflow) => (
+                  <Card key={workflow.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <CardTitle className="text-base">{workflow.name}</CardTitle>
+                          <CardDescription className="text-sm">
+                            {workflow.description || 'No description provided.'}
+                          </CardDescription>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline">{workflow.trigger || 'manual'}</Badge>
+                            <span>
+                              {workflow.steps.length} step{workflow.steps.length === 1 ? '' : 's'}
+                            </span>
+                            <span>
+                              Saved {new Date(workflow.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size={isMobile ? 'default' : 'sm'}
+                            onClick={() => removeWorkflow(workflow.id)}
+                            aria-label={`Delete ${workflow.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div
+                        className={cn(
+                          'flex justify-end gap-2',
+                          isMobile && 'flex-col gap-3'
+                        )}
+                      >
+                        <Button
+                          size={isMobile ? 'default' : 'sm'}
+                          className={cn(isMobile && 'w-full justify-center text-base')}
+                          onClick={() => handleApplySaved(workflow)}
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          Apply Workflow
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
+
+        <Separator className="my-4" />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Execution Logs
+              </CardTitle>
+              <CardDescription className="text-xs flex items-center gap-2">
+                Status:
+                <Badge variant={lastRunStatus === 'completed' ? 'secondary' : lastRunStatus === 'failed' ? 'destructive' : 'outline'}>
+                  {lastRunStatus.toUpperCase()}
+                </Badge>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[200px] pr-4">
+                <div className="space-y-2 text-xs">
+                  {executionLogs.length === 0 ? (
+                    <p className="text-muted-foreground">Execute a workflow to stream logs here.</p>
+                  ) : (
+                    executionLogs.map((log, index) => (
+                      <div key={`${log.timestamp}-${index}`} className="flex items-start gap-2">
+                        <Badge className={`mt-0.5 ${levelStyles[log.level] ?? levelStyles.info}`}>
+                          {log.level.toUpperCase()}
+                        </Badge>
+                        <div className="space-y-1">
+                          <div className="font-medium text-muted-foreground">Step: {log.stepId}</div>
+                          <div>{log.message}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Available Credentials
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Reference IDs when configuring nodes that require secure secrets.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs">
+              {credentialMetadata.length === 0 ? (
+                <p className="text-muted-foreground">No credentials stored yet. Create them from the dashboard.</p>
+              ) : (
+                <div className="space-y-1">
+                  {credentialMetadata.map((credential) => (
+                    <div key={credential.id} className="rounded border border-dashed border-muted p-2">
+                      <div className="font-medium text-sm">{credential.name}</div>
+                      <div className="text-muted-foreground">ID: {credential.id}</div>
+                      <div className="text-muted-foreground">Type: {credential.type}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </DialogContent>
     </Dialog>
   );
