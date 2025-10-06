@@ -15,6 +15,13 @@ interface AgentCardProps {
   onBuildWorkflow?: (agentId: string) => void;
 }
 
+export const AgentCard: React.FC<AgentCardProps> = ({
+  agent,
+  onEdit,
+  onViewMemory,
+  onBuildWorkflow,
+}) => {
+  const isMobile = useIsMobile();
 
 
 export const AgentCard: React.FC<AgentCardProps> = ({
@@ -50,7 +57,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
         </div>
         <CardDescription className="text-muted-foreground">
-          {agent.description}
+          {agent.description || 'No description provided'}
         </CardDescription>
       </CardHeader>
 
@@ -103,6 +110,52 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
         </div>
       </CardContent>
+
+      <CardFooter
+        className={cn(
+          'flex flex-wrap items-center gap-2 pt-0',
+          isMobile ? 'flex-col' : 'justify-between'
+        )}
+      >
+        <Button
+          asChild
+          variant="secondary"
+          size={isMobile ? 'default' : 'sm'}
+          className={cn('flex-1', isMobile && 'w-full')}
+        >
+          <Link to={`/agents/${agent.id}`} className="flex items-center justify-center gap-1">
+            <Eye className="h-4 w-4" />
+            View
+          </Link>
+        </Button>
+        <Button
+          variant="outline"
+          size={isMobile ? 'default' : 'sm'}
+          onClick={() => onEdit(agent.id)}
+          className={cn('flex-1', isMobile && 'w-full')}
+        >
+          <Settings className="h-4 w-4" />
+          Configure
+        </Button>
+        <Button
+          variant="secondary"
+          size={isMobile ? 'default' : 'sm'}
+          onClick={() => onViewMemory(agent.id)}
+          className={cn('flex-1', isMobile && 'w-full')}
+        >
+          <Database className="h-4 w-4" />
+          Memory
+        </Button>
+        <Button
+          variant="outline"
+          size={isMobile ? 'default' : 'sm'}
+          onClick={() => onBuildWorkflow(agent.id)}
+          className={cn('flex-1', isMobile && 'w-full')}
+        >
+          <Workflow className="h-4 w-4" />
+          Workflows
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

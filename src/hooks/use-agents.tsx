@@ -197,7 +197,22 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   useEffect(() => {
-    setAgents(agentsData);
+    setAgents((current) => {
+      if (current === agentsData) {
+        return current;
+      }
+
+      if (current.length === agentsData.length) {
+        const hasSameOrder = current.every(
+          (agent, index) => agent.id === agentsData[index]?.id
+        );
+        if (hasSameOrder) {
+          return current;
+        }
+      }
+
+      return agentsData;
+    });
   }, [agentsData]);
 
   const updateAgentFromServer = useCallback(
