@@ -97,6 +97,26 @@ export const createServer = () => {
     return next();
   };
 
+  const requireWorkspaceRole = (minimumRole) => {
+    const roleOrder = ['viewer', 'editor', 'admin', 'owner'];
+    const minimumIndex = roleOrder.indexOf(minimumRole);
+
+    if (minimumIndex === -1) {
+      throw new Error(`Unknown workspace role: ${minimumRole}`);
+    }
+
+    return (req, res, next) => {
+      const membershipRole = req.workspaceMembership?.role;
+      const membershipIndex = roleOrder.indexOf(membershipRole);
+
+      if (membershipIndex === -1 || membershipIndex < minimumIndex) {
+        return res.status(403).json({ message: 'You do not have permission to access this resource.' });
+      }
+
+      return next();
+    };
+  };
+
   app.post('/auth/login', async (req, res) => {
     const { email, password } = req.body ?? {};
 
@@ -148,17 +168,35 @@ export const createServer = () => {
     return res.json(req.workspaceResources.agents);
   });
 
-  app.get('/workspaces/:workspaceId/workflows', authenticate, authorizeWorkspace, (req, res) => {
-    return res.json(req.workspaceResources.workflows);
-  });
+  app.get(
+    '/workspaces/:workspaceId/workflows',
+    authenticate,
+    authorizeWorkspace,
+    requireWorkspaceRole('editor'),
+    (req, res) => {
+      return res.json(req.workspaceResources.workflows);
+    },
+  );
 
-  app.get('/workspaces/:workspaceId/credentials', authenticate, authorizeWorkspace, (req, res) => {
-    return res.json(req.workspaceResources.credentials);
-  });
+  app.get(
+    '/workspaces/:workspaceId/credentials',
+    authenticate,
+    authorizeWorkspace,
+    requireWorkspaceRole('editor'),
+    (req, res) => {
+      return res.json(req.workspaceResources.credentials);
+    },
+  );
 
-  app.get('/workspaces/:workspaceId/runs', authenticate, authorizeWorkspace, (req, res) => {
-    return res.json(req.workspaceResources.runs);
-  });
+  app.get(
+    '/workspaces/:workspaceId/runs',
+    authenticate,
+    authorizeWorkspace,
+    requireWorkspaceRole('editor'),
+    (req, res) => {
+      return res.json(req.workspaceResources.runs);
+    },
+  );
 
   return app;
 };
