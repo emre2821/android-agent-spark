@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { AgentCard } from './AgentCard';
 
@@ -50,6 +51,8 @@ describe('AgentCard', () => {
   it('disables restricted actions when permissions are missing', () => {
     const onEdit = vi.fn();
     const onViewMemory = vi.fn();
+  it('calls onBuildWorkflow when Workflows button clicked', () => {
+    const onBuildWorkflow = vi.fn();
     render(
       <BrowserRouter>
         <AgentCard
@@ -73,5 +76,13 @@ describe('AgentCard', () => {
 
     expect(onEdit).not.toHaveBeenCalled();
     expect(onViewMemory).not.toHaveBeenCalled();
+          onEdit={() => {}}
+          onViewMemory={() => {}}
+          onBuildWorkflow={onBuildWorkflow}
+        />
+      </BrowserRouter>
+    );
+    fireEvent.click(screen.getByText('Workflows'));
+    expect(onBuildWorkflow).toHaveBeenCalledWith('1');
   });
 });
