@@ -2,6 +2,7 @@ export type AgentStatus = 'active' | 'inactive' | 'learning';
 
 export interface Agent {
   id: string;
+  workspaceId: string;
   name: string;
   description: string;
   status: AgentStatus;

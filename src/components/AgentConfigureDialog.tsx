@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
+import { Agent } from '@/types/agent';
 import { useAgents } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
 import type { AgentStatus } from '@/types/agent';

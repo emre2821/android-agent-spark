@@ -1,3 +1,7 @@
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Agent } from '@/types/agent';
+import { useAuth } from './use-auth';
 import React, {
 import {
   createContext,
@@ -100,6 +104,9 @@ export type MemoryInput = {
 
 export interface AgentsContextValue {
   agents: Agent[];
+  setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
+  isFetching: boolean;
+  refetch: () => Promise<unknown>;
   isLoading: boolean;
   isError: boolean;
   connectionState: 'connecting' | 'open' | 'closed';
@@ -166,6 +173,7 @@ export const API_BASE = normalizedBase;
 
 const AgentsContext = createContext<AgentsContextValue | undefined>(undefined);
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const listenersRef = useRef(new Set<(event: ServerEvent) => void>());
@@ -559,6 +567,26 @@ function removeAgent(current: Agent[], agentId: string) {
 }
 
 export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
+  const { token, currentWorkspace } = useAuth();
+  const workspaceId = currentWorkspace?.id;
+
+  const fetchAgents = async (): Promise<Agent[]> => {
+    if (!workspaceId || !token) {
+      return [];
+    }
+
+    const res = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}/agents`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error('Failed to fetch agents');
+    return res.json();
+  };
+
+  const { data, isFetching, refetch } = useQuery<Agent[]>({
+    queryKey: ['agents', workspaceId, token],
   const queryClient = useQueryClient();
   const [agents, setAgents] = useState<Agent[]>([]);
 
@@ -569,6 +597,8 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   } = useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: fetchAgents,
+    enabled: Boolean(workspaceId && token),
+    staleTime: 1000 * 30,
   });
 
   useEffect(() => {
@@ -1034,6 +1064,21 @@ export const AgentsProvider = ({ children }: { children: React.ReactNode }) => {
   );
 
   useEffect(() => {
+    if (data) {
+      setAgents(data);
+    } else if (!workspaceId) {
+      setAgents([]);
+    }
+  }, [data, workspaceId]);
+
+  const value = useMemo(
+    () => ({
+      agents,
+      setAgents,
+      isFetching,
+      refetch,
+    }),
+    [agents, isFetching, refetch],
     if (typeof window === 'undefined') {
       return;
     }

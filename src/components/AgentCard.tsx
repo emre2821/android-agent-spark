@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Eye, Settings, Workflow, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Agent } from '@/types/agent';
 import { formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,8 @@ import type { Agent } from '@/types/agent';
 
 interface AgentCardProps {
   agent: Agent;
+  canConfigure: boolean;
+  canViewMemory: boolean;
   onEdit: (agentId: string) => void;
   onViewMemory: (agentId: string) => void;
   onBuildWorkflow?: (agentId: string) => void;
@@ -19,6 +22,21 @@ interface AgentCardProps {
 
 export const AgentCard: React.FC<AgentCardProps> = ({
   agent,
+  canConfigure,
+  canViewMemory,
+  onEdit,
+  onViewMemory,
+}) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-agent-active/20 text-agent-active border-agent-active/30';
+      case 'inactive':
+        return 'bg-agent-inactive/20 text-agent-inactive border-agent-inactive/30';
+      case 'learning':
+        return 'bg-agent-memory/20 text-agent-memory border-agent-memory/30';
+      default:
+        return 'bg-muted text-muted-foreground';
   onEdit,
   onViewMemory,
   onBuildWorkflow,
@@ -104,6 +122,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
           <Button
             variant="outline"
+            size="sm"
+            onClick={() => canConfigure && onEdit(agent.id)}
+            className="flex-1"
+            disabled={!canConfigure}
+            title={canConfigure ? undefined : 'Requires editor access'}
             size={actionButtonSize}
             onClick={() => onEdit(agent.id)}
 
@@ -114,6 +137,11 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
           <Button
             variant="secondary"
+            size="sm"
+            onClick={() => canViewMemory && onViewMemory(agent.id)}
+            className="flex-1"
+            disabled={!canViewMemory}
+            title={canViewMemory ? undefined : 'Only admins can review memory'}
             size={actionButtonSize}
             onClick={() => onViewMemory(agent.id)}
 
