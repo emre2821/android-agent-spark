@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1",
+    "name": "Aurora",
+    "description": "First wave automation agent",
+    "status": "active",
+    "tasksCompleted": 7,
+    "memoryItems": 12,
+    "lastActive": "Today"
+  },
+  {
+    "id": "2",
+    "name": "Borealis",
+    "description": "Keeps nightly routines in sync",
+    "status": "learning",
+    "tasksCompleted": 3,
+    "memoryItems": 8,
+    "lastActive": "1 hour ago"
+  }
+]

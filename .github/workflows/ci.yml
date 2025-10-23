@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ['*']
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Cypress end-to-end tests
+        run: npm run test:e2e
+
+      - name: Build web bundle
+        run: npm run build:web
+
+      - name: Build mobile bundle
+        run: npm run build:mobile
+
+      - name: Build desktop bundle
+        run: npm run build:desktop
