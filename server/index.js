@@ -362,13 +362,15 @@ const createApp = () => {
     })
   );
 
-  app.post(
-    '/__test__/reset',
-    handler((_req, res) => {
-      resetAll();
-      res.status(204).send();
-    })
-  );
+  if (process.env.NODE_ENV === 'test') {
+    app.post(
+      '/__test__/reset',
+      handler((_req, res) => {
+        resetAll();
+        res.status(204).send();
+      })
+    );
+  }
 
   app.use((err, _req, res, _next) => {
     if (err instanceof HttpError) {
