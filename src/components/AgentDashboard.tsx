@@ -1,3 +1,4 @@
+import React, { useMemo, useState } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import React, { useMemo, useState } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -43,6 +44,7 @@ import { useAgents } from '@/hooks/use-agents';
 import { useAuth } from '@/hooks/use-auth';
 
 export const AgentDashboard: React.FC = () => {
+  const { agents, createAgent, connectionState } = useAgents();
   const { agents, setAgents, isFetching } = useAgents();
   const { user, workspaces, currentWorkspace, currentRole, setWorkspace, isLoading } = useAuth();
 import { useToast } from '@/hooks/use-toast';
@@ -103,6 +105,16 @@ export const AgentDashboard: React.FC = () => {
   useEffect(() => {
     if (!canConfigureAgent) setSelectedAgentConfig(null);
   }, [canConfigureAgent]);
+
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        [agent.name, agent.description].some((value) =>
+          value.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ),
+    [agents, searchQuery]
+  );
 
   useEffect(() => {
     if (!canReviewMemory) setSelectedAgentMemory(null);
@@ -455,6 +467,7 @@ export const AgentDashboard: React.FC = () => {
                 }`}
               />
               <span className="capitalize">{connectionState} connection</span>
+            </div>
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>

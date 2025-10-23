@@ -34,6 +34,14 @@ interface CreateAgentPayload {
   status: AgentStatus;
 }
 
+type AgentStatus = 'active' | 'inactive' | 'learning';
+
+interface CreateAgentPayload {
+  name: string;
+  description: string;
+  status: AgentStatus;
+}
+
 interface CreateAgentDialogProps {
   open: boolean;
   onClose: () => void;

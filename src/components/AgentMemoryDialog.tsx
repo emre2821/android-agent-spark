@@ -68,6 +68,22 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     setIsAdding(true);
     try {
       await createMemory(agentId, {
+
+  useEffect(() => {
+    if (!editingId) return;
+    const item = memoryItems.find((memory) => memory.id === editingId);
+    if (!item) {
+      setEditingId(null);
+      return;
+    }
+    setEditDraft({ key: item.key, value: item.value, type: item.type });
+  }, [editingId, memoryItems]);
+
+  const handleAddMemory = async () => {
+    if (!agentId || !newItem.key.trim() || !newItem.value.trim()) return;
+    setIsAdding(true);
+    try {
+      await createMemory(agentId, {
 type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 
 

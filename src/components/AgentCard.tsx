@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Brain, Database, Eye, Settings, Workflow, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 import { Agent } from '@/types/agent';
 import { formatDistanceToNow } from 'date-fns';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -65,6 +66,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
   const actionButtonSize = isMobile ? 'default' : 'sm';
   const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
+
+  const lastActiveLabel = useMemo(() => {
+    try {
+      return formatDistanceToNow(new Date(agent.lastActive), { addSuffix: true });
+    } catch (error) {
+      return agent.lastActive;
+    }
+  }, [agent.lastActive]);
 
   const lastActiveLabel = useMemo(() => {
     try {

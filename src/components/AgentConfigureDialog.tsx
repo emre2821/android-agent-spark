@@ -28,6 +28,9 @@ interface AgentConfigureDialogProps {
 }
 
 const DEFAULT_TAGS = ['automation', 'ai'];
+}
+
+const DEFAULT_TAGS = ['automation', 'ai'];
   agent: Agent | null;
 }
 
