@@ -1,9 +1,18 @@
+export type AgentStatus = 'active' | 'inactive' | 'learning';
+
 export interface Agent {
   id: string;
+  workspaceId: string;
   name: string;
   description: string;
-  status: 'active' | 'inactive' | 'learning';
+  status: AgentStatus;
   tasksCompleted: number;
   memoryItems: number;
   lastActive: string;
+  createdAt: string;
+  updatedAt: string;
+export type AgentStatus = 'active' | 'inactive' | 'learning'
+
+export interface Agent {
 }
+
