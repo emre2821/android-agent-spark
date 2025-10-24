@@ -2,8 +2,37 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { AgentsProvider, useAgents } from '@/hooks/use-agents';
 import { Agent } from '@/types/agent';
+
+type AgentsModule = typeof import('@/hooks/use-agents');
+
+let AgentsProvider: AgentsModule['AgentsProvider'];
+let useAgents: AgentsModule['useAgents'];
+
+const loadAgentsModule = async (apiUrl?: string | null) => {
+  vi.resetModules();
+  const metaEnv = import.meta.env as Record<string, string | undefined>;
+  const hadOriginal = Object.prototype.hasOwnProperty.call(metaEnv, 'VITE_API_URL');
+  const originalValue = metaEnv.VITE_API_URL;
+
+  if (apiUrl == null) {
+    Reflect.deleteProperty(metaEnv, 'VITE_API_URL');
+  } else {
+    metaEnv.VITE_API_URL = apiUrl;
+  }
+
+  const module = (await import('@/hooks/use-agents')) as AgentsModule;
+  AgentsProvider = module.AgentsProvider;
+  useAgents = module.useAgents;
+
+  if (hadOriginal) {
+    metaEnv.VITE_API_URL = originalValue;
+  } else {
+    Reflect.deleteProperty(metaEnv, 'VITE_API_URL');
+  }
+
+  return module;
+};
 
 declare global {
   // eslint-disable-next-line no-var
@@ -133,9 +162,14 @@ const createWrapper = () => {
     },
   });
 
+  const Provider = AgentsProvider;
+  if (!Provider) {
+    throw new Error('AgentsProvider not loaded');
+  }
+
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <AgentsProvider>{children}</AgentsProvider>
+      <Provider>{children}</Provider>
     </QueryClientProvider>
   );
 
@@ -143,11 +177,12 @@ const createWrapper = () => {
 };
 
 describe('useAgents hook', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     agentsStore = [successAgent()];
+    createResolve = null;
+    await loadAgentsModule();
     setupFetch();
     MockWebSocket.reset();
-    createResolve = null;
   });
 
   afterEach(() => {
@@ -192,5 +227,23 @@ describe('useAgents hook', () => {
     await waitFor(() =>
       expect(result.current.agents.find((agent) => agent.id === '1')?.status).toBe('active')
     );
+  });
+
+  it('honors a custom VITE_API_URL when issuing requests', async () => {
+    agentsStore = [successAgent()];
+    createResolve = null;
+    await loadAgentsModule('https://example.com/api');
+    setupFetch();
+    MockWebSocket.reset();
+
+    const { wrapper } = createWrapper();
+    renderHook(() => useAgents(), { wrapper });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    const [call] = fetchMock.mock.calls;
+    const requestInput = call?.[0];
+    const url = typeof requestInput === 'string' ? requestInput : requestInput?.url;
+    expect(url).toBe('https://example.com/api/agents');
   });
 });
