@@ -102,7 +102,8 @@ function deriveWebSocketUrl(baseUrl: string) {
   try {
     const url = new URL(httpOrigin);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = '/ws';
+    const basePath = url.pathname.replace(/\/$/, '');
+    url.pathname = basePath ? `${basePath}/ws` : '/ws';
     url.search = '';
     return url.toString();
   } catch {
