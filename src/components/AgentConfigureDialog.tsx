@@ -16,6 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Save, X, Plus, Workflow } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useAgents } from '@/hooks/use-agents';
+import type { Agent, AgentStatus } from '@/types/agent';
 import { Agent } from '@/types/agent';
 import { useAgents } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
@@ -130,6 +134,9 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   });
   agent,
 }) => {
+  const isMobile = useIsMobile();
+  const { updateAgent } = useAgents();
+  const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
 
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -137,6 +144,14 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const initialConfig = useMemo(() => deriveConfigFromAgent(agent), [agent]);
 
   useEffect(() => {
+    setConfig(initialConfig);
+    setNewTag('');
+    setIsSaving(false);
+  }, [initialConfig, open]);
+
+  const handleDialogChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onClose();
 
 
   };
@@ -222,6 +237,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     });
   };
 
+  const handleSave = async () => {
+    if (!agent || !config.name.trim() || isSaving) {
   if (!agent) {
     return null;
   }
@@ -230,6 +247,26 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
     }
 
     setIsSaving(true);
+    const payload: AgentUpdatePayload = {
+      name: config.name.trim(),
+      description: config.description.trim(),
+      status: config.status,
+      priority: config.priority,
+      autoStart: config.autoStart,
+      learningMode: config.learningMode,
+      maxTasks: config.maxTasks,
+      memoryLimit: config.memoryLimit,
+      systemPrompt: config.systemPrompt,
+      tags: config.tags,
+    };
+
+    try {
+      await updateAgent(agent.id, payload);
+      onClose();
+    } catch (error) {
+      console.error('Failed to save agent configuration', error);
+    } finally {
+      setIsSaving(false);
 
     }
   };
@@ -237,6 +274,25 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   if (!agent) return null;
 
   return (
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      <DialogContent
+        className={cn(
+          'sm:max-w-[600px] max-h-[80vh] overflow-y-auto',
+          isMobile &&
+            'h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-none overflow-y-auto rounded-2xl border border-border/50 p-0'
+        )}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configure Agent: {agent.name}
+          </DialogTitle>
+          <DialogDescription>
+            Customize your agent's behavior, settings, and workflows.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
 
           {/* Basic Settings */}
           <div className="space-y-4">
@@ -457,6 +513,8 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           </div>
         </div>
 
+        <DialogFooter>
+          <Button type="button" onClick={handleSave} disabled={isSaving || !config.name.trim()}>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel

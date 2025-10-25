@@ -87,6 +87,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 
 
+const createEmptyDraft = (): MemoryDraft => ({ key: '', value: '', type: 'fact' });
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
   const { toast } = useToast();
@@ -112,6 +113,11 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
   const resetDrafts = useCallback(() => {
     setMemoryItems([]);
+    setNewItem(createEmptyDraft());
+    resetEditor();
+    setIsLoading(false);
+    setIsSubmitting(false);
+    setIsUpdating(false);
 
   }, [resetEditor]);
 
@@ -163,6 +169,16 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     return () => {
       active = false;
     };
+  }, [agentId, open, fetchAgentMemory, resetEditor, toast, resetDrafts]);
+
+  const handleDialogChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 <
 
   const handleAddMemory = async () => {
@@ -318,6 +334,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   const getTypeColor = (type: MemoryType) => typeClasses[type] ?? 'bg-muted text-muted-foreground';
 
   return (
+    <Dialog open={open} onOpenChange={handleDialogChange}>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh]">
         <DialogHeader>

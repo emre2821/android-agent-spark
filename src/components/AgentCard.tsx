@@ -23,6 +23,12 @@ interface AgentCardProps {
 
 export const AgentCard: React.FC<AgentCardProps> = ({
   agent,
+  onEdit,
+  onViewMemory,
+  onBuildWorkflow,
+}) => {
+  const isMobile = useIsMobile();
+
   canConfigure,
   canViewMemory,
   onEdit,
@@ -83,6 +89,14 @@ export const AgentCard: React.FC<AgentCardProps> = ({
     }
   }, [agent.lastActive]);
 
+  const actionLayout = cn(
+    'flex flex-wrap items-center gap-2',
+    isMobile ? 'flex-col w-full' : 'justify-end'
+  );
+
+  const actionButtonSize = isMobile ? 'default' : 'sm';
+  const actionButtonClasses = cn('gap-1', isMobile && 'w-full');
+
   return (
     <Card className="agent-card border-border/50 hover:border-primary/30 transition-colors">
       <CardHeader className="pb-3">
@@ -91,6 +105,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             <Brain className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{agent.name}</CardTitle>
           </div>
+          <Badge className={getStatusColor(agent.status)}>{agent.status}</Badge>
 
         </div>
         <CardDescription className="text-muted-foreground">
@@ -117,6 +132,17 @@ export const AgentCard: React.FC<AgentCardProps> = ({
           </div>
         </div>
 
+        <div className="text-xs text-muted-foreground">Last active: {agent.lastActive}</div>
+
+        <div className={actionLayout}>
+          <Button
+            asChild
+            variant="outline"
+            size={actionButtonSize}
+            className={actionButtonClasses}
+          >
+            <Link to={`/agents/${agent.id}`} className="flex items-center justify-center gap-1">
+
         <div className="text-xs text-muted-foreground">
           Last active: {lastActiveLabel}
         </div>
@@ -138,7 +164,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             title={canConfigure ? undefined : 'Requires editor access'}
             size={actionButtonSize}
             onClick={() => onEdit(agent.id)}
-
+            className={actionButtonClasses}
           >
             <Settings className="h-4 w-4" />
             Configure
@@ -153,11 +179,22 @@ export const AgentCard: React.FC<AgentCardProps> = ({
             title={canViewMemory ? undefined : 'Only admins can review memory'}
             size={actionButtonSize}
             onClick={() => onViewMemory(agent.id)}
-
+            className={actionButtonClasses}
           >
             <Database className="h-4 w-4" />
             Memory
           </Button>
+          {onBuildWorkflow && (
+            <Button
+              variant="outline"
+              size={actionButtonSize}
+              onClick={() => onBuildWorkflow(agent.id)}
+              className={actionButtonClasses}
+            >
+              <Workflow className="h-4 w-4" />
+              Workflows
+            </Button>
+          )}
 
         </div>
       </CardContent>

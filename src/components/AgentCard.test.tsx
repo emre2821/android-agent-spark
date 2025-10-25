@@ -18,6 +18,7 @@ describe('AgentCard', () => {
   it('renders agent information', () => {
     render(
       <BrowserRouter>
+        <AgentCard agent={agent} onEdit={() => {}} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
         <AgentCard
           agent={agent}
           canConfigure
@@ -35,6 +36,7 @@ describe('AgentCard', () => {
     const onEdit = vi.fn();
     render(
       <BrowserRouter>
+        <AgentCard agent={agent} onEdit={onEdit} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
         <AgentCard
           agent={agent}
           canConfigure
