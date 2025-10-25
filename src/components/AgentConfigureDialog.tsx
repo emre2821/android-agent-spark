@@ -20,10 +20,21 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAgents } from '@/hooks/use-agents';
 import type { Agent, AgentStatus } from '@/types/agent';
+import { Agent } from '@/types/agent';
+import { useAgents } from '@/hooks/use-agents';
+import { useToast } from '@/hooks/use-toast';
+import type { AgentStatus } from '@/types/agent';
 
 interface AgentConfigureDialogProps {
   open: boolean;
   onClose: () => void;
+  agentId: string | null;
+}
+
+const DEFAULT_TAGS = ['automation', 'ai'];
+}
+
+const DEFAULT_TAGS = ['automation', 'ai'];
   agent: Agent | null;
 }
 
@@ -103,11 +114,30 @@ const deriveConfigFromAgent = (agent: Agent | null): AgentConfigurationState => 
 export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   open,
   onClose,
+  agentId,
+}) => {
+  const { agents, updateAgent } = useAgents();
+  const { toast } = useToast();
+  const agent = useMemo(() => agents.find((item) => item.id === agentId) ?? null, [agents, agentId]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [config, setConfig] = useState({
+    name: '',
+    description: '',
+    status: 'inactive' as AgentStatus,
+    autoStart: true,
+    learningMode: true,
+    maxTasks: 100,
+    priority: 'medium',
+    tags: [...DEFAULT_TAGS],
+    systemPrompt: 'You are a helpful AI agent designed to automate tasks efficiently.',
+    memoryLimit: 1000,
+  });
   agent,
 }) => {
   const isMobile = useIsMobile();
   const { updateAgent } = useAgents();
   const [config, setConfig] = useState<AgentConfigurationState>(DEFAULT_CONFIG);
+
   const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -122,6 +152,70 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       onClose();
+
+
+  };
+
+  const handleRequestLock = async () => {
+    const result = await collaboration.requestLock({ reason: 'Editing agent configuration' });
+    if (!result.ok) {
+      toast({
+        title: 'Unable to acquire lock',
+        description: result.message || 'Another collaborator currently holds the lock.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: 'Lock acquired', description: 'You now control this configuration.' });
+    }
+  };
+
+  useEffect(() => {
+    if (!agent) return;
+    setConfig((previous) => ({
+      ...previous,
+      name: agent.name,
+      description: agent.description,
+      status: agent.status,
+    }));
+    setNewTag('');
+  }, [agent]);
+
+  const handleSave = async () => {
+    if (!agent) return;
+    setIsSaving(true);
+    try {
+      await updateAgent(agent.id, {
+        name: config.name,
+        description: config.description,
+        status: config.status,
+      });
+      toast({
+        title: 'Agent Updated',
+        description: 'Agent configuration has been saved successfully.',
+      });
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update agent';
+      toast({
+        title: 'Update failed',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+  const handleReleaseLock = async () => {
+    const result = await collaboration.releaseLock({ reason: 'Finished editing configuration' });
+    if (result.ok) {
+      toast({ title: 'Lock released', description: 'Others can now edit this configuration.' });
+    }
+  };
+
+  const handleForceUnlock = async () => {
+    const reason = window.prompt('Enter a reason for force unlocking this configuration.');
+    if (reason === null) return;
+    const result = await collaboration.forceUnlock(reason || 'Force unlock requested');
+    if (result.ok) {
+      toast({ title: 'Lock overridden', description: 'You now control this configuration.' });
     }
   };
 
@@ -145,6 +239,10 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
   const handleSave = async () => {
     if (!agent || !config.name.trim() || isSaving) {
+  if (!agent) {
+    return null;
+  }
+
       return;
     }
 
@@ -169,6 +267,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
       console.error('Failed to save agent configuration', error);
     } finally {
       setIsSaving(false);
+
     }
   };
 
@@ -194,6 +293,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
         </DialogHeader>
 
         <div className={cn('space-y-6 py-4', isMobile ? 'px-5' : '')}>
+
           {/* Basic Settings */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Basic Information</h4>
@@ -224,6 +324,9 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={config.status}
+                  onValueChange={(value: AgentStatus) => setConfig({ ...config, status: value })}
+                >
+                  <SelectTrigger>
                   onValueChange={(value) =>
                     setConfig({ ...config, status: value as AgentStatus })
                   }
@@ -243,6 +346,9 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={config.priority}
+                  onValueChange={(value) => setConfig({ ...config, priority: value })}
+                >
+                  <SelectTrigger>
                   onValueChange={(value) =>
                     setConfig({ ...config, priority: value as AgentPriority })
                   }
@@ -267,6 +373,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Behavior</h4>
 
+            <div className="flex items-center justify-between">
             <div
               className={cn(
                 'flex items-center justify-between',
@@ -313,6 +420,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   max="1000"
                   value={config.maxTasks}
                   onChange={(e) =>
+                    setConfig({ ...config, maxTasks: parseInt(e.target.value, 10) || 100 })
                     setConfig({
                       ...config,
                       maxTasks: Number.parseInt(e.target.value, 10) || DEFAULT_CONFIG.maxTasks,
@@ -332,6 +440,7 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
                   onChange={(e) =>
                     setConfig({
                       ...config,
+                      memoryLimit: parseInt(e.target.value, 10) || 1000,
                       memoryLimit:
                         Number.parseInt(e.target.value, 10) || DEFAULT_CONFIG.memoryLimit,
                     })
@@ -406,10 +515,16 @@ export const AgentConfigureDialog: React.FC<AgentConfigureDialogProps> = ({
 
         <DialogFooter>
           <Button type="button" onClick={handleSave} disabled={isSaving || !config.name.trim()}>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!config.name.trim() || isSaving}>
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Configuration'}
           </Button>
-        </DialogFooter>
+        </div>
+
       </DialogContent>
     </Dialog>
   );

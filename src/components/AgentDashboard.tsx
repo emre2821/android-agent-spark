@@ -1,93 +1,810 @@
 import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle2,
+  Database,
+  KeyRound,
+  Plus,
+  RefreshCcw,
+  Search,
+  Settings,
+  Sparkles,
+  Users,
+  WifiOff,
+  Workflow,
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+
 import { AgentCard } from './AgentCard';
-import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
+import { AgentConfigureDialog } from './AgentConfigureDialog';
 import { AgentMemoryDialog } from './AgentMemoryDialog';
 import { AgentSettingsDialog } from './AgentSettingsDialog';
+import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
+import { CredentialsManagerDialog } from './credentials/CredentialsManagerDialog';
+import { useAgents, type Agent } from '@/hooks/use-agents';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Search, Settings, Workflow, History } from 'lucide-react';
+import { useAgents } from '@/hooks/use-agents';
+import { useNavigate } from 'react-router-dom';
+
+const DEFAULT_USER_ID = 'demo-user';
+const DEFAULT_WORKSPACE_ID = 'demo-workspace';
 
 import { useAgents } from '@/hooks/use-agents';
+import { useAuth } from '@/hooks/use-auth';
+
+export const AgentDashboard: React.FC = () => {
+  const { agents, createAgent, connectionState } = useAgents();
+  const { agents, setAgents, isFetching } = useAgents();
+  const { user, workspaces, currentWorkspace, currentRole, setWorkspace, isLoading } = useAuth();
+import { useToast } from '@/hooks/use-toast';
+import type { Agent } from '@/types/agent';
+
+const offlineDefault = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+export const AgentDashboard: React.FC = () => {
+  const { agents, createAgent, connectionState } = useAgents();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const {
+    agents,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    isLoading,
+    error: agentLoadError,
+  } = useAgents();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [selectedAgentMemory, setSelectedAgentMemory] = useState<string | null>(null);
   const [selectedAgentConfig, setSelectedAgentConfig] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isCreating, setIsCreating] = useState(false);
+  const [hasPendingSync, setHasPendingSync] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [isOnline, setIsOnline] = useState(offlineDefault);
 
+  const canManageSettings = currentRole === 'owner' || currentRole === 'admin';
+  const canManageWorkflows = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor';
+  const canCreateAgent = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor';
+  const canConfigureAgent = currentRole === 'owner' || currentRole === 'admin' || currentRole === 'editor';
+  const canReviewMemory = currentRole === 'owner' || currentRole === 'admin';
 
+  useEffect(() => {
+    setSelectedAgentConfig(null);
+    setSelectedAgentMemory(null);
+    setShowCreateDialog(false);
+  }, [currentWorkspace?.id]);
+
+  useEffect(() => {
+    if (!canCreateAgent) setShowCreateDialog(false);
+  }, [canCreateAgent]);
+
+  useEffect(() => {
+    if (!canManageSettings) setShowSettingsDialog(false);
+  }, [canManageSettings]);
+
+  useEffect(() => {
+    if (!canManageWorkflows) setShowWorkflowDialog(false);
+  }, [canManageWorkflows]);
+
+  useEffect(() => {
+    if (!canConfigureAgent) setSelectedAgentConfig(null);
+  }, [canConfigureAgent]);
+
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        [agent.name, agent.description].some((value) =>
+          value.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ),
+    [agents, searchQuery]
+  );
+
+  useEffect(() => {
+    if (!canReviewMemory) setSelectedAgentMemory(null);
+  }, [canReviewMemory]);
+
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.description.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [agents, searchQuery],
+  );
+
+  const handleCreateAgent = (agentData: any) => {
+    if (!currentWorkspace || !canCreateAgent) {
+      toast({
+        title: 'Insufficient permissions',
+        description: 'You need edit access to create new agents in this workspace.',
+      });
+      return;
+    }
+
+    const newAgent = {
+      id: Date.now().toString(),
+      workspaceId: currentWorkspace.id,
+      ...agentData,
+      tasksCompleted: 0,
+      memoryItems: 0,
+      lastActive: 'Just created',
+    };
+
+    setAgents((previous) => [...previous, newAgent]);
+    setShowCreateDialog(false);
+    toast({
+      title: 'Agent Created',
+      description: `${agentData.name} has been successfully created.`,
+  const filteredAgents = useMemo(
+    () =>
+      agents.filter((agent) =>
+        [agent.name, agent.description].some((value) =>
+          value.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      ),
+    [agents, searchQuery]
+  );
+
+  const handleCreateAgent = async (agentData: {
+    name: string;
+    description: string;
+    status: 'active' | 'inactive' | 'learning';
+  }) => {
+    try {
+      await createAgent(agentData);
+      setShowCreateDialog(false);
+      toast({
+        title: 'Agent Created',
+        description: `${agentData.name} has been successfully created.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create agent';
+      toast({
+        title: 'Create agent failed',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  const env = import.meta.env as Record<string, string | undefined>;
+  const userId = env?.VITE_USER_ID ?? 'demo-user';
+  const workspaceId = env?.VITE_WORKSPACE_ID ?? 'demo-workspace';
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLastSynced(new Date());
+    }
+  }, [agents, isLoading]);
+
+  const lastSyncedRelative = useMemo(() => {
+    if (!lastSynced) {
+      return null;
+    }
+    return formatDistanceToNow(lastSynced, { addSuffix: true });
+  }, [lastSynced]);
+
+  const filteredAgents = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) {
+      return agents;
+    }
+
+    return agents.filter((agent) => {
+      const haystack = [agent.name, agent.description, agent.status]
+        .filter(Boolean)
+        .map((value) => value.toLowerCase());
+      return haystack.some((value) => value.includes(normalized));
+    });
+  }, [agents, searchQuery]);
+
+  const selectedAgent: Agent | null = useMemo(() => {
+    if (!selectedAgentConfig) {
+      return null;
+    }
+    return agents.find((agent) => agent.id === selectedAgentConfig) ?? null;
+  }, [agents, selectedAgentConfig]);
+
+  const kpiTiles = useMemo(
+    () => {
+      const totalAgents = agents.length;
+      const activeAgents = agents.filter((agent) => agent.status === 'active').length;
+      const learningAgents = agents.filter((agent) => agent.status === 'learning').length;
+      const completedTasks = agents.reduce((total, agent) => total + (agent.tasksCompleted ?? 0), 0);
+      const totalMemory = agents.reduce((total, agent) => total + (agent.memoryItems ?? 0), 0);
+      const completionRate = totalAgents > 0
+        ? Math.round((completedTasks / Math.max(totalAgents, 1)) * 10) / 10
+        : 0;
+
+      return [
+        {
+          title: 'Active agents',
+          value: activeAgents,
+          description: `${totalAgents} total`,
+          icon: Users,
+        },
+        {
+          title: 'Tasks completed',
+          value: completedTasks,
+          description: `${completionRate} avg per agent`,
+          icon: CheckCircle2,
+        },
+        {
+          title: 'Knowledge items',
+          value: totalMemory,
+          description: `${learningAgents} learning`,
+          icon: Database,
+        },
+        {
+          title: 'Automation health',
+          value: activeAgents === totalAgents && totalAgents > 0 ? 'Optimal' : 'Monitoring',
+          description: hasPendingSync ? 'Syncing recent changes' : 'All systems nominal',
+          icon: Sparkles,
+        },
+      ];
+    },
+    [agents, hasPendingSync]
+  );
+
+  const handleCreateAgent = async (values: CreateAgentFormValues) => {
+    setIsCreating(true);
+    setHasPendingSync(true);
+
+    try {
+      const created = await createAgent(values);
+      toast({
+        title: 'Agent Created',
+        description: `${created.name} is ready to assist your workflows.`,
+      });
+      setShowCreateDialog(false);
+      setLastSynced(new Date());
+      return created;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred.';
+      toast({
+        title: 'Unable to create agent',
+        description: message,
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsCreating(false);
+      setHasPendingSync(false);
+    }
+  };
+
+  const handleConfigureAgent = (agentId: string, config: any) => {
+    if (!canConfigureAgent) {
+      toast({
+        title: 'View only',
+        description: 'Your role does not allow updating agent settings.',
+      });
+      return;
+    }
+
+    setAgents((previous) =>
+      previous.map((agent) =>
+        agent.id === agentId
+          ? { ...agent, name: config.name, description: config.description, status: config.status }
+          : agent,
+      ),
+    );
+    setSelectedAgentConfig(null);
+    toast({
+      title: 'Agent Updated',
+      description: 'Agent configuration has been saved successfully.',
+    });
+  };
+
+  const openConfigureDialog = (agentId: string) => {
+    if (!canConfigureAgent) {
+      toast({
+        title: 'View only',
+        description: 'You do not have permission to configure agents in this workspace.',
+      });
+      return;
+    }
+    setSelectedAgentConfig(agentId);
+  };
+
+  const openMemoryDialog = (agentId: string) => {
+    if (!canReviewMemory) {
+      toast({
+        title: 'Restricted content',
+        description: 'Only owners and admins can inspect memory stores.',
+      });
+      return;
+    }
+    setSelectedAgentMemory(agentId);
+  };
+
+  const getSelectedAgent = () => agents.find((agent) => agent.id === selectedAgentConfig) || null;
+
+  if (isLoading && !currentWorkspace) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading your workspace…
+      </div>
+    );
+  }
+
+  if (!currentWorkspace) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <h2 className="text-2xl font-semibold">No workspace assigned</h2>
+        <p className="max-w-md text-muted-foreground">
+          Ask a workspace owner to invite you so you can collaborate on agents, workflows, and runs.
+        </p>
+      </div>
+    );
+  }
+  const handleOpenWorkflows = () => {
+    navigate('/workflows');
+  };
+
+  const handleBuildWorkflow = (agentId: string) => {
+    navigate(`/workflows?agentId=${encodeURIComponent(agentId)}`);
+  };
+
+  const renderLoadingState = () => (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <Card key={`agent-skeleton-${index}`} className="border-dashed border-border/60">
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-3 w-48 mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 py-12 text-center">
+      <Sparkles className="h-10 w-10 text-muted-foreground" />
+      <h3 className="mt-4 text-lg font-semibold">No agents found</h3>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        Create your first automation agent to orchestrate workflows, manage memory, and trigger tasks across your workspace.
+      </p>
+      <Button className="mt-6" onClick={() => setShowCreateDialog(true)}>
+        <Plus className="h-4 w-4 mr-2" />
+        Create agent
+      </Button>
+    </div>
+  );
+
+  const renderErrorState = (error: Error) => (
+    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+      <h3 className="text-base font-semibold text-destructive">Unable to load agents</h3>
+      <p className="mt-2 text-sm text-destructive/80">
+        {error.message || 'An unexpected error occurred while fetching your agents.'}
+      </p>
+      <Button variant="outline" className="mt-4" onClick={() => setShowCreateDialog(true)}>
+        Try creating an agent
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               AI Agent Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
-              Manage your intelligent automation agents
+              {currentWorkspace.description ?? 'Manage your intelligent automation agents'}
             </p>
-            {lastSyncedRelative && (
-              <p className="text-xs text-muted-foreground">
-                Last synced {lastSyncedRelative}
-              </p>
-            )}
           </div>
+          <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-64">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Workspace</Label>
+              <Select
+                value={currentWorkspace.id}
+                onValueChange={setWorkspace}
+                disabled={workspaces.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select workspace" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaces.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      {workspace.name} • {workspace.role.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Signed in as <span className="font-medium text-foreground">{user?.name ?? 'Guest'}</span>
+            </p>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  connectionState === 'open'
+                    ? 'bg-green-500'
+                    : connectionState === 'connecting'
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                }`}
+              />
+              <span className="capitalize">{connectionState} connection</span>
+            </div>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">AI Agent Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your intelligent automation agents
+          </p>
+          {lastSyncedRelative && (
+            <p className="text-xs text-muted-foreground">Last synced {lastSyncedRelative}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleOpenWorkflows}>
+            <Workflow className="h-4 w-4 mr-2" />
+            Workflows
+          </Button>
+          <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
+          <Button variant="outline" onClick={() => setShowCredentialsDialog(true)}>
+            <KeyRound className="h-4 w-4 mr-2" />
+            Credentials
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Agent
+          </Button>
+        </div>
+      </div>
 
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/workflows')}
+            className="flex items-center"
+          >
+            <Workflow className="h-4 w-4 mr-2" />
+            Workflows
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowCredentialsDialog(true)}
+            className="flex items-center"
+          >
+            <KeyRound className="h-4 w-4 mr-2" />
+            Credentials
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowSettingsDialog(true)}
+            className="flex items-center"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)} className="flex items-center">
+            <Plus className="h-4 w-4 mr-2" />
+            New Agent
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {!isOnline && (
+          <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Offline mode</p>
+              <p>Your cached agents are available. Changes will sync when you reconnect.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search agents..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/workflow-runs')}
+            >
+              <History className="h-4 w-4 mr-2" />
+              Run History
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWorkflowDialog(true)}
+              disabled={!canManageWorkflows}
             >
               <Workflow className="h-4 w-4 mr-2" />
               Workflows
             </Button>
             <Button
               variant="outline"
-
+              size="sm"
+              onClick={() => setShowSettingsDialog(true)}
+              disabled={!canManageSettings}
             >
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
             <Button
               onClick={() => setShowCreateDialog(true)}
-
+              className="bg-gradient-primary hover:opacity-90 transition-opacity"
+              disabled={!canCreateAgent}
             >
               <Plus className="h-4 w-4 mr-2" />
               New Agent
             </Button>
+        )}
+
+        {isOnline && hasPendingSync && (
+          <div className="flex items-start gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            <RefreshCcw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+            <div>
+              <p className="font-medium">Syncing changes</p>
+              <p>Your recent updates are being uploaded to the automation hub.</p>
+            </div>
           </div>
-        </div>
+        )}
+      </div>
 
-        <div className="space-y-3">
-          {!isOnline && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100 flex items-start gap-3">
-              <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                <p className="font-medium">Offline mode</p>
-                <p>Your cached agents are available. Changes will sync when you reconnect.</p>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="gradient-card rounded-lg p-4 border border-border/50">
+            <div className="text-2xl font-bold text-agent-active">
+              {agents.filter((agent) => agent.status === 'active').length}
             </div>
-          )}
-
-          {isOnline && hasPendingSync && (
-            <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100 flex items-start gap-3">
-              <RefreshCcw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
-              <div>
-                <p className="font-medium">Syncing changes</p>
-                <p>Your recent updates are being uploaded to the automation hub.</p>
-              </div>
+            <div className="text-sm text-muted-foreground">Active Agents</div>
+          </div>
+          <div className="gradient-card rounded-lg p-4 border border-border/50">
+            <div className="text-2xl font-bold text-agent-task">
+              {currentWorkspace.summary?.workflowCount ?? 0}
             </div>
-          )}
-        </div>
-
-        {/* Search and Filters */}
-
+            <div className="text-sm text-muted-foreground">Workflows</div>
+          </div>
+          <div className="gradient-card rounded-lg p-4 border border-border/50">
+            <div className="text-2xl font-bold text-agent-memory">
+              {currentWorkspace.summary?.credentialCount ?? 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Credentials</div>
+          </div>
+          <div className="gradient-card rounded-lg p-4 border border-border/50">
+            <div className="text-2xl font-bold text-primary">
+              {currentWorkspace.summary?.runCount ?? 0}
+            </div>
+            <div className="text-sm text-muted-foreground">Runs Tracked</div>
+          </div>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-sm">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search agents..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-10"
             />
           </div>
+          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+            <span>
+              Showing <strong>{filteredAgents.length}</strong> of{' '}
+              <strong>{agents.length}</strong> agents
+            </span>
+          </div>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{stats.totalAgents}</div>
+              <CardDescription>Total agents in your workspace</CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
+              <Activity className="h-4 w-4 text-agent-active" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{stats.activeAgents}</div>
+              <CardDescription>Currently assisting with automations</CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tasks Completed</CardTitle>
+              <Workflow className="h-4 w-4 text-agent-task" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{stats.totalTasks}</div>
+              <CardDescription>Lifecycle tasks finished by agents</CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Memory Items</CardTitle>
+              <Database className="h-4 w-4 text-agent-memory" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{stats.totalMemory}</div>
+              <CardDescription>Knowledge stored across agents</CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-[260px] w-full" />
+              ))}
+            </div>
+          ) : filteredAgents.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredAgents.map((agent) => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  onEdit={(agentId) => setSelectedAgentConfig(agentId)}
+                  onViewMemory={(agentId) => setSelectedAgentMemory(agentId)}
+                  onBuildWorkflow={handleBuildWorkflow}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/60 bg-background/40 px-6 py-12 text-center">
+              <div className="rounded-full border border-border/40 bg-muted/20 p-3">
+                <Search className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-foreground">
+                  {hasAgents
+                    ? 'No agents match your search'
+                    : 'You have not created any agents yet'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {hasAgents
+                    ? 'Try a different search term or reset the filters.'
+                    : 'Create an agent to begin orchestrating automated workflows.'}
+                </p>
+              </div>
+              {!hasAgents && (
+                <Button onClick={() => setShowCreateDialog(true)} className="mt-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create your first agent
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpiTiles.map(({ title, value, description, icon: Icon }) => (
+          <Card key={title} className="border-border/60">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+              <Icon className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{value}</div>
+              <CardDescription className="text-xs text-muted-foreground/80">
+                {description}
+              </CardDescription>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAgents.map((agent) => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              canConfigure={canConfigureAgent}
+              canViewMemory={canReviewMemory}
+              onEdit={openConfigureDialog}
+              onViewMemory={openMemoryDialog}
+            />
+          ))}
+        </div>
+
+        {filteredAgents.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              {isFetching ? 'Loading agents…' : 'No agents found matching your search.'}
+            </p>
+      <div className="space-y-3">
+        {!isOnline && (
+          <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            <WifiOff className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Offline mode</p>
+              <p>Your cached agents are available. Changes will sync when you reconnect.</p>
+            </div>
+          </div>
+        )}
+
+        {isOnline && hasPendingSync && (
+          <div className="flex items-start gap-3 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+            <RefreshCcw className="mt-0.5 h-4 w-4 shrink-0 animate-spin" />
+            <div>
+              <p className="font-medium">Syncing changes</p>
+              <p>Your recent updates are being uploaded to the automation hub.</p>
+            </div>
+          </div>
         )}
       </div>
 
       <CreateAgentDialog
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="relative w-full md:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search agents..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
         onSubmit={handleCreateAgent}
@@ -99,25 +816,28 @@ import { useAgents } from '@/hooks/use-agents';
         onClose={() => setShowSettingsDialog(false)}
       />
 
-
       <AgentConfigureDialog
         open={selectedAgentConfig !== null}
         onClose={() => setSelectedAgentConfig(null)}
+        agentId={selectedAgentConfig}
         agent={selectedAgent}
       />
 
       <AgentMemoryDialog
         open={selectedAgentMemory !== null}
         onClose={() => setSelectedAgentMemory(null)}
-        agentId={selectedAgentMemory || ''}
+        agentId={selectedAgentMemory ?? ''}
       />
 
-      <CredentialsManagerDialog
-        open={showCredentialsDialog}
-        onClose={() => setShowCredentialsDialog(false)}
-        userId={userId}
-        workspaceId={workspaceId}
-      />
+      {showCredentialsDialog && (
+        <CredentialsManagerDialog
+          open={showCredentialsDialog}
+          onClose={() => setShowCredentialsDialog(false)}
+          userId={userId}
+          workspaceId={workspaceId}
+        />
+      )}
     </div>
   );
 };
+

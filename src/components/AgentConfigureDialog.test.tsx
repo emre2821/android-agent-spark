@@ -3,6 +3,15 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
 import type { Agent } from '@/types/agent';
+import { vi } from 'vitest';
+
+const updateAgentMock = vi.fn();
+
+vi.mock('@/hooks/use-agents', () => ({
+  useAgents: () => ({
+    updateAgent: updateAgentMock,
+  }),
+}));
 
 beforeAll(() => {
   Object.defineProperty(window.HTMLElement.prototype, 'hasPointerCapture', {
@@ -21,9 +30,21 @@ beforeAll(() => {
     configurable: true,
     value: () => {},
   });
+  class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  // @ts-expect-error jsdom test shim
+  global.ResizeObserver = ResizeObserver;
 });
 
 describe('AgentConfigureDialog', () => {
+  beforeEach(() => {
+    updateAgentMock.mockReset();
+    updateAgentMock.mockResolvedValue(undefined);
+  });
+
   const createAgent = (overrides: Partial<Agent>): Agent => ({
     id: 'agent-id',
     name: 'Default Agent',
