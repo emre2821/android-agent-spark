@@ -1,60 +1,15 @@
 # Node Authoring Guide
 
-This project treats **nodes** as the atomic steps that power an automation workflow. They show up inside the `WorkflowDialog` component and describe triggers, actions, and processors that an agent can chain together.
-
-## Node schema
-Each node uses a minimal interface:
-
-```ts
-interface WorkflowStep {
-  id: string;
-  type: 'trigger' | 'action' | 'analyze' | 'process' | 'condition' | string;
-  name: string;
-  config: Record<string, unknown>;
-}
-```
-
-- `id`: a unique string (use `crypto.randomUUID()` or `Date.now().toString()` for mock data).
-- `type`: drives iconography and grouping inside the dialog.
-- `name`: short human readable description.
-- `config`: free-form JSON for runtime execution.
-
-## Adding prebuilt nodes
-1. Open `src/components/WorkflowDialog.tsx` and locate the `prebuiltWorkflows` array.
-2. Append a new workflow object with `steps` that match the schema above.
-3. Provide an icon from `lucide-react` so the card has immediate visual identity.
-4. Keep descriptions concise (≤120 characters) so they render cleanly within the card grid.
-
-## Authoring custom nodes at runtime
-Users can assemble bespoke workflows within the **Custom Workflow** tab of the dialog:
-
-1. The dialog maintains a local `customWorkflow` object in component state.
-2. Pressing “Add Step” appends a new node with default values; users can rename, select a type, and add config.
-3. `removeCustomStep` prunes steps safely without mutating state in place.
-4. Persisting the workflow happens inside `handleSaveCustom`—replace the `console.log` with your API call once the backend is ready.
-
-## Execution contracts
-When wiring nodes to a real runtime:
-- Ensure the backend accepts the `WorkflowStep` structure (including the `config` payload) to avoid breaking authoring.
-- Validate config on both client and server; use Zod schemas in `src/lib` to keep validation reusable.
-- Emit toast notifications through `useToast()` to communicate success/failure back to the author.
-
-## Testing new nodes
-- Extend `cypress/fixtures/agents.json` or create workflow-specific fixtures if end-to-end coverage is needed.
-- Add component tests around the dialog behaviours (e.g., adding/removing steps) to keep interaction patterns stable.
-- Keep node logic pure and serialisable so Vitest can exercise it without mocking DOM APIs.
-# Node Authoring Guidelines
-
-This guide explains how to create workflow nodes that integrate with the node registry and execution engine.
+Workflow automation now runs through a formal node registry and execution engine. Each node describes the work it can perform, how it should be configured, and how it reports progress back to the UI.
 
 ## Node definition basics
 
-Nodes live in `src/lib/nodes/index.ts` and are described by a `NodeDefinition`. Each node provides:
+Nodes live in `src/lib/nodes/index.ts` and are registered with `registerNode`. A node definition includes:
 
-- A globally unique `type` identifier (e.g. `http.request`).
-- Metadata (`displayName`, `description`, `category`).
-- A Zod `configSchema` describing configuration the node accepts.
-- An async `run` handler that receives validated config and a `NodeExecutionContext`.
+- A globally unique `type` string (e.g. `http.request`).
+- Metadata (`displayName`, `description`, `category`) so the builder can render cards and icons.
+- A Zod `configSchema` that validates user-supplied configuration before execution.
+- An async `run` handler that receives the validated config and a `NodeExecutionContext` with helpers for logging, credential access, and outbound HTTP calls.【F:src/lib/nodes/index.ts†L1-L200】
 
 ```ts
 registerNode({
@@ -72,30 +27,39 @@ registerNode({
 });
 ```
 
-## Configuration validation
+## Configuration & validation
 
-All node configuration must be validated with Zod before execution. Keep schemas strict—prefer explicit enums and `min`/`max` checks to guarantee downstream safety. Optional values should use `optional()` so defaulting happens in the handler.
+- Keep schemas strict—use enums, `min`/`max`, and `refine` helpers so invalid payloads never reach downstream services.
+- Optional fields should default inside the schema (e.g. `z.enum([...]).default('GET')`) so the UI and engine stay in sync.【F:src/lib/nodes/index.ts†L60-L120】
+- Fail validation early and surface descriptive error messages; the workflow builder surfaces these to authors.
 
 ## Execution context
 
-Handlers receive a `NodeExecutionContext` that provides:
+`NodeExecutionContext` carries runtime metadata and helpers:
 
-- `userId` and `workspaceId` for scoping.
-- `credentials.getCredential(id)` to fetch decrypted secrets.
-- `emitLog(entry)` to stream structured logs back to the UI.
-- `fetchImpl` (defaulting to `globalThis.fetch`) for HTTP-capable nodes.
+- `userId` / `workspaceId` scope the execution.
+- `credentials.getCredential(id)` resolves stored secrets before making outbound calls.
+- `emitLog(entry)` streams structured logs that appear in the workflow run console.
+- `fetchImpl` falls back to `globalThis.fetch`, but can be replaced in tests for determinism.【F:src/lib/nodes/index.ts†L12-L80】
 
-Always call `emitLog` for meaningful state changes. Logs drive the workflow console and should be human-readable. Long-running nodes should periodically emit progress updates.
+Always log meaningful milestones (`info`), warnings (`warn`), and errors (`error`). Long-running handlers should emit periodic updates so operators see progress.
 
-## Credential usage
+## Workflow engine integration
 
-Never place raw secrets in configuration. Instead, accept a `credentialId` and use `context.credentials.getCredential`. The helper returns decrypted payloads loaded from secure storage. When a credential is missing or malformed, emit a `warn`/`error` log and return `{ status: 'error' }` so the workflow engine halts gracefully.
+- `WorkflowsProvider` clones node definitions when building drafts so mutations never mutate registry state. Use helper utilities such as `createEmptyStep` and `cloneSteps` from `src/types/workflow` to keep snapshots consistent.【F:src/hooks/use-workflows.tsx†L1-L120】
+- When a workflow runs, execution logs are appended via `logStepExecution`, which relies on node handlers emitting log entries. Returning `{ status: 'error' }` marks the step as failed without crashing the entire run.【F:src/hooks/use-workflows.tsx†L80-L200】
 
-## Error handling
+## Credentials & secrets
 
-Throwing inside `run` will bubble to the workflow engine and be surfaced as an execution error. Prefer returning `{ status: 'error' }` when the node can handle the issue (e.g. validation failure). Reserve thrown errors for unexpected problems.
+Do not embed raw credentials directly in node configuration. Accept a `credentialId` and fetch the decrypted payload via the execution context. Many built-in nodes already demonstrate this pattern (e.g. `database.query` and `http.request`). Missing credentials should emit a warning and return `{ status: 'error' }` to halt safely.【F:src/lib/nodes/index.ts†L80-L200】
 
 ## Testing nodes
 
-Use Vitest to ensure nodes validate config and emit expected logs. See `src/test/sampleNode.test.ts` for an example that executes the `messaging.send` node through the workflow engine, asserts streamed logs, and verifies schema enforcement.
+- Use Vitest to exercise nodes in isolation—pass a mocked `NodeExecutionContext` with stubbed `emitLog`/`credentials` to assert behaviour.
+- End-to-end workflow tests should focus on integration paths (credential lookup + log emission) rather than duplicating unit coverage. See `src/hooks/__tests__/use-agents.test.tsx` and workflow engine tests for patterns that mock WebSocket streams and execution logs.【F:src/hooks/__tests__/use-agents.test.tsx†L1-L240】
+
+## Surfacing new nodes in the UI
+
+- Registering a node automatically exposes it in the workflow builder palette. Provide friendly metadata so the UI can group it under the appropriate category card.
+- For bespoke starter workflows, extend the presets under `src/lib/workflowTemplates.ts` so authors see curated examples that leverage the new node types.【F:src/lib/workflowTemplates.ts†L1-L200】
 
