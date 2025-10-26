@@ -942,6 +942,7 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
 
 
   const [activeTab, setActiveTab] = useState('prebuilt');
+  const customWorkflowsEnabled = false;
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowTemplate | null>(null);
   const [customWorkflow, setCustomWorkflow] = useState({
     name: '',
@@ -949,6 +950,12 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
     trigger: '',
     steps: [] as WorkflowStep[],
   });
+
+  useEffect(() => {
+    if (!customWorkflowsEnabled && activeTab === 'custom') {
+      setActiveTab('prebuilt');
+    }
+  }, [activeTab, customWorkflowsEnabled]);
 
     onClose();
     navigate(`/workflows/builder${buildSearchSuffix(options)}`);
@@ -999,7 +1006,9 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
             <TabsTrigger value="prebuilt">Prebuilt Workflows</TabsTrigger>
-            <TabsTrigger value="custom">Custom Workflow</TabsTrigger>
+            {customWorkflowsEnabled && (
+              <TabsTrigger value="custom">Custom Workflow</TabsTrigger>
+            )}
             <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
 
@@ -1085,8 +1094,9 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
             </div>
           </TabsContent>
 
-          <TabsContent value="custom" className="space-y-4">
-            <div className="space-y-4">
+          {customWorkflowsEnabled && (
+            <TabsContent value="custom" className="space-y-4">
+              <div className="space-y-4">
 
                 <div className="space-y-2">
                   <Label htmlFor="workflowName">Workflow Name</Label>
@@ -1195,7 +1205,8 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
 
               </div>
             </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
           <TabsContent value="saved" className="space-y-4">
             {savedWorkflows.length === 0 ? (

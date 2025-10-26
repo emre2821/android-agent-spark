@@ -101,6 +101,8 @@ Chains linting, type checking, and the Vitest run to mirror the local checks exp
 
 Each script sets `VITE_RUNTIME_TARGET` so the UI can adapt to the active platform and then runs the appropriate Capacitor/Tauri copy step. After bundling, use `npx cap sync <platform>` before opening the native project.
 
+> **Preview notice:** These Capacitor/Tauri bundles currently ship as preview-only artifacts. They generate platform-specific assets but still require manual wiring into the native shells before submission-ready builds can be produced.
+
 ### Offline-first data
 - Agent and workflow payloads are cached with IndexedDB on the web and Capacitor Preferences on native builds (`src/lib/offline-storage.ts`).
 - The dashboard loads cached state immediately, falling back to it when the API is unreachable (`use-agents`, `use-workflows`).
