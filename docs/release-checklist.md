@@ -27,8 +27,11 @@ Use this list before tagging a release or cutting a build for any distribution c
 
 ## Operations
 - [ ] Sync the mock dataset with production reality or mask new sensitive fields.
+  - Log refresh details under `docs/operations/` with date-stamped notes.
 - [ ] Rotate API keys/secrets if the backend integration changed.
+  - Record the credential owner, storage location, and revocation timestamp.
 - [ ] Confirm deployment manifests set `JWT_SECRET`, `AGENT_DB_PATH`, and `WORKFLOW_STORE_PATH` appropriately.
 - [ ] Back up or migrate the SQLite database and workflow store before rolling the release.
 - [ ] Notify support + product channels with rollout timing and rollback plan.
+  - Capture the announcement and rollback summary in the dated ops log.
 
