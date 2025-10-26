@@ -5,16 +5,20 @@ Use this list before tagging a release or cutting a build for any distribution c
 ## Code & quality gates
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
-- [ ] `npm test` (ensure coverage thresholds are met)
+- [ ] `npm test` (Vitest + coverage thresholds)
 - [ ] `npm run test:e2e`
 - [ ] `npm run build:web`
 - [ ] `npm run build:mobile`
 - [ ] `npm run build:desktop`
+- [ ] `npm run validate` (local spot-check before publishing)
 
 ## Functional review
 - [ ] Smoke-test agent creation, configuration, and memory dialogs.
 - [ ] Validate workflow authoring (prebuilt + custom) across modern browsers.
 - [ ] Confirm `/agents/:id` detail pages render populated state for recent agents.
+- [ ] Exercise login for each sample account role and ensure workspace switching updates dashboards.
+- [ ] Trigger an agent task run and confirm WebSocket-driven updates appear in the activity stream and notifications.
+- [ ] Create, publish, and diff workflow versions to verify revision history is intact.
 
 ## Documentation
 - [ ] Update `docs/` with any new architecture or operations changes.
@@ -24,5 +28,7 @@ Use this list before tagging a release or cutting a build for any distribution c
 ## Operations
 - [ ] Sync the mock dataset with production reality or mask new sensitive fields.
 - [ ] Rotate API keys/secrets if the backend integration changed.
+- [ ] Confirm deployment manifests set `JWT_SECRET`, `AGENT_DB_PATH`, and `WORKFLOW_STORE_PATH` appropriately.
+- [ ] Back up or migrate the SQLite database and workflow store before rolling the release.
 - [ ] Notify support + product channels with rollout timing and rollback plan.
 

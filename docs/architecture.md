@@ -1,34 +1,34 @@
 # Architecture Overview
 
 ## System map
-- **Client:** React 18 + Vite with the shadcn/ui component primitives. Routing is handled by `react-router-dom`, data fetching and caching by `@tanstack/react-query`, and shared context lives under `src/hooks`.
-- **Server:** A lightweight Express service under `server/` that exposes mock agent data via `/agents`. It is designed to be replaced with a production orchestrator while keeping the contract intact.
-- **Build tooling:** Vite powers development and static builds, TailwindCSS drives styling, and Vitest provides the testing runtime. Capacitor sits on top of Vite bundles for mobile/desktop packaging.
+- **Client.** React 18 + Vite drives the dashboard experience. Routing is handled with `react-router-dom`, React Query powers data fetching/caching, and shared state is exposed through providers in `src/hooks` (`AuthProvider`, `AgentsProvider`, and `WorkflowsProvider`). UI primitives live under `src/components/ui` and mirror the shadcn/ui design system.【F:src/App.tsx†L1-L50】【F:src/hooks/use-auth.tsx†L1-L123】
+- **Server.** `server/index.js` boots an Express application with JWT authentication, workspace-aware authorization, REST endpoints for agents/memory/tasks backed by SQLite, workflow revision APIs, and a WebSocket gateway for real-time events. Supporting modules handle persistence (`server/storage.js`) and workflow versioning (`server/workflowStore.js`).【F:server/index.js†L1-L120】【F:server/storage.js†L1-L210】【F:server/workflowStore.js†L1-L160】
+- **Build & tooling.** Vite orchestrates local development and production builds, TailwindCSS supplies styling utilities, and Vitest + Testing Library cover unit/integration suites. Cypress handles end-to-end validation, while Capacitor/Electron scripts package the SPA for mobile and desktop runtimes.【F:package.json†L1-L120】【F:vite.config.ts†L1-L60】
 
 ## Runtime flow
-1. The application boots inside `src/main.tsx`, renders `<App />`, and wires the `QueryClientProvider`, `AgentsProvider`, and router.
-2. `AgentsProvider` executes `fetch('http://localhost:3001/agents')` via React Query. Once the promise resolves, agent state is propagated to the dashboard.
-3. Components under `src/components` consume `useAgents()` and `useToast()` to mutate local state (e.g., creating agents, updating config) and surface feedback.
-4. Navigation flows through `src/pages`, which are thin wrappers around dashboard/detail components. Deep links (`/agents/:id`) reuse the cached agent collection.
-5. The Express backend reads from `mockAgents.js` and returns JSON responses. The `createApp()` factory makes it testable while keeping the CLI entry point (`npm run server`) identical.
+1. `src/main.tsx` mounts `<App />`, which wraps the router with React Query, authentication, agent, and workflow providers so downstream components receive hydrated context values.【F:src/main.tsx†L1-L5】【F:src/App.tsx†L1-L50】
+2. Users are redirected to `/login` until they authenticate. `AuthProvider` exchanges credentials for a JWT via `POST /auth/login`, stores it in `localStorage`, and fetches the user/workspace roster from `/auth/me`. Workspace selection is persisted across reloads.【F:src/hooks/use-auth.tsx†L1-L123】
+3. Once authenticated, `AgentsProvider` loads agent summaries from `GET /agents`, subscribes to `/ws` for live updates, and exposes mutation helpers that call the REST API. Optimistic updates keep the React Query cache responsive while the server broadcasts authoritative changes.【F:src/hooks/use-agents.tsx†L1-L200】【F:server/index.js†L200-L320】
+4. Workflow-oriented views use `WorkflowsProvider` to manage builder state, version snapshots, and execution logs locally while delegating long-term storage to workflow APIs. Collaboration and notifications modules attach to the WebSocket stream to surface run progress in the UI.【F:src/hooks/use-workflows.tsx†L1-L120】【F:src/components/WorkflowRunNotifications.tsx†L1-L160】
+5. The Express server writes agent/task/memory records to SQLite (configurable via `AGENT_DB_PATH`) and workflow definitions to JSON (`WORKFLOW_STORE_PATH`). Whenever data mutates, broadcast helpers fan events out to all connected WebSocket clients so multiple dashboards stay synchronized.【F:server/storage.js†L1-L210】【F:server/workflowStore.js†L1-L160】【F:server/index.js†L200-L320】
 
 ## State & data
-- **Agents:** Stored in context provided by `AgentsProvider`. Components mutate the array via `setAgents`, ensuring React Query cache stays the single source of truth.
-- **Workflows & dialogs:** Managed through local component state, allowing multiple overlays to coexist without global stores.
-- **Toasts:** The custom hook in `src/hooks/use-toast.ts` centralises toast lifecycle handling so UI surfaces stay consistent.
+- **Authentication & workspace context.** JWTs and selected workspace IDs persist in `localStorage`. The auth hook exposes helpers for login/logout, workspace switching, and guards routes with `<ProtectedRoute />`.【F:src/hooks/use-auth.tsx†L1-L180】【F:src/components/ProtectedRoute.tsx†L1-L20】
+- **Agents.** React Query caches the `/agents` collection and detail fetches. `useAgents` layers optimistic updates and websocket listeners on top of REST mutations so UI state never drifts from server truth.【F:src/hooks/use-agents.tsx†L1-L200】【F:server/index.js†L200-L320】
+- **Workflows.** Builder state lives in `WorkflowsProvider`, which tracks steps, execution logs, and version history while delegating persistence/exports to the backend workflow store. Zod-powered node definitions under `src/lib/nodes` ensure runtime configs remain valid.【F:src/hooks/use-workflows.tsx†L1-L200】【F:src/lib/nodes/index.ts†L1-L160】
+- **Offline caching.** `src/lib/offline-storage.ts` exposes IndexedDB/Capacitor-backed helpers that let mobile/desktop bundles hydrate from cached agents and workflows when the API is unreachable.【F:src/lib/offline-storage.ts†L1-L160】
 
-## UI composition
-- Layout primitives reside in `src/components/ui`, mirroring the shadcn/ui pattern. Higher-level composites (cards, dialogs, dashboards) are colocated with their logic for discoverability.
-- Icons are provided via `lucide-react`. Visual theming comes from Tailwind utilities declared in `App.css` and `index.css`.
+## Real-time & collaboration
+- The WebSocket server mounted at `/ws` sends agent/task/memory events and simulated task stream logs. `useAgents` and collaboration clients derive URLs from `VITE_API_URL` and handle reconnection semantics to keep dashboards warm.【F:server/index.js†L200-L320】【F:src/lib/collaboration/collaborationClient.ts†L1-L220】
+- Collaboration features coordinate edits through the `CollaborationClient`, which multiplexes presence and selection updates over the same WebSocket channel.【F:src/lib/collaboration/collaborationClient.ts†L1-L220】
 
 ## Testing layers
-- **Component & hook tests:** Vitest + Testing Library live next to the component files. They assert rendering, interactions, and side-effects such as toast emission.
-- **Integration tests:** Vitest + Supertest validate the Express API contract, ensuring UI mocks stay in sync with backend responses.
-- **End-to-end tests:** Cypress scripts under `cypress/e2e` exercise real user flows against a built preview, with network intercepts for determinism.
-- **Coverage enforcement:** `vite.config.ts` enforces minimum coverage (90% lines/statements, 60% branches/functions) so regressions fail CI early.
+- **Component & hook tests.** Vitest + Testing Library cover UI and provider logic. Mock WebSocket implementations validate streaming behaviour within `src/hooks/__tests__/use-agents.test.tsx`.【F:src/hooks/__tests__/use-agents.test.tsx†L1-L240】
+- **Server integration.** Supertest and WebSocket clients exercise the Express API and `/ws` gateway to guarantee the contract stays regression-free (`server/__tests__/server.integration.test.ts`).【F:server/__tests__/server.integration.test.ts†L1-L160】
+- **End-to-end.** Cypress specs in `cypress/e2e` run against a production build served via `npm run preview`, mirroring the release bundle paths and websocket proxying configured in `vite.config.ts`.【F:cypress/e2e/agents.cy.ts†L1-L160】【F:vite.config.ts†L1-L40】
 
-## Extensibility points
-- Replace the mock Express server with real orchestration while maintaining `/agents` shape.
-- Add new dialogs, cards, or workflows by colocating them inside `src/components` and leveraging the existing UI primitives.
-- Extend the Agents context with optimistic updates or background refresh using React Query's `queryClient.setQueryData` utilities.
+## Extensibility
+- Swap the bundled Express server for production infrastructure by re-implementing the REST/WebSocket contract exposed under `/agents`, `/auth`, `/workflows`, and `/ws`. The client resolves API roots via `VITE_API_URL`, so deployments can point at remote services without code changes.【F:src/lib/api/config.ts†L1-L40】【F:server/index.js†L1-L120】
+- Register new automation nodes by extending `src/lib/nodes`. Each definition provides Zod validation, access to credentials, and structured logging hooks so workflow executions stay observable.【F:src/lib/nodes/index.ts†L1-L200】
+- Package additional runtimes (Capacitor, Electron) using the existing npm scripts. They compile the same Vite bundle while enabling native bridges through platform-specific entry points.【F:package.json†L1-L80】
 
