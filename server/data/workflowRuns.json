@@ -1,3 +1,210 @@
 {
-  "runs": []
+  "runs": [
+    {
+      "id": "run-aurora-qualification-20240512",
+      "workflowId": "wf-aurora-qualification",
+      "workflowName": "Lead Qualification",
+      "trigger": "webhook",
+      "status": "completed",
+      "startedAt": "2024-05-12T10:32:10.000Z",
+      "updatedAt": "2024-05-12T10:33:42.000Z",
+      "completedAt": "2024-05-12T10:33:42.000Z",
+      "currentAttempt": 1,
+      "retryPolicy": {
+        "strategy": "none",
+        "maxAttempts": 1,
+        "intervalSeconds": 0
+      },
+      "history": [
+        {
+          "status": "running",
+          "timestamp": "2024-05-12T10:32:10.000Z",
+          "note": "Run accepted with masked payload"
+        },
+        {
+          "status": "completed",
+          "timestamp": "2024-05-12T10:33:42.000Z",
+          "note": "Lead scored and routed"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-capture",
+          "name": "Capture Lead",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-05-12T10:32:10.000Z",
+          "completedAt": "2024-05-12T10:32:20.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-05-12T10:32:12.000Z",
+              "message": "Webhook payload masked"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-05-12T10:32:20.000Z",
+              "attempt": 1,
+              "note": "Captured masked lead data"
+            }
+          ]
+        },
+        {
+          "id": "step-score",
+          "name": "Score Lead",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-05-12T10:32:20.000Z",
+          "completedAt": "2024-05-12T10:32:55.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-05-12T10:32:35.000Z",
+              "message": "Scoring model lead-score-v2 applied"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-05-12T10:32:55.000Z",
+              "attempt": 1,
+              "note": "Score generated"
+            }
+          ]
+        },
+        {
+          "id": "step-enrich",
+          "name": "Enrich CRM",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-05-12T10:32:55.000Z",
+          "completedAt": "2024-05-12T10:33:25.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-05-12T10:33:10.000Z",
+              "message": "HubSpot enrichment returned masked payload"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-05-12T10:33:25.000Z",
+              "attempt": 1,
+              "note": "Enrichment applied"
+            }
+          ]
+        },
+        {
+          "id": "step-route",
+          "name": "Assign Owner",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-05-12T10:33:25.000Z",
+          "completedAt": "2024-05-12T10:33:42.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-05-12T10:33:35.000Z",
+              "message": "Lead routed to sales owner"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-05-12T10:33:42.000Z",
+              "attempt": 1,
+              "note": "Owner assignment complete"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "run-cobalt-escalation-20240510",
+      "workflowId": "wf-cobalt-escalation",
+      "workflowName": "Escalation Digest",
+      "trigger": "schedule",
+      "status": "failed",
+      "startedAt": "2024-05-10T18:40:00.000Z",
+      "updatedAt": "2024-05-10T19:02:00.000Z",
+      "completedAt": "2024-05-10T19:02:00.000Z",
+      "currentAttempt": 1,
+      "retryPolicy": {
+        "strategy": "exponential",
+        "maxAttempts": 3,
+        "intervalSeconds": 600
+      },
+      "history": [
+        {
+          "status": "running",
+          "timestamp": "2024-05-10T18:40:00.000Z",
+          "note": "Digest run started"
+        },
+        {
+          "status": "failed",
+          "timestamp": "2024-05-10T19:02:00.000Z",
+          "note": "Zendesk sandbox token expired"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-ingest",
+          "name": "Collect Escalations",
+          "status": "failed",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "startedAt": "2024-05-10T18:40:00.000Z",
+          "completedAt": "2024-05-10T19:02:00.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-05-10T18:59:00.000Z",
+              "message": "Zendesk API responded 401"
+            }
+          ],
+          "retry": {
+            "attempts": 1,
+            "maxAttempts": 3,
+            "nextRetryAt": "2024-05-10T19:12:00.000Z"
+          },
+          "history": [
+            {
+              "status": "running",
+              "timestamp": "2024-05-10T18:40:00.000Z",
+              "attempt": 1,
+              "note": "Ingest start"
+            },
+            {
+              "status": "failed",
+              "timestamp": "2024-05-10T19:02:00.000Z",
+              "attempt": 1,
+              "note": "Token expired"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }

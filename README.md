@@ -13,19 +13,22 @@ A Vite + React + TypeScript project for experimenting with AI agent dashboards. 
    ```bash
    npm install
    ```
-2. **Start the mock API** in a separate terminal so the dashboard can hydrate agent data.
+2. **Start the API + realtime server** in a separate terminal. This boots the Express app, SQLite persistence, and WebSocket gateway.
    ```bash
    npm run server
    ```
+   The server listens on `http://localhost:3001` by default. Set `PORT`, `JWT_SECRET`, `AGENT_DB_PATH`, or `WORKFLOW_STORE_PATH` if you need to customise the runtime.【F:server/index.js†L1-L120】【F:server/storage.js†L1-L120】【F:server/workflowStore.js†L1-L60】
 3. **Launch the Vite dev server** for the web client.
    ```bash
    npm run dev
    ```
+   Open `http://localhost:5173/login` and sign in with one of the bundled sample accounts (for example `avery.owner@example.com` / `password123`).【F:src/pages/Login.tsx†L1-L80】
 4. **Run quality checks** whenever you touch the codebase.
    ```bash
    npm run lint        # static analysis
    npm run typecheck   # TypeScript validation
-   npm test            # vitest component + integration suite with coverage
+   npm test            # Vitest component + integration suite with coverage thresholds
+   npm run validate    # lint + typecheck + tests in a single command
    npm run test:e2e    # Cypress end-to-end flows (build + preview required)
    ```
 5. **Build artifacts** for the different distribution targets.
@@ -53,16 +56,30 @@ npm run dev
 npm run server
 ```
 
+The server issues JWTs, stores agents in SQLite, and exposes `/ws` for live updates. Override defaults with:
+
+```bash
+PORT=4000 \
+JWT_SECRET="change-me" \
+AGENT_DB_PATH="/var/lib/spark/agents.db" \
+WORKFLOW_STORE_PATH="/var/lib/spark/workflows.json" \
+npm run server
+```
+
+Sample credentials for local testing:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Owner/Admin | `avery.owner@example.com` | `password123` |
+| Admin | `bailey.admin@example.com` | `password123` |
+| Editor | `casey.editor@example.com` | `password123` |
+| Viewer | `devon.viewer@example.com` | `password123` |
+
 ### Environment variables
-- `VITE_API_URL` &mdash; optional HTTP base URL for the agent API. When unset the
-  app issues requests against the relative `/agents` path on the current
-  origin, making local development and packaged builds work without extra
-  configuration.
+- `VITE_API_URL` &mdash; optional HTTP base URL for the agent API. When unset the app targets `http://localhost:3001` for both REST and WebSocket traffic. Set it to the fully qualified API origin (e.g. `https://spark.example.com/api`).【F:src/lib/api/config.ts†L1-L40】
 ### Environment configuration
 
-The frontend reads API locations from the `VITE_API_URL` environment variable. When omitted, it falls back to relative `/api`
-requests which are proxied to `http://localhost:3001` during local development (see `vite.config.ts`). Set `VITE_API_URL`
-when deploying the UI separately from the API, e.g.:
+The frontend reads API locations from the `VITE_API_URL` environment variable. When omitted, it falls back to `http://localhost:3001` (matching the default Express server). For staging/production builds, point it at the deployed API origin so REST and WebSocket calls resolve correctly. For example:
 
 ```bash
 VITE_API_URL="https://spark.example.com/api" npm run build

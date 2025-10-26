@@ -1,69 +1,153 @@
 {
   "agents": [
     {
-      "id": "1",
+      "id": "agent-aurora-orbit",
+      "workspaceId": "workspace-aurora",
       "name": "Task Automator",
-      "description": "Automates daily tasks and workflows with intelligent decision making",
+      "description": "Automates daily task triage and routing for the Aurora workspace.",
       "status": "active",
-      "lastActive": "2024-01-01T00:00:00.000Z"
+      "tags": ["operations", "triage"],
+      "owner": {
+        "id": "user-avery",
+        "name": "Avery Quinn",
+        "email": "avery.owner@example.com"
+      },
+      "riskLevel": "low",
+      "region": "us-west-2",
+      "deployStage": "production",
+      "createdAt": "2024-04-30T16:12:00.000Z",
+      "updatedAt": "2024-05-12T14:55:00.000Z",
+      "lastActive": "2024-05-12T15:05:00.000Z"
     },
     {
-      "id": "2",
-      "name": "Data Collector",
-      "description": "Gathers and organizes information from multiple sources",
+      "id": "agent-aurora-scout",
+      "workspaceId": "workspace-aurora",
+      "name": "Signal Scout",
+      "description": "Collects market telemetry and normalizes input for analytics pipelines.",
       "status": "learning",
-      "lastActive": "2023-12-31T23:00:00.000Z"
+      "tags": ["data", "collection"],
+      "owner": {
+        "id": "user-casey",
+        "name": "Casey Rivers",
+        "email": "casey.editor@example.com"
+      },
+      "riskLevel": "medium",
+      "region": "us-west-2",
+      "deployStage": "staging",
+      "createdAt": "2024-05-05T09:30:00.000Z",
+      "updatedAt": "2024-05-12T11:10:00.000Z",
+      "lastActive": "2024-05-12T13:42:00.000Z"
     },
     {
-      "id": "3",
-      "name": "Smart Assistant",
-      "description": "Provides intelligent responses and performs complex reasoning",
+      "id": "agent-cobalt-sentinel",
+      "workspaceId": "workspace-cobalt",
+      "name": "Support Sentinel",
+      "description": "Summarizes escalations and drafts handoff notes for customer support.",
       "status": "inactive",
-      "lastActive": "2023-12-29T00:00:00.000Z"
+      "tags": ["support", "summaries"],
+      "owner": {
+        "id": "user-bailey",
+        "name": "Bailey Hart",
+        "email": "bailey.admin@example.com"
+      },
+      "riskLevel": "low",
+      "region": "us-east-1",
+      "deployStage": "production",
+      "createdAt": "2024-03-18T18:45:00.000Z",
+      "updatedAt": "2024-05-10T22:18:00.000Z",
+      "lastActive": "2024-05-10T19:02:00.000Z"
     }
   ],
   "tasks": [
     {
-      "id": "t-1",
-      "agentId": "1",
-      "title": "Process inbox triage",
+      "id": "task-aurora-inbox-001",
+      "agentId": "agent-aurora-orbit",
+      "title": "Process high-priority inbox triage",
       "status": "completed",
-      "createdAt": "2023-12-31T06:00:00.000Z",
-      "updatedAt": "2023-12-31T23:00:00.000Z"
+      "log": "All ticket identifiers masked with surrogate keys before export.",
+      "labels": ["triage", "ops"],
+      "sloSeconds": 300,
+      "createdAt": "2024-05-12T14:58:00.000Z",
+      "updatedAt": "2024-05-12T15:05:00.000Z",
+      "completedAt": "2024-05-12T15:05:00.000Z"
     },
     {
-      "id": "t-2",
-      "agentId": "2",
-      "title": "Collect website metrics",
+      "id": "task-aurora-scout-044",
+      "agentId": "agent-aurora-scout",
+      "title": "Refresh telemetry extract for APAC region",
       "status": "running",
-      "createdAt": "2023-12-31T23:30:00.000Z",
-      "updatedAt": "2023-12-31T23:50:00.000Z"
+      "log": "Execution streaming redacted metrics set for validation.",
+      "labels": ["data-pipeline"],
+      "sloSeconds": 900,
+      "createdAt": "2024-05-12T13:15:00.000Z",
+      "updatedAt": "2024-05-12T13:42:00.000Z",
+      "completedAt": null
+    },
+    {
+      "id": "task-cobalt-sentinel-318",
+      "agentId": "agent-cobalt-sentinel",
+      "title": "Draft escalation digest for shift change",
+      "status": "failed",
+      "log": "Attempt blocked: Zendesk sandbox token expired; requires rotation.",
+      "labels": ["support"],
+      "sloSeconds": 420,
+      "createdAt": "2024-05-10T18:40:00.000Z",
+      "updatedAt": "2024-05-10T19:02:00.000Z",
+      "completedAt": "2024-05-10T19:02:00.000Z"
     }
   ],
   "memories": [
     {
-      "id": "m-1",
-      "agentId": "1",
+      "id": "memory-aurora-orbit-timezone",
+      "agentId": "agent-aurora-orbit",
       "key": "user_timezone",
-      "value": "UTC-8 (Pacific Time)",
+      "value": "UTC-08:00 (America/Los_Angeles)",
       "type": "fact",
-      "timestamp": "2023-12-30T00:00:00.000Z"
+      "source": "manual-entry",
+      "visibility": "internal",
+      "masked": false,
+      "createdAt": "2024-04-30T16:15:00.000Z",
+      "updatedAt": "2024-05-12T09:00:00.000Z",
+      "timestamp": "2024-05-12T09:00:00.000Z"
     },
     {
-      "id": "m-2",
-      "agentId": "1",
+      "id": "memory-aurora-orbit-channel",
+      "agentId": "agent-aurora-orbit",
       "key": "preferred_notification_channel",
-      "value": "Slack #ops channel",
+      "value": "Slack #aurora-ops (masked)",
       "type": "preference",
-      "timestamp": "2023-12-29T00:00:00.000Z"
+      "source": "settings-sync",
+      "visibility": "internal",
+      "masked": true,
+      "createdAt": "2024-04-30T17:00:00.000Z",
+      "updatedAt": "2024-05-11T21:20:00.000Z",
+      "timestamp": "2024-05-11T21:20:00.000Z"
     },
     {
-      "id": "m-3",
-      "agentId": "2",
+      "id": "memory-aurora-scout-refresh",
+      "agentId": "agent-aurora-scout",
       "key": "data_refresh_window",
-      "value": "Every hour between 9am-6pm PST",
+      "value": "Hourly between 08:00-18:00 local workspace time.",
       "type": "context",
-      "timestamp": "2023-12-31T12:00:00.000Z"
+      "source": "analytics-policy",
+      "visibility": "internal",
+      "masked": false,
+      "createdAt": "2024-05-05T09:35:00.000Z",
+      "updatedAt": "2024-05-12T11:10:00.000Z",
+      "timestamp": "2024-05-12T11:10:00.000Z"
+    },
+    {
+      "id": "memory-cobalt-sentinel-scrub",
+      "agentId": "agent-cobalt-sentinel",
+      "key": "sanitization_policy",
+      "value": "Remove direct ticket URLs; replace with internal case IDs.",
+      "type": "skill",
+      "source": "audit-log",
+      "visibility": "restricted",
+      "masked": false,
+      "createdAt": "2024-03-20T08:10:00.000Z",
+      "updatedAt": "2024-05-09T16:55:00.000Z",
+      "timestamp": "2024-05-09T16:55:00.000Z"
     }
   ]
 }
