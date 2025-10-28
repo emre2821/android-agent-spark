@@ -6,8 +6,8 @@
 - Mobile (`bundle:android` / `bundle:ios`) and desktop (`bundle:desktop`) bundles are explicitly labeled as preview builds while native shell integration is finalized.
 
 ## Deferred / Known Gaps
-- The custom workflow builder remains hidden until end-to-end persistence is delivered. Existing prebuilt and saved workflows continue to function normally.
-- Native shell wiring for Capacitor/Tauri packages is still pending; expect manual integration work before producing shippable binaries.
+- The custom workflow builder and offline **Saved** tab remain hidden until end-to-end persistence is delivered. Prebuilt templates continue to function normally while persistence is implemented.【F:src/components/WorkflowDialog.tsx†L1003-L1110】
+- Native shell wiring for Capacitor/Tauri packages is still pending; expect manual integration work before producing shippable binaries.【F:README.md†L107-L117】
 ## Unreleased
 
 ### Features

@@ -1009,7 +1009,6 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
             {customWorkflowsEnabled && (
               <TabsTrigger value="custom">Custom Workflow</TabsTrigger>
             )}
-            <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
 
           <TabsContent value="prebuilt" className="space-y-4">
@@ -1208,66 +1207,6 @@ const prebuiltWorkflows: WorkflowTemplate[] = [
             </TabsContent>
           )}
 
-          <TabsContent value="saved" className="space-y-4">
-            {savedWorkflows.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Saved workflows will appear here for offline reuse.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {savedWorkflows.map((workflow) => (
-                  <Card key={workflow.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <CardTitle className="text-base">{workflow.name}</CardTitle>
-                          <CardDescription className="text-sm">
-                            {workflow.description || 'No description provided.'}
-                          </CardDescription>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline">{workflow.trigger || 'manual'}</Badge>
-                            <span>
-                              {workflow.steps.length} step{workflow.steps.length === 1 ? '' : 's'}
-                            </span>
-                            <span>
-                              Saved {new Date(workflow.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size={isMobile ? 'default' : 'sm'}
-                            onClick={() => removeWorkflow(workflow.id)}
-                            aria-label={`Delete ${workflow.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div
-                        className={cn(
-                          'flex justify-end gap-2',
-                          isMobile && 'flex-col gap-3'
-                        )}
-                      >
-                        <Button
-                          size={isMobile ? 'default' : 'sm'}
-                          className={cn(isMobile && 'w-full justify-center text-base')}
-                          onClick={() => handleApplySaved(workflow)}
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Apply Workflow
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
 
         <Separator className="my-4" />
