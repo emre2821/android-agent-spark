@@ -9,7 +9,7 @@ A Vite + React + TypeScript project for experimenting with AI agent dashboards. 
 - Utility hooks for mobile detection and toast notifications.
 
 ## Quickstart
-1. **Install dependencies**
+1. **Install dependencies** (builds `better-sqlite3`, so expect native compilation on the first run).
    ```bash
    npm install
    ```
@@ -40,6 +40,8 @@ A Vite + React + TypeScript project for experimenting with AI agent dashboards. 
 ## Getting Started
 ### Prerequisites
 - Node.js 18+
+- npm 10+
+- Python 3 and a C/C++ toolchain (needed the first time `better-sqlite3` compiles)
 
 ### Installation
 ```bash
