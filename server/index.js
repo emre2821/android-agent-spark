@@ -398,7 +398,7 @@ const createApp = () => {
     }
 
     if (err?.message === 'Not allowed by CORS') {
-      res.status(403).json({ error: 'CORS origin denied' });
+      res.status(403).json({ error: 'Access denied' });
       return;
     }
 
