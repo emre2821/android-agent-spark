@@ -16,8 +16,8 @@
       "region": "us-west-2",
       "deployStage": "production",
       "createdAt": "2024-04-30T16:12:00.000Z",
-      "updatedAt": "2024-05-12T14:55:00.000Z",
-      "lastActive": "2024-05-12T15:05:00.000Z"
+      "updatedAt": "2024-05-18T09:15:00.000Z",
+      "lastActive": "2024-05-18T09:20:00.000Z"
     },
     {
       "id": "agent-aurora-scout",
@@ -35,8 +35,8 @@
       "region": "us-west-2",
       "deployStage": "staging",
       "createdAt": "2024-05-05T09:30:00.000Z",
-      "updatedAt": "2024-05-12T11:10:00.000Z",
-      "lastActive": "2024-05-12T13:42:00.000Z"
+      "updatedAt": "2024-05-18T08:52:00.000Z",
+      "lastActive": "2024-05-18T08:55:00.000Z"
     },
     {
       "id": "agent-cobalt-sentinel",
@@ -54,8 +54,27 @@
       "region": "us-east-1",
       "deployStage": "production",
       "createdAt": "2024-03-18T18:45:00.000Z",
-      "updatedAt": "2024-05-10T22:18:00.000Z",
-      "lastActive": "2024-05-10T19:02:00.000Z"
+      "updatedAt": "2024-05-15T21:10:00.000Z",
+      "lastActive": "2024-05-15T19:02:00.000Z"
+    },
+    {
+      "id": "agent-lumen-weaver",
+      "workspaceId": "workspace-lumen",
+      "name": "Story Weaver",
+      "description": "Co-creates branching narratives and lore expansions for Lumen creatives.",
+      "status": "active",
+      "tags": ["creative", "narrative"],
+      "owner": {
+        "id": "user-avery",
+        "name": "Avery Quinn",
+        "email": "avery.owner@example.com"
+      },
+      "riskLevel": "medium",
+      "region": "us-west-1",
+      "deployStage": "production",
+      "createdAt": "2024-04-22T14:20:00.000Z",
+      "updatedAt": "2024-05-18T07:40:00.000Z",
+      "lastActive": "2024-05-18T07:45:00.000Z"
     }
   ],
   "tasks": [
@@ -64,36 +83,48 @@
       "agentId": "agent-aurora-orbit",
       "title": "Process high-priority inbox triage",
       "status": "completed",
-      "log": "All ticket identifiers masked with surrogate keys before export.",
+      "log": "Surrogate contact IDs applied; export verified against masking policy v3.",
       "labels": ["triage", "ops"],
       "sloSeconds": 300,
-      "createdAt": "2024-05-12T14:58:00.000Z",
-      "updatedAt": "2024-05-12T15:05:00.000Z",
-      "completedAt": "2024-05-12T15:05:00.000Z"
+      "createdAt": "2024-05-18T09:05:00.000Z",
+      "updatedAt": "2024-05-18T09:20:00.000Z",
+      "completedAt": "2024-05-18T09:20:00.000Z"
     },
     {
-      "id": "task-aurora-scout-044",
+      "id": "task-aurora-scout-052",
       "agentId": "agent-aurora-scout",
       "title": "Refresh telemetry extract for APAC region",
       "status": "running",
-      "log": "Execution streaming redacted metrics set for validation.",
+      "log": "Streaming masked metrics sample for validator checksum.",
       "labels": ["data-pipeline"],
       "sloSeconds": 900,
-      "createdAt": "2024-05-12T13:15:00.000Z",
-      "updatedAt": "2024-05-12T13:42:00.000Z",
+      "createdAt": "2024-05-18T08:30:00.000Z",
+      "updatedAt": "2024-05-18T08:55:00.000Z",
       "completedAt": null
     },
     {
-      "id": "task-cobalt-sentinel-318",
+      "id": "task-cobalt-sentinel-327",
       "agentId": "agent-cobalt-sentinel",
       "title": "Draft escalation digest for shift change",
       "status": "failed",
-      "log": "Attempt blocked: Zendesk sandbox token expired; requires rotation.",
+      "log": "Zendesk sandbox token rotated; awaiting validation before retry.",
       "labels": ["support"],
       "sloSeconds": 420,
-      "createdAt": "2024-05-10T18:40:00.000Z",
-      "updatedAt": "2024-05-10T19:02:00.000Z",
-      "completedAt": "2024-05-10T19:02:00.000Z"
+      "createdAt": "2024-05-15T18:40:00.000Z",
+      "updatedAt": "2024-05-15T19:02:00.000Z",
+      "completedAt": "2024-05-15T19:02:00.000Z"
+    },
+    {
+      "id": "task-lumen-weaver-104",
+      "agentId": "agent-lumen-weaver",
+      "title": "Assemble weekly creative prompt set",
+      "status": "completed",
+      "log": "All reference assets tokenized; distribution package signed.",
+      "labels": ["creative"],
+      "sloSeconds": 600,
+      "createdAt": "2024-05-18T07:10:00.000Z",
+      "updatedAt": "2024-05-18T07:45:00.000Z",
+      "completedAt": "2024-05-18T07:45:00.000Z"
     }
   ],
   "memories": [
@@ -107,34 +138,34 @@
       "visibility": "internal",
       "masked": false,
       "createdAt": "2024-04-30T16:15:00.000Z",
-      "updatedAt": "2024-05-12T09:00:00.000Z",
-      "timestamp": "2024-05-12T09:00:00.000Z"
+      "updatedAt": "2024-05-18T09:00:00.000Z",
+      "timestamp": "2024-05-18T09:00:00.000Z"
     },
     {
       "id": "memory-aurora-orbit-channel",
       "agentId": "agent-aurora-orbit",
       "key": "preferred_notification_channel",
-      "value": "Slack #aurora-ops (masked)",
+      "value": "MASKED::slack-channel",
       "type": "preference",
       "source": "settings-sync",
       "visibility": "internal",
       "masked": true,
       "createdAt": "2024-04-30T17:00:00.000Z",
-      "updatedAt": "2024-05-11T21:20:00.000Z",
-      "timestamp": "2024-05-11T21:20:00.000Z"
+      "updatedAt": "2024-05-18T08:45:00.000Z",
+      "timestamp": "2024-05-18T08:45:00.000Z"
     },
     {
       "id": "memory-aurora-scout-refresh",
       "agentId": "agent-aurora-scout",
       "key": "data_refresh_window",
-      "value": "Hourly between 08:00-18:00 local workspace time.",
+      "value": "Hourly between 08:00-18:00 workspace-local.",
       "type": "context",
       "source": "analytics-policy",
       "visibility": "internal",
       "masked": false,
       "createdAt": "2024-05-05T09:35:00.000Z",
-      "updatedAt": "2024-05-12T11:10:00.000Z",
-      "timestamp": "2024-05-12T11:10:00.000Z"
+      "updatedAt": "2024-05-18T08:52:00.000Z",
+      "timestamp": "2024-05-18T08:52:00.000Z"
     },
     {
       "id": "memory-cobalt-sentinel-scrub",
@@ -146,8 +177,21 @@
       "visibility": "restricted",
       "masked": false,
       "createdAt": "2024-03-20T08:10:00.000Z",
-      "updatedAt": "2024-05-09T16:55:00.000Z",
-      "timestamp": "2024-05-09T16:55:00.000Z"
+      "updatedAt": "2024-05-15T16:55:00.000Z",
+      "timestamp": "2024-05-15T16:55:00.000Z"
+    },
+    {
+      "id": "memory-lumen-weaver-tone",
+      "agentId": "agent-lumen-weaver",
+      "key": "creative_tone",
+      "value": "Use luminous, invitational language; redact client identifiers.",
+      "type": "guideline",
+      "source": "creative-brief",
+      "visibility": "internal",
+      "masked": false,
+      "createdAt": "2024-04-22T14:30:00.000Z",
+      "updatedAt": "2024-05-18T07:40:00.000Z",
+      "timestamp": "2024-05-18T07:40:00.000Z"
     }
   ]
 }
