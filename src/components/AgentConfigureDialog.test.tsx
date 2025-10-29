@@ -1,5 +1,4 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { AgentConfigureDialog } from './AgentConfigureDialog';
 import type { Agent } from '@/types/agent';
@@ -35,8 +34,8 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   }
-  // @ts-expect-error jsdom test shim
-  global.ResizeObserver = ResizeObserver;
+  const globalWithResize = globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver };
+  globalWithResize.ResizeObserver = ResizeObserver;
 });
 
 describe('AgentConfigureDialog', () => {
@@ -53,11 +52,12 @@ describe('AgentConfigureDialog', () => {
     tasksCompleted: 0,
     memoryItems: 0,
     lastActive: 'today',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     ...overrides,
   });
 
   it('refreshes the form state when different agents are opened in sequence', async () => {
-    const user = userEvent.setup();
     const onClose = vi.fn();
 
     const firstAgent = createAgent({
@@ -85,13 +85,11 @@ describe('AgentConfigureDialog', () => {
     expect(descriptionInput.value).toBe('First agent');
     expect(statusTrigger).toHaveTextContent('Active');
 
-    await user.clear(nameInput);
-    await user.type(nameInput, 'Alpha Prime');
-    await user.clear(descriptionInput);
-    await user.type(descriptionInput, 'Updated description');
+    fireEvent.change(nameInput, { target: { value: 'Alpha Prime' } });
+    fireEvent.change(descriptionInput, { target: { value: 'Updated description' } });
 
-    await user.click(statusTrigger);
-    await user.click(await screen.findByRole('option', { name: 'Inactive' }));
+    fireEvent.mouseDown(statusTrigger);
+    fireEvent.click(await screen.findByRole('option', { name: 'Inactive' }));
     expect(statusTrigger).toHaveTextContent('Inactive');
 
     rerender(<AgentConfigureDialog open={false} agent={firstAgent} onClose={onClose} />);
@@ -105,11 +103,10 @@ describe('AgentConfigureDialog', () => {
     expect(secondDescriptionInput.value).toBe('Second agent');
     expect(secondStatusTrigger).toHaveTextContent('Inactive');
 
-    await user.clear(secondNameInput);
-    await user.type(secondNameInput, 'Beta Prime');
+    fireEvent.change(secondNameInput, { target: { value: 'Beta Prime' } });
 
-    await user.click(secondStatusTrigger);
-    await user.click(await screen.findByRole('option', { name: 'Learning' }));
+    fireEvent.mouseDown(secondStatusTrigger);
+    fireEvent.click(await screen.findByRole('option', { name: 'Learning' }));
 
     expect(secondNameInput.value).toBe('Beta Prime');
     expect(secondStatusTrigger).toHaveTextContent('Learning');
