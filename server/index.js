@@ -27,7 +27,7 @@ import {
   getWorkspaceSummary,
 } from './data.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-20240518';
 const TOKEN_TTL = '4h';
 
 const sanitizeUser = (user) => ({
