@@ -113,19 +113,19 @@ npm run validate
 
 Chains linting, type checking, and the Vitest run to mirror the local checks expected before pushing changes.
 
-### Mobile & desktop bundles
+### Mobile & desktop bundles (preview-only)
 - **Android:** `npm run bundle:android`
 - **iOS:** `npm run bundle:ios`
 - **Desktop shell:** `npm run bundle:desktop`
 
 Each script sets `VITE_RUNTIME_TARGET` so the UI can adapt to the active platform and then runs the appropriate Capacitor/Tauri copy step. After bundling, use `npx cap sync <platform>` before opening the native project.
 
-> **Preview notice:** These Capacitor/Tauri bundles currently ship as preview-only artifacts. They generate platform-specific assets but still require manual wiring into the native shells before submission-ready builds can be produced.
+> **Preview notice:** The generated bundles are intentionally labeled preview-only. They package the web assets but still need manual shell wiring (Android Studio/Xcode/Electron Builder) before shippable binaries can be produced.
 
 ### Offline-first data
 - Agent and workflow payloads are cached with IndexedDB on the web and Capacitor Preferences on native builds (`src/lib/offline-storage.ts`).
 - The dashboard loads cached state immediately, falling back to it when the API is unreachable (`use-agents`, `use-workflows`).
-- Saved workflows are available under the new **Saved** tab even while offline.
+- Saved-workflow caching is temporarily disabled in the UI until the persistence APIs are finalized.
 
 ### Native plugin requirements
 Install these Capacitor plugins in the native shells to unlock mobile capabilities:

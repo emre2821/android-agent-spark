@@ -1,5 +1,14 @@
 # Release Notes
 
+## Enhancements
+- Agent updates, task activity, and memory edits now persist through the API layer so dashboards stay in sync across devices.
+- Agent memory fetches, inserts, updates, and deletes use the live API with optimistic UI updates for a smoother editing flow.
+- Mobile (`bundle:android` / `bundle:ios`) and desktop (`bundle:desktop`) bundles are explicitly labeled as preview builds while native shell integration is finalized.
+
+## Deferred / Known Gaps
+- The custom workflow builder and offline **Saved** tab remain hidden until end-to-end persistence is delivered. Prebuilt templates continue to function normally while persistence is implemented.【F:src/components/WorkflowDialog.tsx†L1003-L1110】
+- Native shell wiring for Capacitor/Tauri packages is still pending; expect manual integration work before producing shippable binaries.【F:README.md†L107-L117】
+## Unreleased
 ## 2024-11-07
 
 ### Features
