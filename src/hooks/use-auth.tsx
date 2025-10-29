@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { TOKEN_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from '@/lib/auth/storage';
+
 type Role = 'owner' | 'admin' | 'editor' | 'viewer';
 
 type WorkspaceSummary = {
@@ -35,9 +37,6 @@ type AuthContextValue = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
-const TOKEN_STORAGE_KEY = 'eden_auth_token';
-const WORKSPACE_STORAGE_KEY = 'eden_workspace_id';
-
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
