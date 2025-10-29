@@ -12,8 +12,6 @@ const config: CapacitorConfig = {
       launchShowDuration: 1500,
       backgroundColor: '#1a1a2e',
       showSpinner: false
-    },
-
     }
   },
   android: {
@@ -27,3 +25,4 @@ const config: CapacitorConfig = {
 };
 
 export default config;
+
