@@ -21,8 +21,15 @@ export const serverConfig = {
 
 export const corsOptions = {
   origin: (origin, callback) => {
+    // By default, reject requests with no origin header for better security.
+    // If you need to allow such requests, set ALLOW_NO_ORIGIN=true in your environment.
+    const allowNoOrigin = process.env.ALLOW_NO_ORIGIN === 'true';
     if (!origin) {
-      callback(null, true);
+      if (allowNoOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Requests with no Origin header are not allowed by CORS policy.'));
+      }
       return;
     }
 
