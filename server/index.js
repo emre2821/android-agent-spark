@@ -1,19 +1,3 @@
-import express from "express";
-import cors from "cors";
-import { mockAgents } from "./mockAgents.js";
-import {
-  listWorkflows,
-  getWorkflow,
-  createWorkflow,
-  updateDraftVersion,
-  createDraftVersion,
-  duplicateVersion,
-  revertToVersion,
-  publishVersion,
-  diffVersions,
-  exportWorkflow,
-  importWorkflows,
-} from "./workflowStore.js";
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
@@ -226,6 +210,10 @@ if (process.env.NODE_ENV !== 'test') {
 }
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+
+import { corsOptions, serverConfig } from './config/serverConfig.js';
+import logger from './logger.js';
+import { mockAgents } from './mockAgents.js';
 import {
   ALLOWED_AGENT_STATUSES,
   ALLOWED_MEMORY_TYPES,
@@ -249,8 +237,6 @@ import {
   updateTask,
 } from './storage.js';
 
-const DEFAULT_PORT = Number(process.env.PORT) || 3001;
-
 class HttpError extends Error {
   constructor(status, message) {
     super(message);
@@ -258,9 +244,11 @@ class HttpError extends Error {
   }
 }
 
+const DEFAULT_PORT = Number.isFinite(serverConfig.port) ? serverConfig.port : 3001;
+
 const createApp = () => {
   const app = express();
-  app.use(cors());
+  app.use(cors(corsOptions));
   app.use(express.json());
 
   const httpServer = createHttpServer(app);
@@ -290,6 +278,16 @@ const createApp = () => {
     }
     activeStreams.clear();
   };
+
+  if (listAgents().length === 0) {
+    for (const agent of mockAgents) {
+      try {
+        createAgent({ name: agent.name, description: agent.description, status: agent.status });
+      } catch (error) {
+        logger.warn('Failed to seed mock agent', { agent: agent.name, error });
+      }
+    }
+  }
 
   wss.on('connection', (socket) => {
     sockets.add(socket);
@@ -326,6 +324,7 @@ const createApp = () => {
     ];
 
     steps.forEach((message, index) => {
+      const key = `${task.id}-${index}`;
       const timeout = setTimeout(() => {
         broadcast({
           type: 'task.stream',
@@ -337,6 +336,7 @@ const createApp = () => {
             step: index,
           },
         });
+
         if (index === steps.length - 1) {
           const completed = updateTask(task.id, { status: 'completed' });
           if (completed) {
@@ -347,15 +347,18 @@ const createApp = () => {
             }
           }
         }
+
+        activeStreams.delete(key);
       }, (index + 1) * 150);
-      activeStreams.set(`${task.id}-${index}`, timeout);
+
+      activeStreams.set(key, timeout);
     });
   };
 
   const handler = (fn) => (req, res, next) => {
     try {
       const maybePromise = fn(req, res, next);
-      if (maybePromise?.then) {
+      if (maybePromise && typeof maybePromise.then === 'function') {
         maybePromise.catch(next);
       }
     } catch (error) {
@@ -366,8 +369,12 @@ const createApp = () => {
   app.get(
     '/agents',
     handler((_req, res) => {
-      res.json(listAgents());
-    })
+      const agents = listAgents();
+      if (!Array.isArray(agents)) {
+        throw new HttpError(500, 'Agent data unavailable');
+      }
+      res.json(agents);
+    }),
   );
 
   app.post(
@@ -381,7 +388,7 @@ const createApp = () => {
       const agent = createAgent({ name, description, status });
       broadcast({ type: 'agent.created', data: agent });
       res.status(201).json(agent);
-    })
+    }),
   );
 
   app.get(
@@ -392,7 +399,7 @@ const createApp = () => {
         throw new HttpError(404, 'Agent not found');
       }
       res.json(agent);
-    })
+    }),
   );
 
   app.put(
@@ -400,17 +407,13 @@ const createApp = () => {
     handler((req, res) => {
       const { name, description, status } = req.body ?? {};
       validateAgentStatus(status);
-      const updated = updateAgent(req.params.agentId, {
-        name,
-        description,
-        status,
-      });
+      const updated = updateAgent(req.params.agentId, { name, description, status });
       if (!updated) {
         throw new HttpError(404, 'Agent not found');
       }
       broadcast({ type: 'agent.updated', data: updated });
       res.json(updated);
-    })
+    }),
   );
 
   app.delete(
@@ -422,7 +425,7 @@ const createApp = () => {
       }
       broadcast({ type: 'agent.deleted', data: { id: req.params.agentId } });
       res.status(204).send();
-    })
+    }),
   );
 
   app.get(
@@ -433,7 +436,7 @@ const createApp = () => {
         throw new HttpError(404, 'Agent not found');
       }
       res.json(listTasks(req.params.agentId));
-    })
+    }),
   );
 
   app.post(
@@ -451,7 +454,7 @@ const createApp = () => {
       const task = createTask(agent.id, { title, status, log });
       broadcast({ type: 'task.created', data: task });
       res.status(201).json(task);
-    })
+    }),
   );
 
   app.patch(
@@ -471,7 +474,7 @@ const createApp = () => {
       }
       broadcast({ type: 'task.updated', data: updated });
       res.json(updated);
-    })
+    }),
   );
 
   app.delete(
@@ -485,7 +488,7 @@ const createApp = () => {
       broadcast({ type: 'task.deleted', data: { id: req.params.taskId, agentId: task.agentId } });
       emitAgentUpdate(task.agentId);
       res.status(204).send();
-    })
+    }),
   );
 
   app.post(
@@ -507,7 +510,7 @@ const createApp = () => {
       }
       simulateTaskRun(updated);
       res.json(updated);
-    })
+    }),
   );
 
   app.get(
@@ -518,7 +521,7 @@ const createApp = () => {
         throw new HttpError(404, 'Agent not found');
       }
       res.json(listMemory(req.params.agentId));
-    })
+    }),
   );
 
   app.post(
@@ -543,7 +546,7 @@ const createApp = () => {
         broadcast({ type: 'agent.updated', data: touched });
       }
       res.status(201).json(memory);
-    })
+    }),
   );
 
   app.patch(
@@ -564,7 +567,7 @@ const createApp = () => {
         emitAgentUpdate(existing.agentId);
       }
       res.json(updated);
-    })
+    }),
   );
 
   app.delete(
@@ -583,7 +586,7 @@ const createApp = () => {
         emitAgentUpdate(existing.agentId);
       }
       res.status(204).send();
-    })
+    }),
   );
 
   if (process.env.NODE_ENV === 'test') {
@@ -592,7 +595,7 @@ const createApp = () => {
       handler((_req, res) => {
         resetAll();
         res.status(204).send();
-      })
+      }),
     );
   }
 
@@ -601,7 +604,13 @@ const createApp = () => {
       res.status(err.status).json({ error: err.message });
       return;
     }
-    console.error(err);
+
+    if (err?.message === 'Not allowed by CORS') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    logger.error('Unhandled error processing request', { error: err });
     res.status(500).json({ error: 'Internal server error' });
   });
 
@@ -612,7 +621,7 @@ const createApp = () => {
         try {
           socket.close();
         } catch (error) {
-          console.error('Error closing socket', error);
+          logger.warn('Failed to close websocket connection', { error });
         }
       }
       wss.close(() => {
@@ -620,787 +629,14 @@ const createApp = () => {
       });
     });
 
-  return { app, server: httpServer, wss, close, broadcast };
+  return Object.assign(app, { app, server: httpServer, wss, close, broadcast });
 };
 
 if (process.env.NODE_ENV !== 'test') {
-  const { server } = createApp();
-  server.listen(DEFAULT_PORT, () => {
-    console.log(`API server running on http://localhost:${DEFAULT_PORT}`);
+  const appInstance = createApp();
+  appInstance.server.listen(DEFAULT_PORT, () => {
+    logger.info('API server started', { port: DEFAULT_PORT, url: `http://localhost:${DEFAULT_PORT}` });
   });
 }
 
 export { createApp, HttpError };
-
-const DEFAULT_PORT = Number(process.env.PORT) || 3001;
-
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-
-const createApp = () => {
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
-
-  const httpServer = createHttpServer(app);
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const sockets = new Set();
-  const activeStreams = new Map();
-
-  const broadcast = (event) => {
-    const payload = JSON.stringify(event);
-    for (const socket of sockets) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(payload);
-      }
-    }
-  };
-
-  const emitAgentUpdate = (agentId) => {
-    const agent = getAgent(agentId);
-    if (agent) {
-      broadcast({ type: 'agent.updated', data: agent });
-    }
-  };
-
-  const clearStreams = () => {
-    for (const timeout of activeStreams.values()) {
-      clearTimeout(timeout);
-    }
-    activeStreams.clear();
-  };
-
-  wss.on('connection', (socket) => {
-    sockets.add(socket);
-    socket.send(JSON.stringify({ type: 'connected' }));
-    socket.on('close', () => {
-      sockets.delete(socket);
-    });
-  });
-
-  const validateAgentStatus = (status) => {
-    if (status !== undefined && !ALLOWED_AGENT_STATUSES.has(status)) {
-      throw new HttpError(400, 'Invalid agent status');
-    }
-  };
-
-  const validateTaskStatus = (status) => {
-    if (status !== undefined && !ALLOWED_TASK_STATUSES.has(status)) {
-      throw new HttpError(400, 'Invalid task status');
-    }
-  };
-
-  const validateMemoryType = (type) => {
-    if (type !== undefined && !ALLOWED_MEMORY_TYPES.has(type)) {
-      throw new HttpError(400, 'Invalid memory type');
-    }
-  };
-
-  const simulateTaskRun = (task) => {
-    const steps = [
-      'Task acknowledged by runtime.',
-      'Planning execution strategy.',
-      'Executing work units.',
-      'Finalizing and reporting results.',
-    ];
-
-    steps.forEach((message, index) => {
-      const timeout = setTimeout(() => {
-        broadcast({
-          type: 'task.stream',
-          data: {
-            taskId: task.id,
-            agentId: task.agentId,
-            message,
-            timestamp: new Date().toISOString(),
-            step: index,
-          },
-        });
-        if (index === steps.length - 1) {
-          const completed = updateTask(task.id, { status: 'completed' });
-          if (completed) {
-            broadcast({ type: 'task.updated', data: completed });
-            const touched = touchAgent(completed.agentId);
-            if (touched) {
-              broadcast({ type: 'agent.updated', data: touched });
-            }
-          }
-        }
-      }, (index + 1) * 150);
-      activeStreams.set(`${task.id}-${index}`, timeout);
-    });
-  };
-
-  const handler = (fn) => (req, res, next) => {
-    try {
-      const maybePromise = fn(req, res, next);
-      if (maybePromise?.then) {
-        maybePromise.catch(next);
-      }
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  app.get(
-    '/agents',
-    handler((_req, res) => {
-      res.json(listAgents());
-    })
-  );
-
-  app.post(
-    '/agents',
-    handler((req, res) => {
-      const { name, description = '', status = 'inactive' } = req.body ?? {};
-      if (!name || typeof name !== 'string') {
-        throw new HttpError(400, 'Name is required');
-      }
-      validateAgentStatus(status);
-      const agent = createAgent({ name, description, status });
-      broadcast({ type: 'agent.created', data: agent });
-      res.status(201).json(agent);
-    })
-  );
-
-  app.get(
-    '/agents/:agentId',
-    handler((req, res) => {
-      const agent = getAgent(req.params.agentId);
-      if (!agent) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      res.json(agent);
-    })
-  );
-
-  app.put(
-    '/agents/:agentId',
-    handler((req, res) => {
-      const { name, description, status } = req.body ?? {};
-      validateAgentStatus(status);
-      const updated = updateAgent(req.params.agentId, {
-        name,
-        description,
-        status,
-      });
-      if (!updated) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      broadcast({ type: 'agent.updated', data: updated });
-      res.json(updated);
-    })
-  );
-
-  app.delete(
-    '/agents/:agentId',
-    handler((req, res) => {
-      const deleted = deleteAgent(req.params.agentId);
-      if (!deleted) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      broadcast({ type: 'agent.deleted', data: { id: req.params.agentId } });
-      res.status(204).send();
-    })
-  );
-
-  app.get(
-    '/agents/:agentId/tasks',
-    handler((req, res) => {
-      const agent = getAgent(req.params.agentId);
-      if (!agent) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      res.json(listTasks(req.params.agentId));
-    })
-  );
-
-  app.post(
-    '/agents/:agentId/tasks',
-    handler((req, res) => {
-      const agent = getAgent(req.params.agentId);
-      if (!agent) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      const { title, status = 'pending', log = '' } = req.body ?? {};
-      if (!title || typeof title !== 'string') {
-        throw new HttpError(400, 'Task title is required');
-      }
-      validateTaskStatus(status);
-      const task = createTask(agent.id, { title, status, log });
-      broadcast({ type: 'task.created', data: task });
-      res.status(201).json(task);
-    })
-  );
-
-  app.patch(
-    '/tasks/:taskId',
-    handler((req, res) => {
-      const { title, status, log } = req.body ?? {};
-      validateTaskStatus(status);
-      const updated = updateTask(req.params.taskId, { title, status, log });
-      if (!updated) {
-        throw new HttpError(404, 'Task not found');
-      }
-      if (status === 'completed' || status === 'failed') {
-        const touched = touchAgent(updated.agentId);
-        if (touched) {
-          broadcast({ type: 'agent.updated', data: touched });
-        }
-      }
-      broadcast({ type: 'task.updated', data: updated });
-      res.json(updated);
-    })
-  );
-
-  app.delete(
-    '/tasks/:taskId',
-    handler((req, res) => {
-      const task = getTask(req.params.taskId);
-      if (!task) {
-        throw new HttpError(404, 'Task not found');
-      }
-      deleteTask(req.params.taskId);
-      broadcast({ type: 'task.deleted', data: { id: req.params.taskId, agentId: task.agentId } });
-      emitAgentUpdate(task.agentId);
-      res.status(204).send();
-    })
-  );
-
-  app.post(
-    '/tasks/:taskId/run',
-    handler((req, res) => {
-      const task = getTask(req.params.taskId);
-      if (!task) {
-        throw new HttpError(404, 'Task not found');
-      }
-      if (task.status === 'running') {
-        res.json(task);
-        return;
-      }
-      const updated = updateTask(task.id, { status: 'running' });
-      broadcast({ type: 'task.updated', data: updated });
-      const touched = touchAgent(task.agentId);
-      if (touched) {
-        broadcast({ type: 'agent.updated', data: touched });
-      }
-      simulateTaskRun(updated);
-      res.json(updated);
-    })
-  );
-
-  app.get(
-    '/agents/:agentId/memory',
-    handler((req, res) => {
-      const agent = getAgent(req.params.agentId);
-      if (!agent) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      res.json(listMemory(req.params.agentId));
-    })
-  );
-
-  app.post(
-    '/agents/:agentId/memory',
-    handler((req, res) => {
-      const agent = getAgent(req.params.agentId);
-      if (!agent) {
-        throw new HttpError(404, 'Agent not found');
-      }
-      const { key, value, type = 'fact' } = req.body ?? {};
-      if (!key || typeof key !== 'string') {
-        throw new HttpError(400, 'Memory key is required');
-      }
-      if (!value || typeof value !== 'string') {
-        throw new HttpError(400, 'Memory value is required');
-      }
-      validateMemoryType(type);
-      const memory = createMemory(agent.id, { key, value, type });
-      broadcast({ type: 'memory.created', data: memory });
-      const touched = touchAgent(agent.id);
-      if (touched) {
-        broadcast({ type: 'agent.updated', data: touched });
-      }
-      res.status(201).json(memory);
-    })
-  );
-
-  app.patch(
-    '/memory/:memoryId',
-    handler((req, res) => {
-      const { key, value, type } = req.body ?? {};
-      validateMemoryType(type);
-      const existing = getMemory(req.params.memoryId);
-      if (!existing) {
-        throw new HttpError(404, 'Memory item not found');
-      }
-      const updated = updateMemory(req.params.memoryId, { key, value, type });
-      broadcast({ type: 'memory.updated', data: updated });
-      const touched = touchAgent(existing.agentId);
-      if (touched) {
-        broadcast({ type: 'agent.updated', data: touched });
-      } else {
-        emitAgentUpdate(existing.agentId);
-      }
-      res.json(updated);
-    })
-  );
-
-  app.delete(
-    '/memory/:memoryId',
-    handler((req, res) => {
-      const existing = getMemory(req.params.memoryId);
-      if (!existing) {
-        throw new HttpError(404, 'Memory item not found');
-      }
-      deleteMemory(req.params.memoryId);
-      broadcast({ type: 'memory.deleted', data: { id: req.params.memoryId, agentId: existing.agentId } });
-      const touched = touchAgent(existing.agentId);
-      if (touched) {
-        broadcast({ type: 'agent.updated', data: touched });
-      } else {
-        emitAgentUpdate(existing.agentId);
-      }
-      res.status(204).send();
-    })
-  );
-
-  app.post(
-    '/__test__/reset',
-    handler((_req, res) => {
-      resetAll();
-      res.status(204).send();
-    })
-  );
-
-  app.use((err, _req, res, _next) => {
-    if (err instanceof HttpError) {
-      res.status(err.status).json({ error: err.message });
-      return;
-    }
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
-  });
-
-  const close = () =>
-    new Promise((resolve) => {
-      clearStreams();
-      for (const socket of sockets) {
-        try {
-          socket.close();
-        } catch (error) {
-          console.error('Error closing socket', error);
-        }
-      }
-      wss.close(() => {
-        httpServer.close(() => resolve());
-      });
-    });
-
-  return { app, server: httpServer, wss, close, broadcast };
-};
-
-if (process.env.NODE_ENV !== 'test') {
-  const { server } = createApp();
-  server.listen(DEFAULT_PORT, () => {
-    console.log(`API server running on http://localhost:${DEFAULT_PORT}`);
-  });
-}
-
-export { createApp, HttpError };
-import { mockAgents } from './mockAgents.js';
-import { workflowStore } from './workflowStore.js';
-import { createServer } from 'http';
-
-export const createApp = () => {
-  const app = express();
-  app.use(cors());
-
-  app.get('/agents', (req, res) => {
-    res.json(mockAgents);
-  });
-
-  return app;
-};
-
-const app = createApp();
-
-if (process.env.NODE_ENV !== 'test') {
-  const port = process.env.PORT || 3001;
-  app.listen(port, () => {
-    console.log(`API server running on http://localhost:${port}`);
-  });
-}
-
-export default app;
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "2mb" }));
-
-app.get("/agents", (req, res) => {
-  res.json(mockAgents);
-app.use(express.json());
-
-
-
-apiRouter.post(
-  '/agents/:agentId/tasks',
-  asyncHandler(async (req, res) => {
-    const agent = await getAgent(req.params.agentId);
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    const result = await createTask(req.params.agentId, req.body ?? {});
-    broadcast('task:created', { agent: result.agent, task: result.task });
-    res.status(201).json({ data: result });
-  }),
-);
-
-apiRouter.patch(
-  '/agents/:agentId/tasks/:taskId',
-  asyncHandler(async (req, res) => {
-    const result = await updateTask(req.params.agentId, req.params.taskId, req.body ?? {});
-    if (!result) {
-      res.status(404).json({ message: 'Task not found' });
-      return;
-    }
-    broadcast('task:updated', { agent: result.agent, task: result.task });
-    res.json({ data: result });
-  }),
-);
-
-apiRouter.delete(
-  '/agents/:agentId/tasks/:taskId',
-  asyncHandler(async (req, res) => {
-    const result = await deleteTask(req.params.agentId, req.params.taskId);
-    if (!result) {
-      res.status(404).json({ message: 'Task not found' });
-      return;
-    }
-    broadcast('task:deleted', { agentId: req.params.agentId, taskId: req.params.taskId, agent: result.agent });
-    res.status(204).send();
-  }),
-);
-
-apiRouter.get(
-  '/agents/:agentId/memory',
-  asyncHandler(async (req, res) => {
-    const agent = await getAgent(req.params.agentId);
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    const memories = await listMemories(req.params.agentId);
-    res.json({ data: memories });
-  }),
-);
-
-apiRouter.post(
-  '/agents/:agentId/memory',
-  asyncHandler(async (req, res) => {
-    const agent = await getAgent(req.params.agentId);
-    if (!agent) {
-      res.status(404).json({ message: 'Agent not found' });
-      return;
-    }
-    const result = await createMemory(req.params.agentId, req.body ?? {});
-    broadcast('memory:created', { agent: result.agent, memory: result.memory });
-    res.status(201).json({ data: result });
-  }),
-);
-
-apiRouter.patch(
-  '/agents/:agentId/memory/:memoryId',
-  asyncHandler(async (req, res) => {
-    const result = await updateMemory(req.params.agentId, req.params.memoryId, req.body ?? {});
-    if (!result) {
-      res.status(404).json({ message: 'Memory not found' });
-      return;
-    }
-    broadcast('memory:updated', { agent: result.agent, memory: result.memory });
-    res.json({ data: result });
-  }),
-);
-
-apiRouter.delete(
-  '/agents/:agentId/memory/:memoryId',
-  asyncHandler(async (req, res) => {
-    const result = await deleteMemory(req.params.agentId, req.params.memoryId);
-    if (!result) {
-      res.status(404).json({ message: 'Memory not found' });
-      return;
-    }
-    broadcast('memory:deleted', { agentId: req.params.agentId, memoryId: req.params.memoryId, agent: result.agent });
-    res.status(204).send();
-  }),
-);
-
-app.use('/api', apiRouter);
-
-app.post(
-  '/triggers/webhook/:triggerId',
-  asyncHandler(async (req, res) => {
-    await triggerEngine.handleWebhook(req.params.triggerId, {
-      headers: req.headers,
-      body: req.body,
-      query: req.query,
-    });
-    res.status(202).json({ message: 'Webhook accepted' });
-  }),
-);
-
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
-app.use((err, req, res, next) => {
-  console.error('Error processing request', err);
-  if (res.headersSent) {
-    next(err);
-    return;
-  }
-  const status = err.statusCode || err.status || 500;
-  res.status(status).json({ message: err.message || 'Internal server error' });
-});
-
-
-});
-
-wss.on('error', (error) => {
-  console.error('WebSocket server error', error);
-});
-
-app.get('/workflow-runs', async (req, res) => {
-  try {
-    const runs = await workflowStore.getAllRuns();
-    res.json(runs);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.get('/workflow-runs/:id', async (req, res) => {
-  try {
-    const run = await workflowStore.getRun(req.params.id);
-    if (!run) {
-      return res.status(404).json({ message: 'Run not found' });
-    }
-    res.json(run);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.post('/workflow-runs', async (req, res) => {
-  try {
-    const run = await workflowStore.createRun(req.body);
-    res.status(201).json(run);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post('/workflow-runs/:id/steps/:stepId/logs', async (req, res) => {
-  try {
-    const entry = await workflowStore.appendStepLog(req.params.id, req.params.stepId, req.body);
-    res.status(201).json(entry);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post('/workflow-runs/:id/steps/:stepId/result', async (req, res) => {
-  try {
-    const run = await workflowStore.recordStepResult(req.params.id, req.params.stepId, req.body);
-    res.json(run);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post('/workflow-runs/:id/retry', async (req, res) => {
-  try {
-    const run = await workflowStore.retryRun(req.params.id, req.body?.reason);
-    res.json(run);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post('/workflow-runs/:id/cancel', async (req, res) => {
-  try {
-    const run = await workflowStore.cancelRun(req.params.id, req.body?.reason);
-    res.json(run);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.get("/workflows", (req, res) => {
-  try {
-    const workflows = listWorkflows();
-    res.json(workflows);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.get("/workflows/:id", (req, res) => {
-  try {
-    const workflow = getWorkflow(req.params.id);
-    res.json(workflow);
-  } catch (error) {
-    res.status(404).json({ message: error.message });
-  }
-});
-
-app.post("/workflows", (req, res) => {
-  try {
-    const { name, description, trigger, steps, author, changeSummary } = req.body;
-    const result = createWorkflow({ name, description, trigger, steps, author, changeSummary });
-    res.status(201).json(result);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post("/workflows/:id/versions", (req, res) => {
-  try {
-    const { definition, author, changeSummary } = req.body;
-    const result = createDraftVersion(req.params.id, { definition, author, changeSummary, action: "created" });
-    res.status(201).json(result);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.patch("/workflows/:id/versions/:versionId", (req, res) => {
-  try {
-    const { definition, author, changeSummary } = req.body;
-    const version = updateDraftVersion(req.params.id, req.params.versionId, { definition, author, changeSummary });
-    res.json(version);
-  } catch (error) {
-    const status = error.message.includes("immutable") ? 409 : 400;
-    res.status(status).json({ message: error.message });
-  }
-});
-
-app.post("/workflows/:id/versions/:versionId/duplicate", (req, res) => {
-  try {
-    const { author, changeSummary } = req.body;
-    const version = duplicateVersion(req.params.id, req.params.versionId, { author, changeSummary });
-    res.status(201).json(version);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post("/workflows/:id/versions/:versionId/revert", (req, res) => {
-  try {
-    const { author, changeSummary } = req.body;
-    const version = revertToVersion(req.params.id, req.params.versionId, { author, changeSummary });
-    res.status(201).json(version);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post("/workflows/:id/versions/:versionId/publish", (req, res) => {
-  try {
-    const { author, changeSummary } = req.body;
-    const version = publishVersion(req.params.id, req.params.versionId, { author, changeSummary });
-    res.json(version);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.get("/workflows/:id/diff", (req, res) => {
-  const { from, to } = req.query;
-  if (!to) {
-    res.status(400).json({ message: "Query parameter 'to' is required" });
-    return;
-  }
-  try {
-    const diff = diffVersions(req.params.id, from, to);
-    res.json(diff);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.get("/workflows/:id/export", (req, res) => {
-  const { format = "json", versionId } = req.query;
-  try {
-    const payload = exportWorkflow(req.params.id, { format, versionId });
-    res.type(format === "yaml" ? "text/yaml" : "application/json").send(payload);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-app.post("/workflows/import", (req, res) => {
-  const { content, format = "json" } = req.body;
-  if (!content) {
-    res.status(400).json({ message: "content is required" });
-    return;
-  }
-  try {
-    const workflows = importWorkflows(content, format);
-    res.status(201).json(workflows);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-
-const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`API server running on http://localhost:${port}`);
-server.on('error', (error) => {
-  console.error('Server error', error);
-});
-
-const DEFAULT_PORT = Number.parseInt(process.env.PORT ?? '3001', 10);
-
-export function startServer(port = DEFAULT_PORT) {
-  return new Promise((resolve, reject) => {
-    if (server.listening) {
-      resolve(server);
-      return;
-    }
-
-    const handleListening = async () => {
-      server.off('error', handleError);
-      try {
-        await triggerEngine.initialize();
-      } catch (error) {
-        console.error('Failed to initialize trigger engine', error);
-      }
-      console.log(`API server running on http://localhost:${port}`);
-      resolve(server);
-    };
-
-    const handleError = (error) => {
-      server.off('listening', handleListening);
-      reject(error);
-    };
-
-    server.once('error', handleError);
-    server.once('listening', handleListening);
-    server.listen(port);
-  });
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startServer().catch((error) => {
-    console.error('Failed to start server', error);
-    process.exitCode = 1;
-  });
-}
-
-export { app, server, wss };

@@ -106,6 +106,7 @@ const normalizeServerEvent = (raw: unknown): ServerEvent | null => {
 
 interface AgentsContextValue {
   agents: Agent[];
+  agentsMap: ReadonlyMap<string, Agent>;
   setAgents: React.Dispatch<React.SetStateAction<Agent[]>>;
   isLoading: boolean;
   isFetching: boolean;
@@ -165,6 +166,7 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const agents = agentsQuery.data ?? [];
+  const agentsMap = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
 
   const setAgents = useCallback<React.Dispatch<React.SetStateAction<Agent[]>>>(
     (updater) => {
@@ -581,6 +583,7 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value = useMemo<AgentsContextValue>(
     () => ({
       agents,
+      agentsMap,
       setAgents,
       isLoading: agentsQuery.isLoading,
       isFetching: agentsQuery.isFetching,
@@ -606,6 +609,7 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }),
     [
       agents,
+      agentsMap,
       agentsQuery.error,
       agentsQuery.isFetching,
       agentsQuery.isLoading,
