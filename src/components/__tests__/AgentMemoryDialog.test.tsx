@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { AgentMemoryDialog } from '@/components/AgentMemoryDialog';
 
-const fetchAgentMemory = vi.fn<(id: string) => Promise<any[]>>();
+const fetchAgentMemory = vi.fn<[string], Promise<any[]>>();
 const addMemoryItem = vi.fn();
 const updateMemoryItem = vi.fn();
 const deleteMemoryItem = vi.fn();

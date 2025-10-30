@@ -34,11 +34,6 @@ const loadAgentsModule = async (apiUrl?: string | null) => {
   return module;
 };
 
-declare global {
-  // eslint-disable-next-line no-var
-  var WebSocket: typeof MockWebSocket;
-}
-
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
 
@@ -78,7 +73,9 @@ class MockWebSocket {
   }
 }
 
-globalThis.WebSocket = MockWebSocket as any;
+const globalSocket = globalThis as typeof globalThis & { WebSocket: typeof WebSocket };
+const originalWebSocket = globalSocket.WebSocket;
+globalSocket.WebSocket = MockWebSocket as unknown as typeof WebSocket;
 
 type FetchImpl = typeof fetch;
 
@@ -90,11 +87,13 @@ const successAgent = (overrides: Partial<Agent> = {}): Agent => ({
   tasksCompleted: 1,
   memoryItems: 2,
   lastActive: '1 hour ago',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   ...overrides,
 });
 
 let agentsStore: Agent[] = [successAgent()];
-let fetchMock: ReturnType<typeof vi.fn<FetchImpl>>;
+let fetchMock: ReturnType<typeof vi.fn>;
 let createResolve: (() => void) | null = null;
 
 const buildResponse = (data: any, status = 200) =>
@@ -187,6 +186,7 @@ describe('useAgents hook', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    globalSocket.WebSocket = originalWebSocket;
   });
 
   it('fetches agents, supports optimistic creation, and reacts to websocket updates', async () => {

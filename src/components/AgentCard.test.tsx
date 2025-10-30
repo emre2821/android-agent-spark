@@ -1,90 +1,81 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 import { AgentCard } from './AgentCard';
+import type { Agent } from '@/types/agent';
+
+const createAgent = (overrides: Partial<Agent> = {}): Agent => ({
+  id: 'agent-1',
+  name: 'Test Agent',
+  description: 'An example agent',
+  status: 'active',
+  tasksCompleted: 3,
+  memoryItems: 5,
+  lastActive: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides,
+});
 
 describe('AgentCard', () => {
-  const agent = {
-    id: '1',
-    workspaceId: 'workspace-aurora',
-    name: 'Test Agent',
-    description: 'An example agent',
-    status: 'active' as const,
-    tasksCompleted: 3,
-    memoryItems: 5,
-    lastActive: 'today'
-  };
-
-  it('renders agent information', () => {
+  it('renders agent details', () => {
+    const agent = createAgent();
     render(
       <BrowserRouter>
-        <AgentCard agent={agent} onEdit={() => {}} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
         <AgentCard
           agent={agent}
-          canConfigure
-          canViewMemory
           onEdit={() => {}}
           onViewMemory={() => {}}
         />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
+
     expect(screen.getByText('Test Agent')).toBeInTheDocument();
     expect(screen.getByText('Tasks:')).toBeInTheDocument();
+    expect(screen.getByText('Memory:')).toBeInTheDocument();
   });
 
-  it('calls onEdit when Configure button clicked', () => {
-    const onEdit = vi.fn();
-    render(
-      <BrowserRouter>
-        <AgentCard agent={agent} onEdit={onEdit} onViewMemory={() => {}} onBuildWorkflow={() => {}} />
-        <AgentCard
-          agent={agent}
-          canConfigure
-          canViewMemory
-          onEdit={onEdit}
-          onViewMemory={() => {}}
-        />
-      </BrowserRouter>
-    );
-    fireEvent.click(screen.getByText('Configure'));
-    expect(onEdit).toHaveBeenCalledWith('1');
-  });
-
-  it('disables restricted actions when permissions are missing', () => {
+  it('calls handlers when buttons are clicked', () => {
+    const agent = createAgent();
     const onEdit = vi.fn();
     const onViewMemory = vi.fn();
-  it('calls onBuildWorkflow when Workflows button clicked', () => {
     const onBuildWorkflow = vi.fn();
+
+    render(
+      <BrowserRouter>
+        <AgentCard
+          agent={agent}
+          onEdit={onEdit}
+          onViewMemory={onViewMemory}
+          onBuildWorkflow={onBuildWorkflow}
+        />
+      </BrowserRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /configure/i }));
+    fireEvent.click(screen.getByRole('button', { name: /memory/i }));
+    fireEvent.click(screen.getByRole('button', { name: /workflows/i }));
+
+    expect(onEdit).toHaveBeenCalledWith(agent.id);
+    expect(onViewMemory).toHaveBeenCalledWith(agent.id);
+    expect(onBuildWorkflow).toHaveBeenCalledWith(agent.id);
+  });
+
+  it('disables restricted actions based on permissions', () => {
+    const agent = createAgent();
     render(
       <BrowserRouter>
         <AgentCard
           agent={agent}
           canConfigure={false}
           canViewMemory={false}
-          onEdit={onEdit}
-          onViewMemory={onViewMemory}
-        />
-      </BrowserRouter>
-    );
-
-    const configureButton = screen.getByText('Configure');
-    const memoryButton = screen.getByText('Memory');
-
-    expect(configureButton).toBeDisabled();
-    expect(memoryButton).toBeDisabled();
-
-    fireEvent.click(configureButton);
-    fireEvent.click(memoryButton);
-
-    expect(onEdit).not.toHaveBeenCalled();
-    expect(onViewMemory).not.toHaveBeenCalled();
           onEdit={() => {}}
           onViewMemory={() => {}}
-          onBuildWorkflow={onBuildWorkflow}
         />
-      </BrowserRouter>
+      </BrowserRouter>,
     );
-    fireEvent.click(screen.getByText('Workflows'));
-    expect(onBuildWorkflow).toHaveBeenCalledWith('1');
+
+    expect(screen.getByRole('button', { name: /configure/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /memory/i })).toBeDisabled();
   });
 });

@@ -12,7 +12,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import WorkflowRuns from "./pages/WorkflowRuns";
 import WorkflowRunNotifications from "@/components/WorkflowRunNotifications";
-import { WorkflowsProvider } from "@/hooks/use-workflows";
+import { WorkflowsProvider } from "@/hooks/use-workflows.tsx";
 import Workflows from "./pages/Workflows";
 
 const queryClient = new QueryClient();

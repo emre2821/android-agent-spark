@@ -53,8 +53,8 @@ describe('useAuth', () => {
           }),
       });
 
-    // @ts-expect-error override for tests
-    global.fetch = fetchMock;
+    const globalWithFetch = globalThis as typeof globalThis & { fetch: typeof fetch };
+    globalWithFetch.fetch = fetchMock as typeof fetch;
 
     const wrapper = ({ children }: { children: ReactNode }) => (
       <AuthProvider>{children}</AuthProvider>
@@ -89,8 +89,8 @@ describe('useAuth', () => {
       json: () => Promise.resolve({ message: 'Invalid credentials' }),
     });
 
-    // @ts-expect-error override for tests
-    global.fetch = fetchMock;
+    const globalWithFetch = globalThis as typeof globalThis & { fetch: typeof fetch };
+    globalWithFetch.fetch = fetchMock as typeof fetch;
 
     const wrapper = ({ children }: { children: ReactNode }) => (
       <AuthProvider>{children}</AuthProvider>

@@ -48,13 +48,13 @@ export const useWorkflowTriggers = (workflow: Workflow | undefined) => {
       if (!input?.id) return;
       await apiRequest(`/workflows/${input.id}`, {
         method: 'PUT',
-        body: {
+        body: JSON.stringify({
           id: input.id,
           name: input.name,
           description: input.description,
           status: input.status,
           agentId: input.agentId,
-        },
+        }),
       });
     },
   });
@@ -91,7 +91,7 @@ export const useWorkflowTriggers = (workflow: Workflow | undefined) => {
       if (!workflowId) throw new Error('Select a workflow first');
       return apiRequest<WorkflowTrigger>(`/workflows/${workflowId}/triggers`, {
         method: 'POST',
-        body: input,
+        body: JSON.stringify(input),
       });
     },
     onSuccess: () => invalidate(),
@@ -102,7 +102,7 @@ export const useWorkflowTriggers = (workflow: Workflow | undefined) => {
       if (!workflowId) throw new Error('Select a workflow first');
       return apiRequest<WorkflowTrigger>(`/workflows/${workflowId}/triggers/${triggerId}`, {
         method: 'PATCH',
-        body: updates,
+        body: JSON.stringify(updates),
       });
     },
     onSuccess: () => invalidate(),
