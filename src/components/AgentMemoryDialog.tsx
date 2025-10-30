@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useAgents } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
+import type { MemoryItem, MemoryType } from '@/types/memory';
 
 interface AgentMemory {
   id: string;
@@ -25,6 +26,11 @@ interface AgentMemoryDialogProps {
   agentId: string;
 }
 
+type MemoryDraft = Pick<MemoryItem, 'key' | 'value' | 'type'>;
+
+const createEmptyDraft = (): MemoryDraft => ({ key: '', value: '', type: 'fact' });
+
+const typeClasses: Record<MemoryType, string> = {
 type MemoryDraft = Pick<AgentMemory, 'key' | 'value' | 'type'>;
 
 const EMPTY_DRAFT: MemoryDraft = { key: '', value: '', type: 'fact' };
@@ -42,6 +48,10 @@ const TYPE_COLORS: Record<MemoryDraft['type'], string> = {
 };
 
 export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onClose, agentId }) => {
+  const { fetchAgentMemory, addMemoryItem, updateMemoryItem, deleteMemoryItem } = useAgents();
+  const { toast } = useToast();
+
+  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>([]);
   const { toast } = useToast();
   const { fetchAgentMemory, addMemoryItem, updateMemoryItem, deleteMemoryItem } = useAgents() as MemoryActions;
 
@@ -52,7 +62,21 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newItem, setNewItem] = useState<MemoryDraft>(createEmptyDraft());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<MemoryDraft>(createEmptyDraft());
 
+  const resetState = useCallback(() => {
+    setMemoryItems([]);
+    setIsLoading(false);
+    setIsSubmitting(false);
+    setIsUpdating(false);
+    setDeletingId(null);
+    setNewItem(createEmptyDraft());
+    setEditingId(null);
+    setEditDraft(createEmptyDraft());
+  }, []);
   const resetEditor = useCallback(() => {
     setEditingId(null);
     setEditDraft(EMPTY_DRAFT);
@@ -74,12 +98,15 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     }
 
     let cancelled = false;
+
     const loadMemory = async () => {
       if (!agentId) {
         setMemoryItems([]);
         return;
       }
       setIsLoading(true);
+      try {
+        const items = await fetchAgentMemory(agentId);
       resetEditor();
       setNewItem(EMPTY_DRAFT);
 
@@ -90,6 +117,11 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
         }
       } catch (error) {
         if (!cancelled) {
+          setMemoryItems([]);
+          const message = error instanceof Error ? error.message : 'Something went wrong while loading memory items.';
+          toast({
+            title: 'Unable to load memory',
+            description: message,
           toast({
             title: 'Unable to load memory',
             description: error instanceof Error ? error.message : 'Something went wrong while loading memory.',
@@ -107,6 +139,35 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     return () => {
       cancelled = true;
     };
+  }, [agentId, fetchAgentMemory, open, resetState, toast]);
+
+  useEffect(() => {
+    if (!editingId) {
+      return;
+    }
+
+    const item = memoryItems.find((memory) => memory.id === editingId);
+    if (!item) {
+      setEditingId(null);
+      setEditDraft(createEmptyDraft());
+      return;
+    }
+
+    setEditDraft({ key: item.key, value: item.value, type: item.type });
+  }, [editingId, memoryItems]);
+
+  const handleDialogChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        resetState();
+        onClose();
+      }
+    },
+    [onClose, resetState],
+  );
+
+  const handleAddMemory = async () => {
+    if (!agentId || !newItem.key.trim() || !newItem.value.trim()) {
   }, [agentId, open, fetchAgentMemory, resetEditor, resetState, toast]);
 
   const handleAddMemory = async () => {
@@ -120,11 +181,21 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
 
     setIsSubmitting(true);
     try {
+      const created = await addMemoryItem(agentId, {
       const saved = await addMemoryItem(agentId, {
         key: newItem.key.trim(),
         value: newItem.value.trim(),
         type: newItem.type,
       });
+      setMemoryItems((items) => [created, ...items]);
+      setNewItem(createEmptyDraft());
+      toast({
+        title: 'Memory added',
+        description: 'The memory item has been stored successfully.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add memory';
+      toast({ title: 'Unable to add memory', description: message, variant: 'destructive' });
       setMemoryItems((items) => [saved, ...items]);
       setNewItem(EMPTY_DRAFT);
       toast({ title: 'Memory added', description: 'The memory item has been stored.' });
@@ -139,6 +210,7 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     }
   };
 
+  const handleStartEditing = (item: MemoryItem) => {
   const handleDeleteMemory = async (id: string) => {
     if (!agentId || !deleteMemoryItem) {
       toast({ title: 'Unable to remove memory', description: 'Memory service is unavailable.', variant: 'destructive' });
@@ -167,6 +239,10 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
   };
 
   const handleUpdateMemory = async () => {
+    if (!agentId || !editingId) {
+      return;
+    }
+
     if (!agentId || !editingId || !updateMemoryItem) {
       toast({ title: 'Unable to update memory', description: 'Memory service is unavailable.', variant: 'destructive' });
       return;
@@ -183,6 +259,15 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
         type: editDraft.type,
       });
       setMemoryItems((items) => items.map((item) => (item.id === updated.id ? updated : item)));
+      setEditingId(null);
+      setEditDraft(createEmptyDraft());
+      toast({
+        title: 'Memory updated',
+        description: 'The memory item changes have been saved.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update memory';
+      toast({ title: 'Unable to update memory', description: message, variant: 'destructive' });
       toast({ title: 'Memory updated', description: 'Changes have been saved.' });
       resetEditor();
     } catch (error) {
@@ -196,6 +281,159 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditDraft(createEmptyDraft());
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!agentId) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await deleteMemoryItem(agentId, id);
+      setMemoryItems((items) => items.filter((item) => item.id !== id));
+      toast({
+        title: 'Memory removed',
+        description: 'The memory item has been deleted.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete memory';
+      toast({ title: 'Unable to delete memory', description: message, variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const memoryCount = useMemo(() => memoryItems.length, [memoryItems]);
+
+  return (
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            Agent Memory Store
+            <Badge variant="outline" className="text-xs">
+              {memoryCount} items
+            </Badge>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <div className="gradient-card p-4 rounded-lg border border-border/50 space-y-3">
+            <h3 className="text-sm font-medium">Add Memory Item</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input
+                placeholder="Memory key (e.g., user_preference)"
+                value={newItem.key}
+                onChange={(event) => setNewItem({ ...newItem, key: event.target.value })}
+                disabled={isSubmitting}
+              />
+              <select
+                className="px-3 py-2 bg-input border border-border rounded-md text-sm"
+                value={newItem.type}
+                onChange={(event) => setNewItem({ ...newItem, type: event.target.value as MemoryType })}
+                disabled={isSubmitting}
+              >
+                <option value="fact">Fact</option>
+                <option value="preference">Preference</option>
+                <option value="skill">Skill</option>
+                <option value="context">Context</option>
+              </select>
+            </div>
+            <Textarea
+              placeholder="Memory value or description..."
+              value={newItem.value}
+              onChange={(event) => setNewItem({ ...newItem, value: event.target.value })}
+              rows={2}
+              disabled={isSubmitting}
+            />
+            <Button onClick={handleAddMemory} disabled={isSubmitting}>
+              <Plus className="h-4 w-4 mr-1" />
+              {isSubmitting ? 'Saving...' : 'Add Memory'}
+            </Button>
+          </div>
+
+          <div className="rounded-lg border border-border/50 bg-card/40">
+            <ScrollArea className="h-[360px] pr-4">
+              <div className="p-4 space-y-6">
+                {isLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading agent memory…</p>
+                ) : memoryItems.length > 0 ? (
+                  memoryItems.map((item, index) => (
+                    <div key={item.id} className="space-y-4" data-testid={`memory-item-${index}`}>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-sm font-semibold text-foreground/90">{item.key}</h4>
+                            <Badge variant="outline" className={typeClasses[item.type] ?? 'bg-muted text-muted-foreground'}>
+                              {item.type}
+                            </Badge>
+                          </div>
+                          {editingId === item.id ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <Input
+                                  value={editDraft.key}
+                                  onChange={(event) => setEditDraft({ ...editDraft, key: event.target.value })}
+                                  disabled={isUpdating}
+                                />
+                                <select
+                                  className="px-3 py-2 bg-input border border-border rounded-md text-sm"
+                                  value={editDraft.type}
+                                  onChange={(event) => setEditDraft({ ...editDraft, type: event.target.value as MemoryType })}
+                                  disabled={isUpdating}
+                                >
+                                  <option value="fact">Fact</option>
+                                  <option value="preference">Preference</option>
+                                  <option value="skill">Skill</option>
+                                  <option value="context">Context</option>
+                                </select>
+                              </div>
+                              <Textarea
+                                value={editDraft.value}
+                                onChange={(event) => setEditDraft({ ...editDraft, value: event.target.value })}
+                                rows={3}
+                                disabled={isUpdating}
+                              />
+                              <div className="flex flex-wrap gap-2">
+                                <Button onClick={handleUpdateMemory} disabled={isUpdating}>
+                                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                                <Button variant="outline" onClick={handleCancelEdit} disabled={isUpdating}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.value}</p>
+                          )}
+                        </div>
+                        {editingId !== item.id && (
+                          <div className="flex items-center gap-2 self-start">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleStartEditing(item)}
+                              aria-label={`Edit memory ${item.key}`}
+                              data-testid={`edit-memory-${index}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleDeleteMemory(item.id)}
+                              disabled={deletingId === item.id}
+                              aria-label={`Delete memory ${item.key}`}
+                              data-testid={`delete-memory-${index}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
   const memoryCount = useMemo(() => memoryItems.length, [memoryItems]);
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -313,29 +551,21 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
                               <p className="whitespace-pre-wrap text-sm text-muted-foreground">{item.value}</p>
                             )}
                           </div>
-                          {editingId !== item.id && (
-                            <div className="flex items-center gap-2 self-start">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => startEditing(item)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleDeleteMemory(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        {index < memoryItems.length - 1 && <Separator />}
+                        )}
                       </div>
+                      {index < memoryItems.length - 1 && <Separator />}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-sm">
+                    <p className="text-muted-foreground">No memory items yet.</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Add your first memory item above to get started.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
                     ))
                   ) : (
                     <div className="py-10 text-center text-sm text-muted-foreground">
@@ -352,3 +582,4 @@ export const AgentMemoryDialog: React.FC<AgentMemoryDialogProps> = ({ open, onCl
     </Dialog>
   );
 };
+
