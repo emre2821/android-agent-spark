@@ -772,7 +772,10 @@ const Workflows: React.FC = () => {
           <ResizablePanel defaultSize={26} className="border-r">
             <div className="flex h-full flex-col gap-4 p-4">
               <div className="flex flex-col gap-2">
-                <Button onClick={() => handleCreateWorkflow(null)} className="justify-start gap-2">
+                <Button
+                  onClick={() => handleCreateWorkflow(agentFilter ?? null, Boolean(agentFilter))}
+                  className="justify-start gap-2"
+                >
                   <Plus className="h-4 w-4" />
                   New workflow
                 </Button>
@@ -1320,7 +1323,10 @@ const Workflows: React.FC = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button onClick={() => handleCreateWorkflow(null)} className="gap-2">
+                    <Button
+                      onClick={() => handleCreateWorkflow(agentFilter ?? null, Boolean(agentFilter))}
+                      className="gap-2"
+                    >
                       <Plus className="h-4 w-4" />
                       Create workflow
                     </Button>
