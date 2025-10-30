@@ -8,11 +8,6 @@ import { AgentDashboard } from '@/components/AgentDashboard';
 import { Agent } from '@/types/agent';
 import * as toastModule from '@/hooks/use-toast';
 
-declare global {
-  // eslint-disable-next-line no-var
-  var WebSocket: typeof MockWebSocket;
-}
-
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
 
@@ -46,7 +41,9 @@ class MockWebSocket {
   }
 }
 
-globalThis.WebSocket = MockWebSocket as any;
+const globalWithSocket = globalThis as typeof globalThis & { WebSocket: typeof WebSocket };
+const originalWebSocket = globalWithSocket.WebSocket;
+globalWithSocket.WebSocket = MockWebSocket as unknown as typeof WebSocket;
 
 const baseAgent = (overrides: Partial<Agent> = {}): Agent => ({
   id: '1',
@@ -56,6 +53,8 @@ const baseAgent = (overrides: Partial<Agent> = {}): Agent => ({
   tasksCompleted: 1,
   memoryItems: 2,
   lastActive: '1 hour ago',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   ...overrides,
 });
 
@@ -133,6 +132,7 @@ describe('AgentDashboard', () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    globalWithSocket.WebSocket = originalWebSocket;
   });
 
   it('creates agents through the dialog and shows success toast', async () => {
