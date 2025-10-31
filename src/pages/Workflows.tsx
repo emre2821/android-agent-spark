@@ -736,6 +736,12 @@ const Workflows: React.FC = () => {
     setConfirmDeleteOpen(true);
   };
 
+  const handleCloseDeleteDialog = () => {
+    setConfirmDeleteOpen(false);
+    setIsDeletingTrigger(false);
+    setPendingDeleteTrigger(null);
+  };
+
   const confirmDeleteTrigger = async () => {
     if (!pendingDeleteTrigger) return;
     setIsDeletingTrigger(true);
@@ -746,7 +752,7 @@ const Workflows: React.FC = () => {
         title: 'Trigger removed',
         description: `${trigger.name} will no longer fire this workflow.`,
       });
-      cancelDeleteTrigger();
+      handleCloseDeleteDialog();
     } catch (error) {
       toast({
         title: 'Failed to delete trigger',
@@ -756,11 +762,6 @@ const Workflows: React.FC = () => {
     } finally {
       setIsDeletingTrigger(false);
     }
-  };
-
-  const cancelDeleteTrigger = () => {
-    setConfirmDeleteOpen(false);
-    setPendingDeleteTrigger(null);
   };
 
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1385,7 +1386,7 @@ const Workflows: React.FC = () => {
           if (open) {
             setConfirmDeleteOpen(true);
           } else {
-            cancelDeleteTrigger();
+            handleCloseDeleteDialog();
           }
         }}
       >
@@ -1399,7 +1400,7 @@ const Workflows: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDeleteTrigger}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCloseDeleteDialog}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteTrigger}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
