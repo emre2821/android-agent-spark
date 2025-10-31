@@ -23,7 +23,16 @@ import { Separator } from '@/components/ui/separator';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { workflowTemplates } from '@/lib/workflowTemplates';
 import { useWorkflows, type WorkflowUpsert } from '@/hooks/use-workflows';
-import { Workflow, WorkflowNode, WorkflowEdge as WorkflowConnection, WorkflowPort } from '@/types/workflow';
+import {
+  Workflow,
+  WorkflowNode,
+  WorkflowEdge as WorkflowConnection,
+  WorkflowPort,
+  clonePorts,
+  ensureArray,
+  ensureExecutionState,
+  ensureMetadata,
+} from '@/types/workflow';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Copy, Loader2, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import { ReactFlowProvider } from 'reactflow';
@@ -46,14 +55,14 @@ const createCanvasNode = (id: string, index: number, data: CanvasNodeData): Canv
 });
 
 const toCanvasState = (workflow: Workflow): { nodes: CanvasNode[]; edges: CanvasEdge[] } => {
-  const nodes = workflow.nodes.map((node, index) =>
+  const nodes = ensureArray(workflow.nodes).map((node, index) =>
     createCanvasNode(node.id, index, {
       label: node.label,
       stepType: node.type,
-      summary: node.data.summary,
+      summary: node.data?.summary,
     }),
   );
-  const edges: CanvasEdge[] = workflow.edges.map((edge) => ({
+  const edges: CanvasEdge[] = ensureArray(workflow.edges).map((edge) => ({
     id: edge.id,
     source: edge.source,
     target: edge.target,
@@ -151,10 +160,12 @@ const WorkflowBuilderInner = () => {
     (workflow: Workflow) => {
       setName(workflow.name);
       setDescription(workflow.description ?? '');
-      setSchedule(workflow.execution.schedule ?? '');
-      setTagsInput(workflow.metadata.tags.join(', '));
-      setInputs(workflow.inputs);
-      setOutputs(workflow.outputs);
+      const execution = ensureExecutionState(workflow.execution);
+      setSchedule(execution.schedule ?? '');
+      const metadata = ensureMetadata(workflow.metadata);
+      setTagsInput(metadata.tags.join(', '));
+      setInputs(clonePorts(workflow.inputs));
+      setOutputs(clonePorts(workflow.outputs));
       const canvas = toCanvasState(workflow);
       setNodes(canvas.nodes);
       setEdges(canvas.edges);
@@ -274,10 +285,8 @@ const WorkflowBuilderInner = () => {
       .map((tag) => tag.trim())
       .filter(Boolean);
 
-    const baseExecution = activeWorkflow?.execution ?? {
-      runCount: 0,
-      lastRunStatus: 'idle' as const,
-    };
+    const baseExecution = ensureExecutionState(activeWorkflow?.execution);
+    const baseMetadata = ensureMetadata(activeWorkflow?.metadata);
 
     return {
       id: activeWorkflow?.id,
@@ -288,8 +297,8 @@ const WorkflowBuilderInner = () => {
       triggerId: nodes[0]?.id,
       nodes: nodes.map(toWorkflowNode),
       edges: edges.map(toWorkflowEdge),
-      inputs,
-      outputs,
+      inputs: clonePorts(inputs),
+      outputs: clonePorts(outputs),
       createdAt: activeWorkflow?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       execution: {
@@ -297,9 +306,8 @@ const WorkflowBuilderInner = () => {
         schedule: schedule || undefined,
       },
       metadata: {
+        ...baseMetadata,
         tags,
-        owner: activeWorkflow?.metadata.owner,
-        category: activeWorkflow?.metadata.category,
       },
     };
   };
