@@ -18,6 +18,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -423,6 +433,8 @@ const Workflows: React.FC = () => {
   const [triggerDialogOpen, setTriggerDialogOpen] = useState(false);
   const [editingTrigger, setEditingTrigger] = useState<WorkflowTrigger | null>(null);
   const [isSavingTrigger, setIsSavingTrigger] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [pendingDeleteTrigger, setPendingDeleteTrigger] = useState<WorkflowTrigger | null>(null);
   const {
     triggers,
     isLoading: triggersLoading,
@@ -718,15 +730,21 @@ const Workflows: React.FC = () => {
     }
   };
 
-  const handleDeleteTrigger = async (trigger: WorkflowTrigger) => {
-    const confirmed = window.confirm(`Remove the ${trigger.name} trigger?`);
-    if (!confirmed) return;
+  const requestDeleteTrigger = (trigger: WorkflowTrigger) => {
+    setPendingDeleteTrigger(trigger);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDeleteTrigger = async () => {
+    if (!pendingDeleteTrigger) return;
+    const trigger = pendingDeleteTrigger;
     try {
       await deleteTrigger(trigger.id);
       toast({
         title: 'Trigger removed',
         description: `${trigger.name} will no longer fire this workflow.`,
       });
+      cancelDeleteTrigger();
     } catch (error) {
       toast({
         title: 'Failed to delete trigger',
@@ -734,6 +752,11 @@ const Workflows: React.FC = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const cancelDeleteTrigger = () => {
+    setConfirmDeleteOpen(false);
+    setPendingDeleteTrigger(null);
   };
 
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1170,7 +1193,7 @@ const Workflows: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 text-destructive hover:text-destructive"
-                                        onClick={() => handleDeleteTrigger(trigger)}
+                                        onClick={() => requestDeleteTrigger(trigger)}
                                         title="Delete trigger"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -1351,6 +1374,37 @@ const Workflows: React.FC = () => {
         }}
         onSubmit={handleTriggerSubmit}
       />
+
+      <AlertDialog
+        open={confirmDeleteOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setConfirmDeleteOpen(true);
+          } else {
+            cancelDeleteTrigger();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove trigger?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteTrigger
+                ? `This will permanently remove the ${pendingDeleteTrigger.name} trigger from this workflow.`
+                : 'This will permanently remove the selected trigger from this workflow.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDeleteTrigger}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteTrigger}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete trigger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
