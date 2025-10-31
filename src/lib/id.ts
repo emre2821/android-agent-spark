@@ -34,7 +34,20 @@ export const generateUniqueId = (): string => {
 
   fallbackCounter = (fallbackCounter + 1) % Number.MAX_SAFE_INTEGER
   const timestamp = Date.now().toString(36)
-  const random = Math.random().toString(36).slice(2, 10)
+
+  // Use crypto.getRandomValues for secure random bytes
+  const randomBytes = new Uint8Array(16)
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(randomBytes)
+  } else {
+    // fallback to Math.random if crypto is not available (should be rare)
+    for (let i = 0; i < randomBytes.length; i++) {
+      randomBytes[i] = Math.floor(Math.random() * 256)
+    }
+  }
+  const random = Array.from(randomBytes)
+    .map(b => b.toString(36).padStart(2, '0'))
+    .join('')
   const counter = fallbackCounter.toString(36)
 
   return `${timestamp}-${random}-${counter}`
