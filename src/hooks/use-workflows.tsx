@@ -1,11 +1,24 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Workflow,
   WorkflowExecutionLog,
+  WorkflowExecutionStatus,
   WorkflowStep,
+  WorkflowUpsert,
   WorkflowVersion,
-  createEmptyStep,
+  cloneEdges,
+  cloneExecution,
+  cloneMetadata,
+  cloneNodes,
+  clonePorts,
   cloneSteps,
+  createEmptyStep,
 } from '@/types/workflow';
 
 interface CreateWorkflowInput {
@@ -14,6 +27,14 @@ interface CreateWorkflowInput {
   agentId?: string | null;
   steps?: WorkflowStep[];
   status?: Workflow['status'];
+  nodes?: Workflow['nodes'];
+  edges?: Workflow['edges'];
+  inputs?: Workflow['inputs'];
+  outputs?: Workflow['outputs'];
+  metadata?: Workflow['metadata'];
+  execution?: Partial<Workflow['execution']>;
+  triggerId?: string | null;
+  version?: number;
 }
 
 interface UpdateWorkflowInput {
@@ -21,8 +42,16 @@ interface UpdateWorkflowInput {
   description?: string;
   agentId?: string | null;
   status?: Workflow['status'];
-  lastRunAt?: string;
-  lastRunStatus?: Workflow['lastRunStatus'];
+  lastRunAt?: string | null;
+  lastRunStatus?: WorkflowExecutionStatus;
+  nodes?: Workflow['nodes'];
+  edges?: Workflow['edges'];
+  inputs?: Workflow['inputs'];
+  outputs?: Workflow['outputs'];
+  metadata?: Workflow['metadata'];
+  execution?: Workflow['execution'];
+  triggerId?: string | null;
+  version?: number;
 }
 
 interface WorkflowsManager {
@@ -35,7 +64,7 @@ interface WorkflowsManager {
   logStepExecution: (
     workflowId: string,
     stepId: string,
-    log: Omit<WorkflowExecutionLog, 'id' | 'timestamp'> & { id?: string; timestamp?: string }
+    log: Omit<WorkflowExecutionLog, 'id' | 'timestamp'> & { id?: string; timestamp?: string },
   ) => WorkflowExecutionLog | undefined;
   createVersionSnapshot: (workflowId: string, note?: string) => WorkflowVersion | undefined;
   applyWorkflowToAgent: (workflowId: string, agentId: string) => void;
@@ -44,6 +73,13 @@ interface WorkflowsManager {
 
 interface WorkflowsContextValue extends WorkflowsManager {
   workflows: Workflow[];
+  getWorkflowById: (workflowId: string) => Workflow | undefined;
+  saveWorkflow: (payload: WorkflowUpsert) => Promise<Workflow>;
+  publishWorkflow: (workflowId: string) => Promise<Workflow>;
+  duplicateWorkflow: (workflowId: string) => Promise<Workflow>;
+  isSaving: boolean;
+  isPublishing: boolean;
+  isDuplicating: boolean;
 }
 
 interface WorkflowsController {
@@ -53,11 +89,22 @@ interface WorkflowsController {
 
 const WorkflowsContext = createContext<WorkflowsContextValue | undefined>(undefined);
 
-const generateId = () => crypto.randomUUID();
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2, 10);
+};
 
 const cloneWorkflow = (workflow: Workflow): Workflow => ({
   ...workflow,
   steps: cloneSteps(workflow.steps),
+  nodes: cloneNodes(workflow.nodes),
+  edges: cloneEdges(workflow.edges),
+  inputs: clonePorts(workflow.inputs),
+  outputs: clonePorts(workflow.outputs),
+  execution: cloneExecution(workflow.execution),
+  metadata: cloneMetadata(workflow.metadata),
   versions: workflow.versions.map((version) => ({
     ...version,
     steps: cloneSteps(version.steps),
@@ -68,27 +115,59 @@ const cloneWorkflow = (workflow: Workflow): Workflow => ({
 
 const buildWorkflow = (input: CreateWorkflowInput): Workflow => {
   const now = new Date().toISOString();
-  const steps = input.steps ? cloneSteps(input.steps) : [];
   return {
     id: generateId(),
     name: input.name,
     description: input.description,
+    trigger: null,
+    triggerId: input.triggerId ?? null,
     agentId: input.agentId ?? null,
-    steps,
     status: input.status ?? 'draft',
-    createdAt: now,
-    updatedAt: now,
+    version: input.version ?? 1,
+    steps: input.steps ? cloneSteps(input.steps) : [],
+    nodes: cloneNodes(input.nodes),
+    edges: cloneEdges(input.edges),
+    inputs: clonePorts(input.inputs),
+    outputs: clonePorts(input.outputs),
     versions: [],
-    lastRunStatus: 'idle',
     triggers: [],
     runs: [],
+    execution: cloneExecution({
+      runCount: input.execution?.runCount ?? 0,
+      lastRunStatus: input.execution?.lastRunStatus ?? 'idle',
+      schedule: input.execution?.schedule,
+    }),
+    metadata: cloneMetadata(
+      input.metadata ?? {
+        tags: [],
+      },
+    ),
+    createdAt: now,
+    updatedAt: now,
+    lastRunAt: null,
+    lastRunStatus: input.execution?.lastRunStatus ?? 'idle',
   };
 };
+
+const mergeWorkflow = (existing: Workflow, updates: UpdateWorkflowInput): Workflow => ({
+  ...existing,
+  ...updates,
+  nodes: updates.nodes ? cloneNodes(updates.nodes) : existing.nodes,
+  edges: updates.edges ? cloneEdges(updates.edges) : existing.edges,
+  inputs: updates.inputs ? clonePorts(updates.inputs) : existing.inputs,
+  outputs: updates.outputs ? clonePorts(updates.outputs) : existing.outputs,
+  metadata: updates.metadata ? cloneMetadata(updates.metadata) : existing.metadata,
+  execution: updates.execution ? cloneExecution(updates.execution) : existing.execution,
+  lastRunStatus: updates.lastRunStatus ?? existing.lastRunStatus,
+  triggerId: updates.triggerId ?? existing.triggerId,
+  version: updates.version ?? existing.version,
+  updatedAt: new Date().toISOString(),
+});
 
 export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: WorkflowsController): WorkflowsManager => {
   const updateWorkflowState = (
     workflowId: string,
-    updater: (workflow: Workflow) => Workflow
+    updater: (workflow: Workflow) => Workflow,
   ) => {
     setWorkflows((prev) => prev.map((workflow) => (workflow.id === workflowId ? updater(workflow) : workflow)));
   };
@@ -100,11 +179,7 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
   };
 
   const updateWorkflow = (workflowId: string, updates: UpdateWorkflowInput) => {
-    updateWorkflowState(workflowId, (workflow) => ({
-      ...workflow,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }));
+    updateWorkflowState(workflowId, (workflow) => mergeWorkflow(workflow, updates));
   };
 
   const removeWorkflow = (workflowId: string) => {
@@ -131,12 +206,12 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
               ...updates,
               config: updates.config ? { ...step.config, ...updates.config } : step.config,
               position: updates.position ? { ...step.position, ...updates.position } : step.position,
-              inputs: updates.inputs ?? step.inputs,
-              outputs: updates.outputs ?? step.outputs,
+              inputs: updates.inputs ? clonePorts(updates.inputs) : step.inputs,
+              outputs: updates.outputs ? clonePorts(updates.outputs) : step.outputs,
               branches: updates.branches ?? step.branches,
               logs: updates.logs ?? step.logs,
             }
-          : step
+          : step,
       ),
       updatedAt: new Date().toISOString(),
     }));
@@ -166,7 +241,7 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
               ...step,
               logs: [...step.logs, log],
             }
-          : step
+          : step,
       ),
       updatedAt: new Date().toISOString(),
     }));
@@ -221,6 +296,11 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
     updateWorkflow(workflowId, {
       lastRunAt: new Date().toISOString(),
       lastRunStatus: 'success',
+      execution: {
+        runCount: workflow.execution.runCount + 1,
+        lastRunStatus: 'success',
+        schedule: workflow.execution.schedule,
+      },
     });
 
     createVersionSnapshot(workflowId, 'Run completed');
@@ -242,23 +322,179 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
 
 export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   const controller = useMemo<WorkflowsController>(
     () => ({
       getWorkflows: () => workflows,
       setWorkflows,
     }),
-    [workflows]
+    [workflows],
   );
 
   const manager = useMemo(() => createWorkflowsManager(controller), [controller]);
 
+  const getWorkflowById = useCallback(
+    (workflowId: string) => workflows.find((workflow) => workflow.id === workflowId),
+    [workflows],
+  );
+
+  const saveWorkflow = useCallback(
+    async (payload: WorkflowUpsert): Promise<Workflow> => {
+      setIsSaving(true);
+      try {
+        let result: Workflow | undefined;
+        setWorkflows((previous) => {
+          const next = [...previous];
+          const now = payload.updatedAt ?? new Date().toISOString();
+          if (payload.id) {
+            const index = next.findIndex((workflow) => workflow.id === payload.id);
+            if (index !== -1) {
+              const existing = next[index];
+              const updated: Workflow = {
+                ...existing,
+                name: payload.name,
+                description: payload.description,
+                status: payload.status,
+                version: payload.version,
+                triggerId: payload.triggerId ?? null,
+                nodes: cloneNodes(payload.nodes),
+                edges: cloneEdges(payload.edges),
+                inputs: clonePorts(payload.inputs),
+                outputs: clonePorts(payload.outputs),
+                execution: cloneExecution(payload.execution),
+                metadata: cloneMetadata(payload.metadata),
+                updatedAt: now,
+                lastRunStatus: payload.execution.lastRunStatus ?? existing.lastRunStatus,
+              };
+              result = updated;
+              next[index] = updated;
+              return next;
+            }
+          }
+
+          const createdAt = payload.createdAt ?? now;
+          const created: Workflow = {
+            id: payload.id ?? generateId(),
+            name: payload.name,
+            description: payload.description,
+            trigger: null,
+            triggerId: payload.triggerId ?? null,
+            agentId: null,
+            status: payload.status,
+            version: payload.version,
+            steps: [],
+            nodes: cloneNodes(payload.nodes),
+            edges: cloneEdges(payload.edges),
+            inputs: clonePorts(payload.inputs),
+            outputs: clonePorts(payload.outputs),
+            versions: [],
+            triggers: [],
+            runs: [],
+            execution: cloneExecution(payload.execution),
+            metadata: cloneMetadata(payload.metadata),
+            createdAt,
+            updatedAt: now,
+            lastRunAt: null,
+            lastRunStatus: payload.execution.lastRunStatus ?? 'idle',
+          };
+          result = created;
+          next.push(created);
+          return next;
+        });
+        return result!;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [],
+  );
+
+  const publishWorkflow = useCallback(
+    async (workflowId: string): Promise<Workflow> => {
+      setIsPublishing(true);
+      try {
+        let updatedWorkflow: Workflow | undefined;
+        setWorkflows((previous) =>
+          previous.map((workflow) => {
+            if (workflow.id !== workflowId) {
+              return workflow;
+            }
+            updatedWorkflow = {
+              ...workflow,
+              status: 'published',
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedWorkflow;
+          }),
+        );
+        if (!updatedWorkflow) {
+          throw new Error('Workflow not found');
+        }
+        return updatedWorkflow;
+      } finally {
+        setIsPublishing(false);
+      }
+    },
+    [],
+  );
+
+  const duplicateWorkflow = useCallback(
+    async (workflowId: string): Promise<Workflow> => {
+      setIsDuplicating(true);
+      try {
+        let duplicate: Workflow | undefined;
+        setWorkflows((previous) => {
+          const source = previous.find((workflow) => workflow.id === workflowId);
+          if (!source) {
+            return previous;
+          }
+          duplicate = {
+            ...cloneWorkflow(source),
+            id: generateId(),
+            name: `${source.name} copy`,
+            status: 'draft',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return [duplicate, ...previous];
+        });
+        if (!duplicate) {
+          throw new Error('Workflow not found');
+        }
+        return duplicate;
+      } finally {
+        setIsDuplicating(false);
+      }
+    },
+    [],
+  );
+
   const value = useMemo<WorkflowsContextValue>(
     () => ({
       workflows,
+      getWorkflowById,
+      saveWorkflow,
+      publishWorkflow,
+      duplicateWorkflow,
+      isSaving,
+      isPublishing,
+      isDuplicating,
       ...manager,
     }),
-    [manager, workflows]
+    [
+      workflows,
+      getWorkflowById,
+      saveWorkflow,
+      publishWorkflow,
+      duplicateWorkflow,
+      isSaving,
+      isPublishing,
+      isDuplicating,
+      manager,
+    ],
   );
 
   return <WorkflowsContext.Provider value={value}>{children}</WorkflowsContext.Provider>;
@@ -277,7 +513,10 @@ export const createInMemoryWorkflowsManager = (initial?: Workflow[]) => {
 
   const getWorkflows = () => state;
   const setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>> = (updater) => {
-    state = typeof updater === 'function' ? (updater as (prev: Workflow[]) => Workflow[])(state) : updater;
+    state =
+      typeof updater === 'function'
+        ? (updater as (prev: Workflow[]) => Workflow[])(state)
+        : updater;
   };
 
   return {

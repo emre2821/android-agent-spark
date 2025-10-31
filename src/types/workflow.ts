@@ -1,175 +1,12 @@
-export type WorkflowVersionStatus = "draft" | "published" | "archived";
+export type WorkflowVersionStatus = 'draft' | 'published' | 'archived';
 
-export interface WorkflowStep {
-  id: string;
-  type: string;
-  name: string;
-  config?: Record<string, unknown>;
-}
+export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived' | 'published';
 
-export interface WorkflowDefinition {
-  name: string;
-  description: string;
-  trigger: string;
-  steps: WorkflowStep[];
-}
-
-export interface WorkflowVersion {
-  id: string;
-  number: number;
-  status: WorkflowVersionStatus;
-  author: string;
-  changeSummary: string;
-  createdAt: string;
-  updatedAt: string;
-  definition: WorkflowDefinition;
-}
-
-export interface WorkflowHistoryEntry {
-  id: string;
-  versionId: string;
-  versionNumber: number;
-  author: string;
-  action: string;
-  summary: string;
-  timestamp: string;
-}
-
-export interface Workflow {
-  id: string;
-  name: string;
-  description: string;
-  trigger: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedVersionId: string | null;
-  versions: WorkflowVersion[];
-  history: WorkflowHistoryEntry[];
-}
-
-export interface WorkflowDiffChange {
-  field: string;
-  from: unknown;
-  to: unknown;
-}
-
-export interface WorkflowDiff {
-  metadataChanges: WorkflowDiffChange[];
-  addedSteps: WorkflowStep[];
-  removedSteps: WorkflowStep[];
-  changedSteps: Array<{
-    id: string;
-    name: string;
-    changes: WorkflowDiffChange[];
-  }>;
-}
-
-export interface WorkflowCreatePayload {
-  name: string;
-  description: string;
-  trigger: string;
-  steps: WorkflowStep[];
-  author: string;
-  changeSummary: string;
-}
-
-export interface WorkflowVersionPayload {
-  definition: WorkflowDefinition;
-  author: string;
-  changeSummary: string;
-}
+export type WorkflowExecutionStatus = 'idle' | 'running' | 'success' | 'error';
 
 export type WorkflowRunStatus = 'running' | 'retrying' | 'completed' | 'failed' | 'cancelled';
 export type WorkflowStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
-export interface WorkflowStepLog {
-  id: string;
-  timestamp: string;
-  level: 'info' | 'warn' | 'error';
-  message: string;
-  context?: Record<string, unknown> | null;
-}
-
-export interface WorkflowStepRetry {
-  attempts: number;
-  maxAttempts: number;
-  nextRetryAt: string | null;
-  lastReason: string | null;
-}
-
-export interface WorkflowStepHistoryEntry {
-  status: WorkflowStepStatus | WorkflowRunStatus;
-  timestamp: string;
-  attempt: number;
-  note?: string | null;
-}
-
-export interface WorkflowStepError {
-  message: string;
-  code: string | null;
-  attempt: number;
-  timestamp: string;
-}
-
-export interface WorkflowStep {
-  id: string;
-  name: string;
-  status: WorkflowStepStatus;
-  attempt: number;
-  maxAttempts: number;
-  startedAt: string | null;
-  completedAt: string | null;
-  logs: WorkflowStepLog[];
-  retry: WorkflowStepRetry;
-  error: WorkflowStepError | null;
-  history: WorkflowStepHistoryEntry[];
-}
-
-export interface WorkflowRetryPolicy {
-  strategy: string;
-  maxAttempts: number;
-  intervalSeconds: number;
-}
-
-export interface WorkflowRunHistoryEntry {
-  status: WorkflowRunStatus | WorkflowStepStatus;
-  timestamp: string;
-  note?: string | null;
-}
-
-export interface WorkflowRunError {
-  stepId: string | null;
-  message: string;
-  attempt: number;
-  timestamp: string;
-}
-
-export interface WorkflowRetryEvent {
-  attempt: number;
-  stepId: string | null;
-  scheduledAt: string | null;
-  reason: string | null;
-}
-
-export interface WorkflowRun {
-  id: string;
-  workflowId: string;
-  workflowName: string;
-  trigger: string;
-  status: WorkflowRunStatus;
-  startedAt: string;
-  updatedAt: string;
-  completedAt: string | null;
-  currentAttempt: number;
-  retryPolicy: WorkflowRetryPolicy;
-  history: WorkflowRunHistoryEntry[];
-  steps: WorkflowStep[];
-  retryHistory: WorkflowRetryEvent[];
-  errors: WorkflowRunError[];
-  metadata: Record<string, unknown>;
-}
-export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived';
-export type WorkflowRunStatus = 'idle' | 'running' | 'success' | 'error';
 export type WorkflowStepType =
   | 'trigger'
   | 'action'
@@ -191,8 +28,182 @@ export interface WorkflowPosition {
 export interface WorkflowPort {
   id: string;
   label: string;
-  dataType: WorkflowPortType;
+  type?: WorkflowPortType;
+  key?: string;
   description?: string;
+  dataType?: WorkflowPortType;
+}
+
+export interface WorkflowNodeData {
+  summary?: string;
+  inputs?: WorkflowPort[];
+  outputs?: WorkflowPort[];
+  config?: Record<string, unknown>;
+}
+
+export interface WorkflowNode {
+  id: string;
+  type: WorkflowStepType;
+  label: string;
+  position: WorkflowPosition;
+  data: WorkflowNodeData;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WorkflowBranch {
+  id: string;
+  label: string;
+  condition: string;
+  targetStepId?: string;
+}
+
+export type WorkflowLogStatus = 'running' | 'success' | 'error';
+
+export interface WorkflowExecutionLog {
+  id: string;
+  timestamp: string;
+  status: WorkflowLogStatus;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type WorkflowStepConfig = Record<string, unknown>;
+
+export interface WorkflowStep {
+  id: string;
+  name: string;
+  type: WorkflowStepType;
+  description?: string;
+  nodeType?: string;
+  position: WorkflowPosition;
+  config: WorkflowStepConfig;
+  inputs: WorkflowPort[];
+  outputs: WorkflowPort[];
+  branches: WorkflowBranch[];
+  logs: WorkflowExecutionLog[];
+}
+
+export interface WorkflowVersion {
+  id: string;
+  createdAt: string;
+  note?: string;
+  steps: WorkflowStep[];
+  agentId?: string | null;
+}
+
+export interface WorkflowMetadata {
+  tags: string[];
+  owner?: string;
+  category?: string;
+}
+
+export interface WorkflowExecution {
+  runCount: number;
+  lastRunStatus: WorkflowExecutionStatus;
+  schedule?: string;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  trigger?: string | null;
+  triggerId?: string | null;
+  agentId?: string | null;
+  status: WorkflowStatus;
+  version?: number;
+  steps: WorkflowStep[];
+  nodes?: WorkflowNode[];
+  edges?: WorkflowEdge[];
+  inputs?: WorkflowPort[];
+  outputs?: WorkflowPort[];
+  versions: WorkflowVersion[];
+  triggers?: WorkflowTrigger[];
+  runs?: WorkflowRunRecord[];
+  execution?: WorkflowExecution;
+  metadata?: WorkflowMetadata;
+  createdAt: string;
+  updatedAt: string;
+  lastRunAt?: string | null;
+  lastRunStatus?: WorkflowExecutionStatus;
+}
+
+export interface StoredWorkflow {
+  id: string;
+  name: string;
+  description: string;
+  trigger?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  steps: WorkflowStep[];
+  status?: WorkflowStatus;
+  lastRunStatus?: WorkflowExecutionStatus;
+  agentId?: string | null;
+  triggers?: WorkflowTrigger[];
+  runs?: WorkflowRunRecord[];
+  nodes?: WorkflowNode[];
+  edges?: WorkflowEdge[];
+  inputs?: WorkflowPort[];
+  outputs?: WorkflowPort[];
+  execution?: WorkflowExecution;
+  metadata?: WorkflowMetadata;
+}
+
+export interface WorkflowDiffChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+export interface WorkflowDiff {
+  metadataChanges: WorkflowDiffChange[];
+  addedSteps: WorkflowStep[];
+  removedSteps: WorkflowStep[];
+  changedSteps: Array<{
+    id: string;
+    name: string;
+    changes: WorkflowDiffChange[];
+  }>;
+}
+
+export interface WorkflowDefinition {
+  name: string;
+  description: string;
+  trigger: string;
+  steps: WorkflowStep[];
+}
+
+export interface WorkflowHistoryEntry {
+  id: string;
+  versionId: string;
+  versionNumber: number;
+  author: string;
+  action: string;
+  summary: string;
+  timestamp: string;
+}
+
+export interface WorkflowCreatePayload {
+  name: string;
+  description: string;
+  trigger: string;
+  steps: WorkflowStep[];
+  author: string;
+  changeSummary: string;
+}
+
+export interface WorkflowVersionPayload {
+  definition: WorkflowDefinition;
+  author: string;
+  changeSummary: string;
 }
 
 export interface WorkflowTriggerMetadata {
@@ -247,23 +258,6 @@ export type WorkflowTrigger =
   | QueueWorkflowTrigger
   | (WorkflowTriggerBase<Record<string, unknown>> & { type: string });
 
-export interface WorkflowBranch {
-  id: string;
-  label: string;
-  condition: string;
-  targetStepId?: string;
-}
-
-export type WorkflowLogStatus = 'running' | 'success' | 'error';
-
-export interface WorkflowExecutionLog {
-  id: string;
-  timestamp: string;
-  status: WorkflowLogStatus;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
-
 export type WorkflowRunRecordStatus = 'pending' | 'success' | 'error';
 
 export interface WorkflowRunRecord {
@@ -278,60 +272,108 @@ export interface WorkflowRunRecord {
   finishedAt?: string | null;
 }
 
-export type WorkflowStepConfig = Record<string, unknown>;
+export interface WorkflowStepLog {
+  id: string;
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  context?: Record<string, unknown> | null;
+}
 
-export interface WorkflowStep {
+export interface WorkflowStepRetry {
+  attempts: number;
+  maxAttempts: number;
+  nextRetryAt: string | null;
+  lastReason: string | null;
+}
+
+export interface WorkflowStepHistoryEntry {
+  status: WorkflowStepStatus | WorkflowRunStatus;
+  timestamp: string;
+  attempt: number;
+  note?: string | null;
+}
+
+export interface WorkflowStepError {
+  message: string;
+  code: string | null;
+  attempt: number;
+  timestamp: string;
+}
+
+export interface WorkflowRunStep {
   id: string;
   name: string;
-  type: WorkflowStepType;
-  description?: string;
-  nodeType?: string;
-  position: WorkflowPosition;
-  config: WorkflowStepConfig;
+  status: WorkflowStepStatus;
+  attempt: number;
+  maxAttempts: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  logs: WorkflowStepLog[];
+  retry: WorkflowStepRetry;
+  error: WorkflowStepError | null;
+  history: WorkflowStepHistoryEntry[];
+}
+
+export interface WorkflowRetryPolicy {
+  strategy: string;
+  maxAttempts: number;
+  intervalSeconds: number;
+}
+
+export interface WorkflowRunHistoryEntry {
+  status: WorkflowRunStatus | WorkflowStepStatus;
+  timestamp: string;
+  note?: string | null;
+}
+
+export interface WorkflowRunError {
+  stepId: string | null;
+  message: string;
+  attempt: number;
+  timestamp: string;
+}
+
+export interface WorkflowRetryEvent {
+  attempt: number;
+  stepId: string | null;
+  scheduledAt: string | null;
+  reason: string | null;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  trigger: string;
+  status: WorkflowRunStatus;
+  startedAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  currentAttempt: number;
+  retryPolicy: WorkflowRetryPolicy;
+  history: WorkflowRunHistoryEntry[];
+  steps: WorkflowRunStep[];
+  retryHistory: WorkflowRetryEvent[];
+  errors: WorkflowRunError[];
+  metadata: Record<string, unknown>;
+}
+
+export interface WorkflowUpsert {
+  id?: string;
+  name: string;
+  description: string;
+  status: WorkflowStatus;
+  version: number;
+  triggerId?: string | null;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
   inputs: WorkflowPort[];
   outputs: WorkflowPort[];
-  branches: WorkflowBranch[];
-  logs: WorkflowExecutionLog[];
-}
-
-export interface WorkflowVersion {
-  id: string;
-  createdAt: string;
-  note?: string;
-  steps: WorkflowStep[];
-  agentId?: string | null;
-}
-
-export interface Workflow {
-  id: string;
-  name: string;
-  description: string;
-  trigger?: string | null;
-  agentId: string | null;
-  status: WorkflowStatus;
-  steps: WorkflowStep[];
-  versions: WorkflowVersion[];
-  triggers?: WorkflowTrigger[];
-  runs?: WorkflowRunRecord[];
-  createdAt: string;
-  updatedAt: string;
-  lastRunAt?: string;
-  lastRunStatus: WorkflowRunStatus;
-}
-
-export interface StoredWorkflow {
-  id: string;
-  name: string;
-  description: string;
-  trigger?: string | null;
-  createdAt: string;
+  execution: WorkflowExecution;
+  metadata: WorkflowMetadata;
+  createdAt?: string;
   updatedAt?: string;
-  steps: WorkflowStep[];
-  status?: WorkflowStatus;
-  lastRunStatus?: WorkflowRunStatus;
-  agentId?: string | null;
-  triggers?: WorkflowTrigger[];
-  runs?: WorkflowRunRecord[];
 }
 
 export const DEFAULT_STEP_POSITION: WorkflowPosition = { x: 160, y: 160 };
@@ -351,9 +393,13 @@ const createId = (): string => {
   return Math.random().toString(36).slice(2, 10);
 };
 
-const clonePort = (port: WorkflowPort): WorkflowPort => ({ ...port });
+const clonePort = (port: WorkflowPort): WorkflowPort => ({
+  ...port,
+  type: port.type ?? port.dataType ?? 'text',
+  dataType: port.type ?? port.dataType ?? 'text',
+});
 
-const clonePorts = (ports: WorkflowPort[] | undefined): WorkflowPort[] =>
+export const clonePorts = (ports: WorkflowPort[] | undefined): WorkflowPort[] =>
   (ports ?? []).map(clonePort);
 
 const cloneBranch = (branch: WorkflowBranch): WorkflowBranch => ({ ...branch });
@@ -375,6 +421,46 @@ const cloneConfig = (config: WorkflowStepConfig | undefined): WorkflowStepConfig
   ...(config ?? {}),
 });
 
+export const cloneNode = (node: WorkflowNode): WorkflowNode => ({
+  id: node.id,
+  type: node.type,
+  label: node.label,
+  position: clonePosition(node.position),
+  data: {
+    summary: node.data.summary,
+    config: { ...(node.data.config ?? {}) },
+    inputs: clonePorts(node.data.inputs),
+    outputs: clonePorts(node.data.outputs),
+  },
+});
+
+export const cloneNodes = (nodes: WorkflowNode[] | undefined): WorkflowNode[] =>
+  (nodes ?? []).map(cloneNode);
+
+export const cloneEdge = (edge: WorkflowEdge): WorkflowEdge => ({
+  id: edge.id,
+  source: edge.source,
+  target: edge.target,
+  sourceHandle: edge.sourceHandle ?? undefined,
+  targetHandle: edge.targetHandle ?? undefined,
+  metadata: edge.metadata ? { ...edge.metadata } : undefined,
+});
+
+export const cloneEdges = (edges: WorkflowEdge[] | undefined): WorkflowEdge[] =>
+  (edges ?? []).map(cloneEdge);
+
+export const cloneExecution = (execution: WorkflowExecution | undefined): WorkflowExecution => ({
+  runCount: execution?.runCount ?? 0,
+  lastRunStatus: execution?.lastRunStatus ?? 'idle',
+  schedule: execution?.schedule,
+});
+
+export const cloneMetadata = (metadata: WorkflowMetadata | undefined): WorkflowMetadata => ({
+  tags: [...(metadata?.tags ?? [])],
+  owner: metadata?.owner,
+  category: metadata?.category,
+});
+
 export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowStep => ({
   id: partial.id ?? createId(),
   name: partial.name ?? 'Untitled Step',
@@ -391,4 +477,3 @@ export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowSt
 
 export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
   steps.map((step) => createEmptyStep(step));
-
