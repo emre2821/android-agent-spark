@@ -229,6 +229,74 @@ describe('useAgents hook', () => {
     );
   });
 
+  it('reverts the optimistic agent when creation fails', async () => {
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useAgents(), { wrapper });
+
+    await waitFor(() => expect(result.current.agents).toHaveLength(1));
+
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          setTimeout(() => resolve(buildResponse({ error: 'Creation failed' }, 500)), 50);
+        }),
+    );
+
+    await act(async () => {
+      const createPromise = result.current.createAgent({
+        name: 'Broken Agent',
+        description: 'This will fail',
+        status: 'active',
+      });
+      const rejectionAssertion = expect(createPromise).rejects.toThrow('Creation failed');
+
+      await waitFor(() => {
+        const data = queryClient.getQueryData<Agent[]>(['agents']) ?? [];
+        expect(data.some((agent) => agent.name === 'Broken Agent')).toBe(true);
+      });
+
+      await rejectionAssertion;
+    });
+
+    await waitFor(() =>
+      expect(result.current.agents.some((agent) => agent.name === 'Broken Agent')).toBe(false),
+    );
+    await waitFor(() => expect(result.current.agents).toHaveLength(1));
+    expect(result.current.agents[0]?.name).toBe('Task Automator');
+  });
+
+  it('reverts agent updates when the mutation fails', async () => {
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useAgents(), { wrapper });
+
+    await waitFor(() => expect(result.current.agents[0]?.name).toBe('Task Automator'));
+
+    let triggerFailure: (() => void) | null = null;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          triggerFailure = () => resolve(buildResponse({ error: 'Update failed' }, 500));
+        }),
+    );
+
+    await act(async () => {
+      const updatePromise = result.current.updateAgent('1', { name: 'UpdatedName' });
+      const rejectionAssertion = expect(updatePromise).rejects.toThrow('Update failed');
+
+      await waitFor(() => {
+        const data = queryClient.getQueryData<Agent[]>(['agents']) ?? [];
+        expect(data.find((agent) => agent.id === '1')?.name).toBe('UpdatedName');
+      });
+
+      triggerFailure?.();
+      await rejectionAssertion;
+    });
+
+    await waitFor(() =>
+      expect(result.current.agents.find((agent) => agent.id === '1')?.name).toBe('Task Automator'),
+    );
+  });
+
   it('honors a custom VITE_API_URL when issuing requests', async () => {
     agentsStore = [successAgent()];
     createResolve = null;
