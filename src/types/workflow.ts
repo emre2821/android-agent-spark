@@ -140,6 +140,17 @@ const getUUIDProvider = (): UUIDProvider | undefined => {
   return globalWithCrypto.crypto;
 };
 
+type StructuredClone = <T>(value: T) => T;
+
+const getStructuredClone = (): StructuredClone | undefined => {
+  const globalWithStructuredClone = globalThis as typeof globalThis & {
+    structuredClone?: StructuredClone;
+  };
+  return globalWithStructuredClone.structuredClone;
+};
+
+const structuredCloneFn = getStructuredClone();
+
 const createId = (): string => {
   const provider = getUUIDProvider();
   if (typeof provider?.randomUUID === 'function') {
@@ -177,8 +188,12 @@ export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowSt
   logs: (partial.logs ?? []).map(cloneLog),
 });
 
-export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
-  steps.map((step) => ({
+const cloneStep = (step: WorkflowStep): WorkflowStep => {
+  if (structuredCloneFn) {
+    return structuredCloneFn(step);
+  }
+
+  return {
     ...step,
     position: clonePosition(step.position),
     config: cloneConfig(step.config),
@@ -186,5 +201,8 @@ export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
     outputs: step.outputs.map(clonePort),
     branches: step.branches.map(cloneBranch),
     logs: step.logs.map(cloneLog),
-  }));
+  };
+};
+
+export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] => steps.map(cloneStep);
 
