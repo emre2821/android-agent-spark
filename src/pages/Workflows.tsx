@@ -435,6 +435,7 @@ const Workflows: React.FC = () => {
   const [isSavingTrigger, setIsSavingTrigger] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteTrigger, setPendingDeleteTrigger] = useState<WorkflowTrigger | null>(null);
+  const [isDeletingTrigger, setIsDeletingTrigger] = useState(false);
   const {
     triggers,
     isLoading: triggersLoading,
@@ -735,28 +736,39 @@ const Workflows: React.FC = () => {
     setConfirmDeleteOpen(true);
   };
 
+  const handleCloseDeleteDialog = () => {
+    setConfirmDeleteOpen(false);
+    setIsDeletingTrigger(false);
+    setPendingDeleteTrigger(null);
+  };
+
   const confirmDeleteTrigger = async () => {
     if (!pendingDeleteTrigger) return;
+    setIsDeletingTrigger(true);
     const trigger = pendingDeleteTrigger;
+    setIsDeletingTrigger(true);
     try {
       await deleteTrigger(trigger.id);
       toast({
         title: 'Trigger removed',
         description: `${trigger.name} will no longer fire this workflow.`,
       });
-      cancelDeleteTrigger();
+      handleCloseDeleteDialog();
     } catch (error) {
       toast({
         title: 'Failed to delete trigger',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeletingTrigger(false);
     }
   };
 
   const cancelDeleteTrigger = () => {
     setConfirmDeleteOpen(false);
     setPendingDeleteTrigger(null);
+    setIsDeletingTrigger(false);
   };
 
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1381,7 +1393,7 @@ const Workflows: React.FC = () => {
           if (open) {
             setConfirmDeleteOpen(true);
           } else {
-            cancelDeleteTrigger();
+            handleCloseDeleteDialog();
           }
         }}
       >
@@ -1395,12 +1407,13 @@ const Workflows: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDeleteTrigger}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCloseDeleteDialog}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteTrigger}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingTrigger}
             >
-              Delete trigger
+              {isDeletingTrigger ? 'Deleting...' : 'Delete trigger'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

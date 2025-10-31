@@ -1,3 +1,4 @@
+import { generateUniqueId } from '@/lib/id';
 import { LockState, PresenceUser, AuditLogEntry } from '@/types/collaboration';
 
 export type CollaborationEventMap = {
@@ -131,13 +132,6 @@ export class CollaborationConflictError extends Error {
 const WS_URL = import.meta.env.VITE_COLLAB_URL ?? 'ws://localhost:3001';
 const ACK_TIMEOUT = 5000;
 
-const generateId = () => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).slice(2);
-};
-
 export class CollaborationClient {
   private socket: WebSocket | null = null;
   private listeners: Partial<{ [K in EventKey]: Set<Listener<CollaborationEventMap[K]>> }> = {};
@@ -220,7 +214,7 @@ export class CollaborationClient {
 
   private sendWithAck(message: AckClientMessage): Promise<AckMessage> {
     if (!message.ackId) {
-      message.ackId = generateId();
+      message.ackId = generateUniqueId();
     }
     const ackId = message.ackId as string;
     return new Promise((resolve, reject) => {
