@@ -740,6 +740,7 @@ const Workflows: React.FC = () => {
     if (!pendingDeleteTrigger) return;
     setIsDeletingTrigger(true);
     const trigger = pendingDeleteTrigger;
+    setIsDeletingTrigger(true);
     try {
       await deleteTrigger(trigger.id);
       toast({
@@ -761,6 +762,7 @@ const Workflows: React.FC = () => {
   const cancelDeleteTrigger = () => {
     setConfirmDeleteOpen(false);
     setPendingDeleteTrigger(null);
+    setIsDeletingTrigger(false);
   };
 
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
