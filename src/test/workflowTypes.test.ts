@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { WorkflowExecutionLog, WorkflowPort, cloneSteps, createEmptyStep } from '@/types/workflow';
+import {
+  WorkflowExecutionLog,
+  WorkflowPort,
+  WorkflowStep,
+  cloneSteps,
+  createEmptyStep,
+} from '@/types/workflow';
 
 describe('workflow type helpers', () => {
   it('creates a step with defaults and unique identifiers', () => {
@@ -86,5 +92,20 @@ describe('workflow type helpers', () => {
     expect(base.config.retries).toBe(1);
     expect(base.inputs[0].label).toBe('In');
     expect(base.logs[0].message).toBe('Done');
+  });
+
+  it('preserves and deep clones unknown properties when available', () => {
+    const stepWithMetadata = {
+      ...createEmptyStep({ name: 'With metadata' }),
+      metadata: { tags: ['alpha'] },
+    } as WorkflowStep & { metadata: { tags: string[] } };
+
+    const [clone] = cloneSteps([stepWithMetadata]) as Array<WorkflowStep & { metadata: { tags: string[] } }>;
+
+    expect(clone.metadata).toEqual(stepWithMetadata.metadata);
+    expect(clone.metadata).not.toBe(stepWithMetadata.metadata);
+
+    clone.metadata.tags.push('beta');
+    expect(stepWithMetadata.metadata.tags).toEqual(['alpha']);
   });
 });

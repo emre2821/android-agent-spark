@@ -1,3 +1,4 @@
+import { generateUniqueId } from '@/lib/id';
 export type WorkflowVersionStatus = 'draft' | 'published' | 'archived';
 
 export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived' | 'published';
@@ -497,12 +498,19 @@ const getUUIDProvider = (): UUIDProvider | undefined => {
   return globalWithCrypto.crypto;
 };
 
+type StructuredClone = <T>(value: T) => T;
+
+const getStructuredClone = (): StructuredClone | undefined => {
+  const globalWithStructuredClone = globalThis as typeof globalThis & {
+    structuredClone?: StructuredClone;
+  };
+  return globalWithStructuredClone.structuredClone;
+};
+
+const structuredCloneFn = getStructuredClone();
+
 const createId = (): string => {
-  const provider = getUUIDProvider();
-  if (typeof provider?.randomUUID === 'function') {
-    return provider.randomUUID();
-  }
-  return Math.random().toString(36).slice(2, 10);
+  return generateUniqueId();
 };
 
 const clonePort = (port: WorkflowPort): WorkflowPort => ({
@@ -581,6 +589,12 @@ export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowSt
   logs: (partial.logs ?? []).map(cloneLog),
 });
 
+const cloneStep = (step: WorkflowStep): WorkflowStep => {
+  if (structuredCloneFn) {
+    return structuredCloneFn(step);
+  }
+
+  return {
 export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
   steps.map((step) => createEmptyStep(step));
   steps.map((step) => ({
@@ -591,5 +605,8 @@ export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
     outputs: step.outputs.map(clonePort),
     branches: step.branches.map(cloneBranch),
     logs: step.logs.map(cloneLog),
-  }));
+  };
+};
+
+export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] => steps.map(cloneStep);
 
