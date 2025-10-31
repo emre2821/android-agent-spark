@@ -1,3 +1,8 @@
+export * from './workflow/core';
+export * from './workflow/triggers';
+export * from './workflow/ids';
+export * from './workflow/hydration';
+export * from './workflow/clone';
 import { generateUniqueId } from '@/lib/id';
 export type WorkflowVersionStatus = 'draft' | 'published' | 'archived';
 
