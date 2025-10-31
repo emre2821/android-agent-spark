@@ -435,6 +435,7 @@ const Workflows: React.FC = () => {
   const [isSavingTrigger, setIsSavingTrigger] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteTrigger, setPendingDeleteTrigger] = useState<WorkflowTrigger | null>(null);
+  const [isDeletingTrigger, setIsDeletingTrigger] = useState(false);
   const {
     triggers,
     isLoading: triggersLoading,
@@ -738,6 +739,7 @@ const Workflows: React.FC = () => {
   const confirmDeleteTrigger = async () => {
     if (!pendingDeleteTrigger) return;
     const trigger = pendingDeleteTrigger;
+    setIsDeletingTrigger(true);
     try {
       await deleteTrigger(trigger.id);
       toast({
@@ -751,12 +753,15 @@ const Workflows: React.FC = () => {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeletingTrigger(false);
     }
   };
 
   const cancelDeleteTrigger = () => {
     setConfirmDeleteOpen(false);
     setPendingDeleteTrigger(null);
+    setIsDeletingTrigger(false);
   };
 
   const handleAgentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1399,8 +1404,9 @@ const Workflows: React.FC = () => {
             <AlertDialogAction
               onClick={confirmDeleteTrigger}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingTrigger}
             >
-              Delete trigger
+              {isDeletingTrigger ? 'Deleting...' : 'Delete trigger'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
