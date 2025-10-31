@@ -1,3 +1,5 @@
+import { generateUniqueId } from '@/lib/id';
+
 export type WorkflowStatus = 'draft' | 'active' | 'archived';
 export type WorkflowRunStatus = 'idle' | 'running' | 'success' | 'error';
 export type WorkflowStepType =
@@ -133,19 +135,8 @@ export interface WorkflowTrigger {
 export type WorkflowTriggerType = 'cron' | 'webhook' | 'queue';
 export type WorkflowTriggerStatus = 'active' | 'paused';
 
-type UUIDProvider = { randomUUID?: () => string };
-
-const getUUIDProvider = (): UUIDProvider | undefined => {
-  const globalWithCrypto = globalThis as typeof globalThis & { crypto?: UUIDProvider };
-  return globalWithCrypto.crypto;
-};
-
 const createId = (): string => {
-  const provider = getUUIDProvider();
-  if (typeof provider?.randomUUID === 'function') {
-    return provider.randomUUID();
-  }
-  return Math.random().toString(36).slice(2, 10);
+  return generateUniqueId();
 };
 
 const clonePort = (port: WorkflowPort): WorkflowPort => ({ ...port });
