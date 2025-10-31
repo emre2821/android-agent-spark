@@ -46,14 +46,14 @@ const createCanvasNode = (id: string, index: number, data: CanvasNodeData): Canv
 });
 
 const toCanvasState = (workflow: Workflow): { nodes: CanvasNode[]; edges: CanvasEdge[] } => {
-  const nodes = workflow.nodes.map((node, index) =>
+  const nodes = (workflow.nodes ?? []).map((node, index) =>
     createCanvasNode(node.id, index, {
       label: node.label,
       stepType: node.type,
       summary: node.data.summary,
     }),
   );
-  const edges: CanvasEdge[] = workflow.edges.map((edge) => ({
+  const edges: CanvasEdge[] = (workflow.edges ?? []).map((edge) => ({
     id: edge.id,
     source: edge.source,
     target: edge.target,
@@ -151,10 +151,10 @@ const WorkflowBuilderInner = () => {
     (workflow: Workflow) => {
       setName(workflow.name);
       setDescription(workflow.description ?? '');
-      setSchedule(workflow.execution.schedule ?? '');
-      setTagsInput(workflow.metadata.tags.join(', '));
-      setInputs(workflow.inputs);
-      setOutputs(workflow.outputs);
+      setSchedule(workflow.execution?.schedule ?? '');
+      setTagsInput((workflow.metadata?.tags ?? []).join(', '));
+      setInputs(workflow.inputs ?? []);
+      setOutputs(workflow.outputs ?? []);
       const canvas = toCanvasState(workflow);
       setNodes(canvas.nodes);
       setEdges(canvas.edges);
@@ -298,8 +298,8 @@ const WorkflowBuilderInner = () => {
       },
       metadata: {
         tags,
-        owner: activeWorkflow?.metadata.owner,
-        category: activeWorkflow?.metadata.category,
+        owner: activeWorkflow?.metadata?.owner,
+        category: activeWorkflow?.metadata?.category,
       },
     };
   };
