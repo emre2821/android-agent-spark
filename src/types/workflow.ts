@@ -491,6 +491,24 @@ export interface WorkflowTrigger {
 export type WorkflowTriggerType = 'cron' | 'webhook' | 'queue';
 export type WorkflowTriggerStatus = 'active' | 'paused';
 
+type UUIDProvider = { randomUUID?: () => string };
+
+const getUUIDProvider = (): UUIDProvider | undefined => {
+  const globalWithCrypto = globalThis as typeof globalThis & { crypto?: UUIDProvider };
+  return globalWithCrypto.crypto;
+};
+
+type StructuredClone = <T>(value: T) => T;
+
+const getStructuredClone = (): StructuredClone | undefined => {
+  const globalWithStructuredClone = globalThis as typeof globalThis & {
+    structuredClone?: StructuredClone;
+  };
+  return globalWithStructuredClone.structuredClone;
+};
+
+const structuredCloneFn = getStructuredClone();
+
 const createId = (): string => {
   return generateUniqueId();
 };
@@ -571,6 +589,12 @@ export const createEmptyStep = (partial: Partial<WorkflowStep> = {}): WorkflowSt
   logs: (partial.logs ?? []).map(cloneLog),
 });
 
+const cloneStep = (step: WorkflowStep): WorkflowStep => {
+  if (structuredCloneFn) {
+    return structuredCloneFn(step);
+  }
+
+  return {
 export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
   steps.map((step) => createEmptyStep(step));
   steps.map((step) => ({
@@ -581,5 +605,8 @@ export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
     outputs: step.outputs.map(clonePort),
     branches: step.branches.map(cloneBranch),
     logs: step.logs.map(cloneLog),
-  }));
+  };
+};
+
+export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] => steps.map(cloneStep);
 
