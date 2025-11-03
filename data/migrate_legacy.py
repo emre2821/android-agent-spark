@@ -10,8 +10,7 @@ from app.db.session import session_scope
 def main() -> None:
     run_migrations()
     with session_scope() as session:
-        migrated = migrate_legacy_vault(session)
-        if migrated:
+        if migrated := migrate_legacy_vault(session):
             print("Legacy vault migrated")
         else:
             print("No legacy vault found or migration skipped")
