@@ -1,43 +1,41 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    branches: ['*']
 
 jobs:
-  quality:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        env:
+          AGENT_SPARK_SCHEDULER_ENABLED: "false"
+        run: pytest
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install frontend deps
+        run: npm run install:web
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint frontend
+        run: npm run lint:web
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Unit and integration tests
-        run: npm test
-
-      - name: Cypress end-to-end tests
-        run: npm run test:e2e
-
-      - name: Build web bundle
+      - name: Build frontend
         run: npm run build:web
-
-      - name: Build mobile bundle
-        run: npm run build:mobile
-
-      - name: Build desktop bundle
-        run: npm run build:desktop

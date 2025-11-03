@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  backend:
+    build: .
+    volumes:
+      - ./data:/opt/app/data
+      - ./app:/opt/app/app
+    environment:
+      - AGENT_SPARK_DEV_MODE=true
+      - AGENT_SPARK_DB_PATH=/opt/app/data/agent_spark.db
+    ports:
+      - "8000:8000"
+  frontend:
+    image: node:20-slim
+    working_dir: /opt/app/web
+    volumes:
+      - ./web:/opt/app/web
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+    environment:
+      - VITE_API_BASE=http://127.0.0.1:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
