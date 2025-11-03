@@ -25,8 +25,7 @@ def cmd_runserver(args: argparse.Namespace) -> None:
 def cmd_import_legacy(_: argparse.Namespace) -> None:
     run_migrations()
     with session_scope() as session:
-        migrated = migrate_legacy_vault(session)
-        if migrated:
+        if migrated := migrate_legacy_vault(session):
             logger.info("Legacy vault migration complete")
         else:
             logger.info("No legacy vault found or migration skipped")
