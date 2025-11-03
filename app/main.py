@@ -20,8 +20,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     run_migrations()
     with session_scope() as session:
-        migrated = migrate_legacy_vault(session)
-        if migrated:
+        if migrated := migrate_legacy_vault(session):
             logger.info("Legacy vault migrated on startup")
     get_scheduler()
     try:
