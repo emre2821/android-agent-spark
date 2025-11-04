@@ -2,7 +2,7 @@ import { promises as fs, existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
-import { CronExpressionParser } from 'cron-parser';
+import { parseExpression } from './utils/cron.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -376,13 +376,13 @@ const defaultData = {
 
 function buildCronMetadata(config, count = 5) {
   try {
-    const expression = CronExpressionParser.parse(config.expression, {
+    const iterator = parseExpression(config.expression, {
       tz: config.timezone || 'UTC',
       currentDate: new Date(),
     });
     const occurrences = [];
     for (let index = 0; index < count; index += 1) {
-      occurrences.push(expression.next().toDate().toISOString());
+      occurrences.push(iterator.next().toDate().toISOString());
     }
     return {
       nextRunAt: occurrences[0] ?? null,

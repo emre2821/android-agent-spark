@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CronExpressionParser } from 'cron-parser';
+import { parseExpression } from '../utils/cron.js';
 
 const workflowStatusSchema = z.enum(['draft', 'active', 'paused', 'archived']);
 
@@ -14,7 +14,7 @@ function isValidTimeZone(value) {
 
 function validateCron(expression, timezone) {
   try {
-    CronExpressionParser.parse(expression, { tz: timezone || 'UTC', currentDate: new Date() });
+    parseExpression(expression, { tz: timezone || 'UTC', currentDate: new Date() });
     return true;
   } catch {
     return false;
