@@ -7,6 +7,7 @@ import path from 'path';
 
 import {
   workspaces,
+import {
   workspaceResources,
   findUserByEmail,
   findUserById,
@@ -254,3 +255,18 @@ if (process.env.NODE_ENV !== 'test' && isDirectExecution()) {
   startServer();
 }
 
+  return app;
+};
+
+export const startWorkspaceServer = ({ port = Number.parseInt(process.env.PORT ?? '3001', 10), onListen } = {}) => {
+  const app = createServer();
+  const server = app.listen(port, () => {
+    if (typeof onListen === 'function') {
+      onListen({ port });
+    } else {
+      // eslint-disable-next-line no-console
+      console.log(`API server running on http://localhost:${port}`);
+    }
+  });
+  return { app, server };
+};
