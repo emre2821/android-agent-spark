@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './index.js';
 
 const app = createApp();
@@ -24,5 +24,52 @@ describe('Agents API', () => {
     expect(agent).toHaveProperty('tasksCompleted');
     expect(agent).toHaveProperty('memoryItems');
     expect(agent).toHaveProperty('lastActive');
+  });
+});
+
+describe('entrypoint bootstrap', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('only starts the runtime server when configured', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.SERVER_ENTRY = 'runtime';
+
+    const runtimeModule = await import('./agentRuntime.js');
+    const workspaceModule = await import('./workspaceServer.js');
+
+    const runtimeSpy = vi.spyOn(runtimeModule, 'startAgentRuntime').mockImplementation(() => ({} as any));
+    const workspaceSpy = vi.spyOn(workspaceModule, 'startWorkspaceServer').mockImplementation(() => ({} as any));
+
+    await import('./index.js');
+
+    expect(runtimeSpy).toHaveBeenCalledTimes(1);
+    expect(workspaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('only starts the workspace API when requested', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.SERVER_ENTRY = 'workspace';
+
+    const runtimeModule = await import('./agentRuntime.js');
+    const workspaceModule = await import('./workspaceServer.js');
+
+    const runtimeSpy = vi.spyOn(runtimeModule, 'startAgentRuntime').mockImplementation(() => ({} as any));
+    const workspaceSpy = vi.spyOn(workspaceModule, 'startWorkspaceServer').mockImplementation(() => ({} as any));
+
+    await import('./index.js');
+
+    expect(workspaceSpy).toHaveBeenCalledTimes(1);
+    expect(runtimeSpy).not.toHaveBeenCalled();
   });
 });
