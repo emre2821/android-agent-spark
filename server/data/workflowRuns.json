@@ -140,7 +140,9 @@
             }
           ]
         }
-      ]
+      ],
+      "retryHistory": [],
+      "errors": []
     },
     {
       "id": "run-cobalt-escalation-20240510",
@@ -204,7 +206,9 @@
             }
           ]
         }
-      ]
+      ],
+      "retryHistory": [],
+      "errors": []
     }
   ]
 }
