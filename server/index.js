@@ -460,7 +460,8 @@ export const stopServer = async () => {
   server = undefined;
 };
 
-const shouldAutoStart = process.env.NODE_ENV !== 'test' && process.env.AGENT_RUNTIME_AUTO_START !== 'false';
+const agentRuntimeAutoStart = (process.env.AGENT_RUNTIME_AUTO_START ?? '').toLowerCase();
+const shouldAutoStart = process.env.NODE_ENV !== 'test' && agentRuntimeAutoStart !== 'false';
 
 if (shouldAutoStart) {
   const envPort = Number.parseInt(process.env.PORT ?? '', 10);
