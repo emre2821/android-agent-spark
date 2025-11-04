@@ -1,0 +1,35 @@
+import { describe, expect, it } from 'vitest';
+import { triggerInputSchema } from '../validation/workflowSchemas.js';
+
+describe('workflow trigger cron validation', () => {
+  it('accepts a valid cron expression and timezone', () => {
+    const result = triggerInputSchema.safeParse({
+      type: 'cron',
+      name: 'Valid Cron',
+      status: 'active',
+      config: {
+        expression: '*/5 * * * * *',
+        timezone: 'UTC',
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an invalid cron expression', () => {
+    const result = triggerInputSchema.safeParse({
+      type: 'cron',
+      name: 'Invalid Cron',
+      status: 'active',
+      config: {
+        expression: 'not-a-cron',
+        timezone: 'UTC',
+      },
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.message.includes('Invalid cron expression'))).toBe(true);
+    }
+  });
+});

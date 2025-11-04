@@ -1,5 +1,5 @@
 import EventEmitter from 'events';
-import { CronExpressionParser } from 'cron-parser';
+import { parseExpression } from './utils/cron.js';
 import {
   createWorkflowRunRecord,
   getWorkflow,
@@ -72,15 +72,15 @@ class TriggerEngine extends EventEmitter {
     const planNext = () => {
       let nextDate;
       try {
-        const expression = CronExpressionParser.parse(trigger.config.expression, {
+        const iterator = parseExpression(trigger.config.expression, {
           tz: trigger.config.timezone || 'UTC',
           currentDate: new Date(),
         });
-        nextDate = expression.next().toDate();
+        nextDate = iterator.next().toDate();
         const preview = [];
         preview.push(nextDate.toISOString());
         for (let index = 0; index < 4; index += 1) {
-          preview.push(expression.next().toDate().toISOString());
+          preview.push(iterator.next().toDate().toISOString());
         }
         setTriggerMetadata(workflow.id, trigger.id, {
           nextRunAt: preview[0] ?? null,
