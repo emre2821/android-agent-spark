@@ -1,4 +1,17 @@
 import EventEmitter from 'events';
+import cronParser from 'cron-parser';
+
+const parseExpression =
+  (typeof cronParser === 'function' && typeof cronParser.parse === 'function'
+    ? cronParser.parse.bind(cronParser)
+    : cronParser.parseExpression ??
+      (cronParser.CronExpressionParser
+        ? cronParser.CronExpressionParser.parse.bind(cronParser.CronExpressionParser)
+        : cronParser.default?.parse.bind(cronParser.default)));
+
+if (!parseExpression) {
+  throw new Error('cron-parser parseExpression is not available');
+}
 import { parseExpression } from './utils/cron.js';
 import {
   createWorkflowRunRecord,
