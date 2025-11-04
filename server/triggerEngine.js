@@ -12,6 +12,7 @@ const parseExpression =
 if (!parseExpression) {
   throw new Error('cron-parser parseExpression is not available');
 }
+import { parseExpression } from './utils/cron.js';
 import {
   createWorkflowRunRecord,
   getWorkflow,

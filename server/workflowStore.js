@@ -15,6 +15,7 @@ const parseExpression =
 if (!parseExpression) {
   throw new Error('cron-parser parseExpression is not available');
 }
+import { parseExpression } from './utils/cron.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

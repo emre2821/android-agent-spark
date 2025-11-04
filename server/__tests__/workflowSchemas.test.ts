@@ -9,6 +9,14 @@ describe('triggerInputSchema cron validation', () => {
       status: 'active',
       config: {
         expression: '0 9 * * *',
+describe('workflow trigger cron validation', () => {
+  it('accepts a valid cron expression and timezone', () => {
+    const result = triggerInputSchema.safeParse({
+      type: 'cron',
+      name: 'Valid Cron',
+      status: 'active',
+      config: {
+        expression: '*/5 * * * * *',
         timezone: 'UTC',
       },
     });
@@ -20,6 +28,7 @@ describe('triggerInputSchema cron validation', () => {
     const result = triggerInputSchema.safeParse({
       type: 'cron',
       name: 'Broken schedule',
+      name: 'Invalid Cron',
       status: 'active',
       config: {
         expression: 'not-a-cron',
@@ -31,6 +40,7 @@ describe('triggerInputSchema cron validation', () => {
     if (!result.success) {
       const issues = result.error.issues.map((issue) => issue.message);
       expect(issues.some((message) => message.toLowerCase().includes('cron'))).toBe(true);
+      expect(result.error.issues.some((issue) => issue.message.includes('Invalid cron expression'))).toBe(true);
     }
   });
 });
