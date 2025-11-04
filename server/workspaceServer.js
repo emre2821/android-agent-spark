@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+import {
+  workspaces,
 import {
   workspaceResources,
   findUserByEmail,
@@ -196,6 +201,59 @@ export const createServer = () => {
       return res.json(req.workspaceResources.runs);
     },
   );
+
+  app.get('/workspaces/:workspaceId/summary', authenticate, authorizeWorkspace, (req, res) => {
+    const summary = getWorkspaceSummary(req.workspace.id);
+    return res.json(summary);
+  });
+
+  app.get('/workspaces/:workspaceId/members', authenticate, authorizeWorkspace, (req, res) => {
+    const workspace = getWorkspaceById(req.workspace.id);
+    const members = workspaces
+      .find((item) => item.id === workspace.id)
+      ?.members?.map((member) => sanitizeUser(findUserById(member.userId)))
+      .filter(Boolean);
+
+    if (!members) {
+      return res.status(404).json({ message: 'Workspace members not found.' });
+    }
+
+    return res.json(members);
+  });
+
+  app.get('/workspaces/:workspaceId/insights', authenticate, authorizeWorkspace, (req, res) => {
+    const {insights} = req.workspaceResources;
+    if (!insights) {
+      return res.status(404).json({ message: 'Workspace insights not found.' });
+    }
+
+    return res.json(insights);
+  });
+
+  return app;
+};
+
+export const startServer = (port) => {
+  const envPort = port ?? Number.parseInt(process.env.PORT ?? '', 10);
+  const resolvedPort = Number.isFinite(envPort) ? envPort : 3001;
+  const app = createServer();
+  return app.listen(resolvedPort, () => {
+    console.log(`Workspace API server running on http://localhost:${resolvedPort}`);
+  });
+};
+
+const isDirectExecution = () => {
+  if (!process.argv[1]) {
+    return false;
+  }
+  const entryPath = path.resolve(process.argv[1]);
+  const modulePath = fileURLToPath(import.meta.url);
+  return entryPath === modulePath;
+};
+
+if (process.env.NODE_ENV !== 'test' && isDirectExecution()) {
+  startServer();
+}
 
   return app;
 };
