@@ -221,7 +221,7 @@ export const createServer = () => {
   });
 
   app.get('/workspaces/:workspaceId/insights', authenticate, authorizeWorkspace, (req, res) => {
-    const insights = req.workspaceResources.insights;
+    const {insights} = req.workspaceResources;
     if (!insights) {
       return res.status(404).json({ message: 'Workspace insights not found.' });
     }
