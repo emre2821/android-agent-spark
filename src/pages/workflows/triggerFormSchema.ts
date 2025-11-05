@@ -1,26 +1,6 @@
 import { z } from 'zod';
-import cronParser from 'cron-parser';
-
-const cronModule = cronParser as unknown as {
-  parseExpression?: typeof cronParser.parse;
-  parse?: typeof cronParser.parse;
-  CronExpressionParser?: { parse: typeof cronParser.parse };
-  default?: { parse: typeof cronParser.parse };
-};
-
-const resolvedParse =
-  (typeof cronParser === 'function' && typeof cronParser.parse === 'function'
-    ? cronParser.parse.bind(cronParser)
-    : cronModule.parseExpression ??
-      cronModule.CronExpressionParser?.parse.bind(cronModule.CronExpressionParser) ??
-      cronModule.default?.parse.bind(cronModule.default) ??
-      cronModule.parse?.bind(cronModule));
-
-if (!resolvedParse) {
-  throw new Error('cron-parser parseExpression is not available');
-}
-
-const parseExpression = resolvedParse;
+import type { WorkflowTrigger } from '@/types/workflow';
+import { parseExpression } from '@/utils/cron';
 
 export const isValidTimeZone = (value: string | undefined) => {
   if (!value) return false;
@@ -72,3 +52,55 @@ export const triggerFormSchema = z
   });
 
 export type TriggerFormValues = z.infer<typeof triggerFormSchema>;
+
+export const getTriggerFormDefaults = (trigger?: WorkflowTrigger | null): TriggerFormValues => {
+  if (!trigger) {
+    return {
+      name: '',
+      type: 'cron',
+      isActive: true,
+      expression: '0 9 * * *',
+      timezone: 'UTC',
+      queueName: '',
+      batchSize: 1,
+      secret: '',
+    };
+  }
+
+  switch (trigger.type) {
+    case 'cron':
+      return {
+        name: trigger.name,
+        type: 'cron',
+        isActive: trigger.status === 'active',
+        expression: trigger.config.expression,
+        timezone: trigger.config.timezone,
+        queueName: '',
+        batchSize: 1,
+        secret: '',
+      };
+    case 'queue':
+      return {
+        name: trigger.name,
+        type: 'queue',
+        isActive: trigger.status === 'active',
+        expression: '0 9 * * *',
+        timezone: 'UTC',
+        queueName: trigger.config.queueName,
+        batchSize: trigger.config.batchSize ?? 1,
+        secret: '',
+      };
+    case 'webhook':
+    default:
+      return {
+        name: trigger.name,
+        type: 'webhook',
+        isActive: trigger.status === 'active',
+        expression: '0 9 * * *',
+        timezone: 'UTC',
+        queueName: '',
+        batchSize: 1,
+        secret: trigger.config.secret ?? '',
+      };
+  }
+};

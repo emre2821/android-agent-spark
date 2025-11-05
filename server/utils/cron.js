@@ -1,5 +1,5 @@
-import { CronExpressionParser } from 'cron-parser';
+import { parseExpression as cronParseExpression } from 'cron-parser';
 
 export function parseExpression(expression, options = {}) {
-  return CronExpressionParser.parse(expression, options);
+  return cronParseExpression(expression, options);
 }
