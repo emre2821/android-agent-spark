@@ -1,6 +1,5 @@
 import http from 'http';
 import request from 'supertest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from './index.js';
 
@@ -50,7 +49,6 @@ describe('module startup', () => {
   });
 
   it('binds the runtime listener only once when auto-starting', async () => {
-    vi.resetModules();
     process.env.NODE_ENV = 'development';
     process.env.PORT = '0';
 
@@ -61,6 +59,9 @@ describe('module startup', () => {
 
     expect(listenSpy).toHaveBeenCalledTimes(1);
     expect(importedModule.server?.listening).toBe(true);
+  });
+});
+
 describe('entrypoint bootstrap', () => {
   const originalEnv = { ...process.env };
 
@@ -78,28 +79,32 @@ describe('entrypoint bootstrap', () => {
   it('only starts the runtime server when configured', async () => {
     process.env.NODE_ENV = 'development';
     process.env.SERVER_ENTRY = 'runtime';
+    process.env.PORT = '0';
 
-    const runtimeModule = await import('./agentRuntime.js');
     const workspaceModule = await import('./workspaceServer.js');
+    const workspaceSpy = vi
+      .spyOn(workspaceModule, 'startWorkspaceServer')
+      .mockImplementation(() => ({} as any));
 
-    const runtimeSpy = vi.spyOn(runtimeModule, 'startAgentRuntime').mockImplementation(() => ({} as any));
-    const workspaceSpy = vi.spyOn(workspaceModule, 'startWorkspaceServer').mockImplementation(() => ({} as any));
+    const indexModule = await import('./index.js');
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    await import('./index.js');
-
-    expect(runtimeSpy).toHaveBeenCalledTimes(1);
+    expect(indexModule.server?.listening).toBe(true);
     expect(workspaceSpy).not.toHaveBeenCalled();
+    await indexModule.stopServer();
   });
 
   it('only starts the workspace API when requested', async () => {
     process.env.NODE_ENV = 'development';
     process.env.SERVER_ENTRY = 'workspace';
 
-    const runtimeModule = await import('./agentRuntime.js');
     const workspaceModule = await import('./workspaceServer.js');
+    const runtimeModule = await import('./agentRuntime.js');
 
+    const workspaceSpy = vi
+      .spyOn(workspaceModule, 'startWorkspaceServer')
+      .mockImplementation(() => ({} as any));
     const runtimeSpy = vi.spyOn(runtimeModule, 'startAgentRuntime').mockImplementation(() => ({} as any));
-    const workspaceSpy = vi.spyOn(workspaceModule, 'startWorkspaceServer').mockImplementation(() => ({} as any));
 
     await import('./index.js');
 

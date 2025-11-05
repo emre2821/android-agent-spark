@@ -2,30 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import cronParser from 'cron-parser';
-
-const cronModule = cronParser as unknown as {
-  parseExpression?: typeof cronParser.parse;
-  parse?: typeof cronParser.parse;
-  CronExpressionParser?: { parse: typeof cronParser.parse };
-  default?: { parse: typeof cronParser.parse };
-};
-
-const resolvedParse =
-  (typeof cronParser === 'function' && typeof cronParser.parse === 'function'
-    ? cronParser.parse.bind(cronParser)
-    : cronModule.parseExpression ??
-      cronModule.CronExpressionParser?.parse.bind(cronModule.CronExpressionParser) ??
-      cronModule.default?.parse.bind(cronModule.default) ??
-      cronModule.parse?.bind(cronModule));
-
-if (!resolvedParse) {
-  throw new Error('cron-parser parseExpression is not available');
-}
-
-const parseExpression = resolvedParse;
 import { parseExpression } from '@/utils/cron';
-import { getTriggerFormDefaults, triggerFormSchema, type TriggerFormValues } from './triggerFormSchema';
+import { getTriggerFormDefaults, triggerFormSchema, type TriggerFormValues } from './workflows/triggerFormSchema';
 import {
   Tabs,
   TabsContent,
@@ -101,60 +79,6 @@ const createPort = (label: string): WorkflowPort => ({
   label,
   dataType: 'text',
 });
-
-import { triggerFormSchema, type TriggerFormValues } from './workflows/triggerFormSchema';
-
-const getTriggerFormDefaults = (trigger?: WorkflowTrigger | null): TriggerFormValues => {
-  if (!trigger) {
-    return {
-      name: '',
-      type: 'cron',
-      isActive: true,
-      expression: '0 9 * * *',
-      timezone: 'UTC',
-      queueName: '',
-      batchSize: 1,
-      secret: '',
-    };
-  }
-
-  switch (trigger.type) {
-    case 'cron':
-      return {
-        name: trigger.name,
-        type: 'cron',
-        isActive: trigger.status === 'active',
-        expression: trigger.config.expression,
-        timezone: trigger.config.timezone,
-        queueName: '',
-        batchSize: 1,
-        secret: '',
-      };
-    case 'queue':
-      return {
-        name: trigger.name,
-        type: 'queue',
-        isActive: trigger.status === 'active',
-        expression: '0 9 * * *',
-        timezone: 'UTC',
-        queueName: trigger.config.queueName,
-        batchSize: trigger.config.batchSize ?? 1,
-        secret: '',
-      };
-    case 'webhook':
-    default:
-      return {
-        name: trigger.name,
-        type: 'webhook',
-        isActive: trigger.status === 'active',
-        expression: '0 9 * * *',
-        timezone: 'UTC',
-        queueName: '',
-        batchSize: 1,
-        secret: trigger.config.secret ?? '',
-      };
-  }
-};
 
 interface TriggerDialogProps {
   workflowId?: string;
