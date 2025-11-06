@@ -3,7 +3,7 @@ import crypto from 'crypto';
 const algorithm = 'aes-256-gcm';
 const ivLength = 12;
 const secret = (() => {
-  const rawSecret = process.env.CREDENTIALS_SECRET ?? 'development-secret-key-20240518';
+  const rawSecret = process.env.CREDENTIALS_SECRET ?? 'development-secret-key-20241109';
   return crypto.createHash('sha256').update(rawSecret).digest();
 })();
 
