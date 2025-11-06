@@ -50,6 +50,10 @@ function stageDesktopBundle(projectRoot) {
   console.log(`Copying web build from ${webDist} to ${path.join(resourcesDir, 'web')}`);
   copyDir(webDist, path.join(resourcesDir, 'web'));
 
+  if (!fs.existsSync(electronMain)) {
+    console.error(`ERROR: Electron main file not found at ${electronMain}. Please ensure it exists before building.`);
+    process.exit(1);
+  }
   fs.copyFileSync(electronMain, path.join(distRoot, 'main.js'));
 
   const pkgJson = {
