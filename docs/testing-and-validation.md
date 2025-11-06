@@ -1,44 +1,18 @@
-# Testing & Validation Guide
+# Testing and Validation
 
-This project relies on a small set of npm scripts to keep behavior consistent across development machines and automation.
+This project spans a Python backend and a TypeScript frontend. Run both test suites before you ship a change or cut a release.
 
-## Linting
-Run ESLint against the entire workspace. This matches the configuration in `eslint.config.js` and is the first gate in the
-validation chain.
+## Python backend
+- **Unit & integration tests:** `pytest` exercises FastAPI routes, the legacy vault importer, and concurrency handling around quick posts.【F:tests/backend/test_api.py†L1-L120】【F:tests/backend/test_migration.py†L1-L80】【F:tests/concurrency/test_quickpost_concurrency.py†L1-L90】
+- **Linting & formatting:** We rely on the standard library `logging` + type hints; use your preferred tooling (e.g. `ruff`, `black`, `mypy`) locally. No pinned linters ship in this repo yet, so document any additional checks you run when opening a PR.
 
-```bash
-npm run lint
-```
+## Frontend (Vite + React)
+- **Linting:** `npm --prefix web run lint` mirrors the ESLint configuration executed by CI.【F:web/package.json†L1-L22】
+- **Type safety & build:** `npm --prefix web run build` compiles the SPA and runs TypeScript checks. Follow with `npm --prefix web run preview -- --host 0.0.0.0 --port 4173` for a smoke test of the production build.【F:web/package.json†L1-L22】
 
-## Unit tests
-Use Vitest for component, hook, and library coverage. The `npm run test` command executes a single pass that is friendly to
-CI, while `npm run test:watch` keeps the runner active for local development.
-
-```bash
-# one-off run
-npm run test
-
-# watch mode
-npm run test:watch
-```
-
-## Type checking
-TypeScript validation is handled with `tsc --noEmit` so you can verify that inference and interfaces line up without
-producing build artifacts.
-
-```bash
-npm run typecheck
-```
-
-## Full validation bundle
-Combine the above checks with `npm run validate`. Use this before pushing a branch to replicate the expected gating
-sequence in automation.
-
-```bash
-npm run validate
-```
-
-## Recommended workflow
-1. During active development run `npm run test:watch` in a separate terminal.
-2. Before submitting changes run `npm run validate` to guarantee lint, type check, and unit tests all succeed.
-3. For release candidates include the validation script in any CI jobs so pull requests and merges stay green.
+## Suggested workflow
+1. Activate your Python virtualenv and install dependencies via `pip install -r requirements.txt`.
+2. Install frontend dependencies with `npm --prefix web install` (or `npm install` at the repository root if you prefer).
+3. Develop with `python -m app.cli runserver --reload` alongside `npm --prefix web run dev`.
+4. Before pushing, run `pytest` and `npm --prefix web run lint`.
+5. For release candidates, add the full bundle: `pytest`, `npm --prefix web run lint`, and `npm --prefix web run build`.
