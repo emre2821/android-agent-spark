@@ -31,22 +31,24 @@ function ensureWebBuild(projectRoot) {
 }
 
 function stageMobileBundle(projectRoot) {
-  const distRoot = path.join(projectRoot, 'dist', 'mobile');
+  const distRoot = path.join(projectRoot, 'dist');
   const webDist = path.join(projectRoot, 'web', 'dist');
-  const stagedWeb = path.join(distRoot, 'www');
 
   fs.rmSync(distRoot, { recursive: true, force: true });
   fs.mkdirSync(distRoot, { recursive: true });
 
-  console.log(`Copying web build from ${webDist} to ${stagedWeb}...`);
-  copyDir(webDist, stagedWeb);
+  console.log(`Copying web build from ${webDist} to ${distRoot}...`);
+  copyDir(webDist, distRoot);
 
   const buildInfo = {
     generatedAt: new Date().toISOString(),
     source: 'scripts/build_mobile.js',
     note: 'Assets ready for Capacitor/Android wrapper ingestion.',
   };
-  fs.writeFileSync(path.join(distRoot, 'BUILD_INFO.json'), JSON.stringify(buildInfo, null, 2));
+  fs.writeFileSync(
+    path.join(distRoot, 'BUILD_INFO.json'),
+    JSON.stringify(buildInfo, null, 2),
+  );
 
   console.log(`Mobile web assets staged at ${distRoot}`);
   console.log('Use `npx cap sync android` inside the mobile shell to finish the native build.');
