@@ -12,59 +12,25 @@
         "name": "Avery Quinn",
         "email": "avery.owner@example.com"
       },
-      "createdAt": "2024-04-15T12:00:00.000Z",
-      "updatedAt": "2024-05-12T10:45:00.000Z",
+      "createdAt": "2024-10-26T12:00:00.000Z",
+      "updatedAt": "2024-11-08T10:45:00.000Z",
       "compliance": {
         "dataRegions": ["us-west-2"],
         "piiHandling": "masked",
-        "lastReviewAt": "2024-05-11T09:30:00.000Z"
+        "maskingProfile": "masking-v4",
+        "lastReviewAt": "2024-11-07T09:30:00.000Z"
       },
-      "publishedVersionId": "ver-aurora-qualification-2",
+      "deployment": {
+        "status": "published",
+        "lastDeployedAt": "2024-11-08T10:45:00.000Z",
+        "rollbackVersionId": "ver-aurora-qualification-2"
+      },
+      "publishedVersionId": "ver-aurora-qualification-3",
       "versions": [
-        {
-          "id": "ver-aurora-qualification-1",
-          "number": 1,
-          "status": "archived",
-          "author": "user-avery",
-          "changeSummary": "Initial publish",
-          "createdAt": "2024-04-15T12:00:00.000Z",
-          "updatedAt": "2024-04-15T12:00:00.000Z",
-          "definition": {
-            "name": "Lead Qualification",
-            "description": "Score and distribute leads automatically.",
-            "trigger": "webhook",
-            "steps": [
-              {
-                "id": "step-capture",
-                "type": "ingest",
-                "name": "Capture Lead",
-                "config": {
-                  "source": "webform"
-                }
-              },
-              {
-                "id": "step-score",
-                "type": "analyze",
-                "name": "Score Lead",
-                "config": {
-                  "model": "lead-score-v1"
-                }
-              },
-              {
-                "id": "step-route",
-                "type": "route",
-                "name": "Assign Owner",
-                "config": {
-                  "team": "sales"
-                }
-              }
-            ]
-          }
-        },
         {
           "id": "ver-aurora-qualification-2",
           "number": 2,
-          "status": "published",
+          "status": "archived",
           "author": "user-avery",
           "changeSummary": "Add CRM enrichment with masked payload",
           "createdAt": "2024-05-12T10:30:00.000Z",
@@ -109,26 +75,83 @@
               }
             ]
           }
+        },
+        {
+          "id": "ver-aurora-qualification-3",
+          "number": 3,
+          "status": "published",
+          "author": "user-avery",
+          "changeSummary": "Add consent check and telemetry masking",
+          "createdAt": "2024-11-08T10:30:00.000Z",
+          "updatedAt": "2024-11-08T10:45:00.000Z",
+          "definition": {
+            "name": "Lead Qualification",
+            "description": "Score leads, ensure consent, enrich with CRM data, and route.",
+            "trigger": "webhook",
+            "steps": [
+              {
+                "id": "step-capture",
+                "type": "ingest",
+                "name": "Capture Lead",
+                "config": {
+                  "source": "webform"
+                }
+              },
+              {
+                "id": "step-consent",
+                "type": "decision",
+                "name": "Confirm Consent",
+                "config": {
+                  "policy": "consent-policy-v2"
+                }
+              },
+              {
+                "id": "step-score",
+                "type": "analyze",
+                "name": "Score Lead",
+                "config": {
+                  "model": "lead-score-v3"
+                }
+              },
+              {
+                "id": "step-enrich",
+                "type": "enrich",
+                "name": "Enrich CRM",
+                "config": {
+                  "provider": "hubspot",
+                  "payloadMasking": "full"
+                }
+              },
+              {
+                "id": "step-route",
+                "type": "route",
+                "name": "Assign Owner",
+                "config": {
+                  "team": "sales"
+                }
+              }
+            ]
+          }
         }
       ],
       "history": [
         {
           "id": "hist-aurora-qualification-created",
-          "versionId": "ver-aurora-qualification-1",
-          "versionNumber": 1,
-          "author": "user-avery",
-          "action": "created",
-          "summary": "Initial publish",
-          "timestamp": "2024-04-15T12:00:00.000Z"
-        },
-        {
-          "id": "hist-aurora-qualification-updated",
           "versionId": "ver-aurora-qualification-2",
           "versionNumber": 2,
           "author": "user-avery",
           "action": "published",
           "summary": "Add CRM enrichment with masking",
           "timestamp": "2024-05-12T10:45:00.000Z"
+        },
+        {
+          "id": "hist-aurora-qualification-consent",
+          "versionId": "ver-aurora-qualification-3",
+          "versionNumber": 3,
+          "author": "user-avery",
+          "action": "published",
+          "summary": "Add consent gate and telemetry masking",
+          "timestamp": "2024-11-08T10:45:00.000Z"
         }
       ]
     },
@@ -145,59 +168,24 @@
         "email": "bailey.admin@example.com"
       },
       "createdAt": "2024-03-22T08:00:00.000Z",
-      "updatedAt": "2024-05-10T19:00:00.000Z",
+      "updatedAt": "2024-11-07T19:00:00.000Z",
       "compliance": {
         "dataRegions": ["us-east-1"],
         "piiHandling": "tokenized",
-        "lastReviewAt": "2024-05-09T16:45:00.000Z"
+        "maskingProfile": "tokenization-v2",
+        "lastReviewAt": "2024-11-06T16:45:00.000Z"
       },
-      "publishedVersionId": "ver-cobalt-escalation-3",
+      "deployment": {
+        "status": "paused",
+        "lastDeployedAt": "2024-11-05T18:40:00.000Z",
+        "rollbackVersionId": "ver-cobalt-escalation-3"
+      },
+      "publishedVersionId": "ver-cobalt-escalation-4",
       "versions": [
-        {
-          "id": "ver-cobalt-escalation-2",
-          "number": 2,
-          "status": "draft",
-          "author": "user-bailey",
-          "changeSummary": "Add sentiment analysis stage",
-          "createdAt": "2024-05-08T12:10:00.000Z",
-          "updatedAt": "2024-05-08T12:10:00.000Z",
-          "definition": {
-            "name": "Escalation Digest",
-            "description": "Summaries with tokenized customer identifiers.",
-            "trigger": "schedule",
-            "steps": [
-              {
-                "id": "step-ingest",
-                "type": "ingest",
-                "name": "Collect Escalations",
-                "config": {
-                  "source": "zendesk",
-                  "masking": "ticket-id"
-                }
-              },
-              {
-                "id": "step-sentiment",
-                "type": "analyze",
-                "name": "Sentiment",
-                "config": {
-                  "model": "sentiment-v1"
-                }
-              },
-              {
-                "id": "step-summarize",
-                "type": "summarize",
-                "name": "Compose Digest",
-                "config": {
-                  "format": "slack"
-                }
-              }
-            ]
-          }
-        },
         {
           "id": "ver-cobalt-escalation-3",
           "number": 3,
-          "status": "published",
+          "status": "archived",
           "author": "user-bailey",
           "changeSummary": "Validate masking rules and publish",
           "createdAt": "2024-05-10T18:40:00.000Z",
@@ -234,17 +222,212 @@
               }
             ]
           }
+        },
+        {
+          "id": "ver-cobalt-escalation-4",
+          "number": 4,
+          "status": "published",
+          "author": "user-bailey",
+          "changeSummary": "Add PagerDuty notification with masked payload",
+          "createdAt": "2024-11-05T18:10:00.000Z",
+          "updatedAt": "2024-11-05T18:40:00.000Z",
+          "definition": {
+            "name": "Escalation Digest",
+            "description": "Summaries with tokenized customer identifiers, escalation metadata, and PagerDuty ping.",
+            "trigger": "schedule",
+            "steps": [
+              {
+                "id": "step-ingest",
+                "type": "ingest",
+                "name": "Collect Escalations",
+                "config": {
+                  "source": "zendesk",
+                  "masking": "ticket-id"
+                }
+              },
+              {
+                "id": "step-summarize",
+                "type": "summarize",
+                "name": "Compose Digest",
+                "config": {
+                  "format": "email"
+                }
+              },
+              {
+                "id": "step-handoff",
+                "type": "route",
+                "name": "Distribute Digest",
+                "config": {
+                  "channel": "slack"
+                }
+              },
+              {
+                "id": "step-pagerduty",
+                "type": "notify",
+                "name": "PagerDuty Ping",
+                "config": {
+                  "serviceKey": "MASKED::pagerduty-service"
+                }
+              }
+            ]
+          }
         }
       ],
       "history": [
         {
-          "id": "hist-cobalt-escalation-created",
+          "id": "hist-cobalt-escalation-publish-v3",
           "versionId": "ver-cobalt-escalation-3",
           "versionNumber": 3,
           "author": "user-bailey",
           "action": "published",
           "summary": "Validate masking rules and publish",
           "timestamp": "2024-05-10T19:00:00.000Z"
+        },
+        {
+          "id": "hist-cobalt-escalation-publish-v4",
+          "versionId": "ver-cobalt-escalation-4",
+          "versionNumber": 4,
+          "author": "user-bailey",
+          "action": "published",
+          "summary": "Add PagerDuty notification with masked payload",
+          "timestamp": "2024-11-05T18:40:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "wf-lumen-prompt-forge",
+      "workspaceId": "workspace-lumen",
+      "name": "Prompt Forge",
+      "description": "Curate weekly creative prompts and deliver masked asset bundles.",
+      "trigger": "manual",
+      "tags": ["creative", "content"],
+      "owner": {
+        "id": "user-avery",
+        "name": "Avery Quinn",
+        "email": "avery.owner@example.com"
+      },
+      "createdAt": "2024-10-20T14:00:00.000Z",
+      "updatedAt": "2024-11-08T16:20:00.000Z",
+      "compliance": {
+        "dataRegions": ["us-west-1"],
+        "piiHandling": "masked",
+        "maskingProfile": "masking-v4",
+        "lastReviewAt": "2024-11-07T15:00:00.000Z"
+      },
+      "deployment": {
+        "status": "published",
+        "lastDeployedAt": "2024-11-08T16:20:00.000Z",
+        "rollbackVersionId": "ver-lumen-prompt-forge-1"
+      },
+      "publishedVersionId": "ver-lumen-prompt-forge-2",
+      "versions": [
+        {
+          "id": "ver-lumen-prompt-forge-1",
+          "number": 1,
+          "status": "archived",
+          "author": "user-avery",
+          "changeSummary": "Initial publish with masked asset export",
+          "createdAt": "2024-10-20T14:00:00.000Z",
+          "updatedAt": "2024-10-20T14:00:00.000Z",
+          "definition": {
+            "name": "Prompt Forge",
+            "description": "Collect creative seeds and package prompts.",
+            "trigger": "manual",
+            "steps": [
+              {
+                "id": "step-gather",
+                "type": "ingest",
+                "name": "Gather Seeds",
+                "config": {
+                  "source": "notion"
+                }
+              },
+              {
+                "id": "step-compose",
+                "type": "generate",
+                "name": "Compose Prompts",
+                "config": {
+                  "model": "creative-diffusion-v1"
+                }
+              },
+              {
+                "id": "step-package",
+                "type": "package",
+                "name": "Package Assets",
+                "config": {
+                  "masking": "tokenize"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "ver-lumen-prompt-forge-2",
+          "number": 2,
+          "status": "published",
+          "author": "user-avery",
+          "changeSummary": "Add tone calibration step",
+          "createdAt": "2024-11-08T15:40:00.000Z",
+          "updatedAt": "2024-11-08T16:20:00.000Z",
+          "definition": {
+            "name": "Prompt Forge",
+            "description": "Collect creative seeds, calibrate tone, and package masked assets.",
+            "trigger": "manual",
+            "steps": [
+              {
+                "id": "step-gather",
+                "type": "ingest",
+                "name": "Gather Seeds",
+                "config": {
+                  "source": "notion"
+                }
+              },
+              {
+                "id": "step-tone",
+                "type": "analyze",
+                "name": "Calibrate Tone",
+                "config": {
+                  "guideline": "creative-tone-v3"
+                }
+              },
+              {
+                "id": "step-compose",
+                "type": "generate",
+                "name": "Compose Prompts",
+                "config": {
+                  "model": "creative-diffusion-v1"
+                }
+              },
+              {
+                "id": "step-package",
+                "type": "package",
+                "name": "Package Assets",
+                "config": {
+                  "masking": "tokenize"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "history": [
+        {
+          "id": "hist-lumen-prompt-forge-publish-v1",
+          "versionId": "ver-lumen-prompt-forge-1",
+          "versionNumber": 1,
+          "author": "user-avery",
+          "action": "published",
+          "summary": "Initial publish with masked asset export",
+          "timestamp": "2024-10-20T14:00:00.000Z"
+        },
+        {
+          "id": "hist-lumen-prompt-forge-publish-v2",
+          "versionId": "ver-lumen-prompt-forge-2",
+          "versionNumber": 2,
+          "author": "user-avery",
+          "action": "published",
+          "summary": "Add tone calibration step",
+          "timestamp": "2024-11-08T16:20:00.000Z"
         }
       ]
     }
