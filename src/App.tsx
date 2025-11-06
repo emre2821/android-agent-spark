@@ -14,37 +14,46 @@ import WorkflowRuns from "./pages/WorkflowRuns";
 import WorkflowRunNotifications from "@/components/WorkflowRunNotifications";
 import { WorkflowsProvider } from "@/hooks/use-workflows.tsx";
 import Workflows from "./pages/Workflows";
+import WorkflowsPreview from "./pages/WorkflowsPreview";
+import { ENABLE_CUSTOM_WORKFLOWS } from "@/config/featureFlags";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <AgentsProvider>
-        <WorkflowsProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <WorkflowRunNotifications />
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/agents/:id" element={<AgentDetail />} />
-                  <Route path="/workflow-runs" element={<WorkflowRuns />} />
-                  <Route path="/workflow-runs/:runId" element={<WorkflowRuns />} />
-                  <Route path="/workflows" element={<Workflows />} />
-                  {/* Place custom routes above the catch-all "*" route */}
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </WorkflowsProvider>
-      </AgentsProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const shell = (
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <WorkflowRunNotifications />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/agents/:id" element={<AgentDetail />} />
+            <Route path="/workflow-runs" element={<WorkflowRuns />} />
+            <Route path="/workflow-runs/:runId" element={<WorkflowRuns />} />
+            <Route
+              path="/workflows"
+              element={ENABLE_CUSTOM_WORKFLOWS ? <Workflows /> : <WorkflowsPreview />}
+            />
+            {/* Place custom routes above the catch-all "*" route */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  );
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AgentsProvider>
+          {ENABLE_CUSTOM_WORKFLOWS ? <WorkflowsProvider>{shell}</WorkflowsProvider> : shell}
+        </AgentsProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

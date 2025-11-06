@@ -77,6 +77,10 @@ python -m app.cli import-legacy
 The WebView loads `http://127.0.0.1:8000`, so pair it with a Termux session running the backend
 (or bundle the backend via Briefcase/Kivy using `docs/packaging_kivy.md`).
 
+> ⚠️ **Preview-only:** The Capacitor wrapper and the experimental Tauri desktop bundle have not been wired into full native
+> shells yet. Expect to perform manual integration work (native plugins, signing, store assets) before shipping binaries. Treat
+> the generated packages as developer previews until the release notes call out full support.
+
 ### Termux / On-device quickstart
 ```bash
 pkg install git python
