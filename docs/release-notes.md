@@ -52,3 +52,7 @@
 - Install native dependencies (`better-sqlite3`) after pulling the release and ensure build tooling is available (Node 18+, Python 3, a C++ toolchain).【F:package.json†L1-L160】
 - Configure new environment variables before deploying: `JWT_SECRET`, `AGENT_DB_PATH`, and `WORKFLOW_STORE_PATH` for the API plus `VITE_API_URL` for the SPA. Persist both the SQLite database and workflow JSON store across releases.【F:server/index.js†L40-L120】【F:server/storage.js†L1-L120】【F:server/workflowStore.js†L1-L80】【F:src/lib/api/config.ts†L1-L46】
 - Re-run the README quickstart to seed local storage: `npm install`, `npm run server`, `npm run dev`, then sign in with one of the bundled sample accounts (e.g. `avery.owner@example.com` / `password123`).【F:README.md†L13-L70】【F:server/data.js†L1-L120】
+
+## Unreleased
+- Track follow-up items in `docs/release-checklist.md` as they are planned.
+- Captured lint/test/build logs for this cycle in `docs/release-tracker.md` and added helper scripts that stage mobile and desktop shells alongside the web bundle before native packaging.
