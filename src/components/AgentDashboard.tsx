@@ -26,6 +26,7 @@ import { AgentSettingsDialog } from './AgentSettingsDialog';
 import { CreateAgentDialog, type CreateAgentFormValues } from './CreateAgentDialog';
 import { CredentialsManagerDialog } from './credentials/CredentialsManagerDialog';
 import { WorkflowDialog } from './WorkflowDialog';
+import { ENABLE_CUSTOM_WORKFLOWS } from '@/config/featureFlags';
 import { useAgents } from '@/hooks/use-agents';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
@@ -107,7 +108,8 @@ export const AgentDashboard: React.FC = () => {
     }
   };
 
-  const canManageWorkflows = roleAllows(currentRole, ['owner', 'admin', 'editor']);
+  const workflowsEnabled = ENABLE_CUSTOM_WORKFLOWS;
+  const canManageWorkflows = workflowsEnabled && roleAllows(currentRole, ['owner', 'admin', 'editor']);
   const canManageSettings = roleAllows(currentRole, ['owner', 'admin']);
   const canCreateAgent = roleAllows(currentRole, ['owner', 'admin', 'editor']);
   const canConfigureAgent = roleAllows(currentRole, ['owner', 'admin', 'editor']);
@@ -342,7 +344,9 @@ export const AgentDashboard: React.FC = () => {
         agentId={selectedAgentMemory ?? ''}
       />
 
-      <WorkflowDialog open={showWorkflowDialog} onClose={() => setShowWorkflowDialog(false)} />
+      {workflowsEnabled && (
+        <WorkflowDialog open={showWorkflowDialog} onClose={() => setShowWorkflowDialog(false)} />
+      )}
 
       <CredentialsManagerDialog
         open={showCredentialsDialog}
