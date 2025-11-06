@@ -42,6 +42,7 @@ npm install
 npm run dev
 ```
 This uses `concurrently` to launch both the FastAPI server (via the CLI) and the Vite dev server.
+> **Tip:** Run the command from the shell where your virtualenv is activated so the backend uses the correct Python interpreter.
 
 ### Docker
 ```bash

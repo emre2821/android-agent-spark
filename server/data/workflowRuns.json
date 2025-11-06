@@ -1,14 +1,14 @@
 {
   "runs": [
     {
-      "id": "run-aurora-qualification-20240512",
+      "id": "run-aurora-qualification-20241108",
       "workflowId": "wf-aurora-qualification",
       "workflowName": "Lead Qualification",
       "trigger": "webhook",
       "status": "completed",
-      "startedAt": "2024-05-12T10:32:10.000Z",
-      "updatedAt": "2024-05-12T10:33:42.000Z",
-      "completedAt": "2024-05-12T10:33:42.000Z",
+      "startedAt": "2024-11-08T10:32:10.000Z",
+      "updatedAt": "2024-11-08T10:34:05.000Z",
+      "completedAt": "2024-11-08T10:34:05.000Z",
       "currentAttempt": 1,
       "retryPolicy": {
         "strategy": "none",
@@ -18,12 +18,12 @@
       "history": [
         {
           "status": "running",
-          "timestamp": "2024-05-12T10:32:10.000Z",
+          "timestamp": "2024-11-08T10:32:10.000Z",
           "note": "Run accepted with masked payload"
         },
         {
           "status": "completed",
-          "timestamp": "2024-05-12T10:33:42.000Z",
+          "timestamp": "2024-11-08T10:34:05.000Z",
           "note": "Lead scored and routed"
         }
       ],
@@ -34,11 +34,11 @@
           "status": "completed",
           "attempt": 1,
           "maxAttempts": 1,
-          "startedAt": "2024-05-12T10:32:10.000Z",
-          "completedAt": "2024-05-12T10:32:20.000Z",
+          "startedAt": "2024-11-08T10:32:10.000Z",
+          "completedAt": "2024-11-08T10:32:25.000Z",
           "logs": [
             {
-              "timestamp": "2024-05-12T10:32:12.000Z",
+              "timestamp": "2024-11-08T10:32:15.000Z",
               "message": "Webhook payload masked"
             }
           ],
@@ -50,24 +50,24 @@
           "history": [
             {
               "status": "completed",
-              "timestamp": "2024-05-12T10:32:20.000Z",
+              "timestamp": "2024-11-08T10:32:25.000Z",
               "attempt": 1,
               "note": "Captured masked lead data"
             }
           ]
         },
         {
-          "id": "step-score",
-          "name": "Score Lead",
+          "id": "step-consent",
+          "name": "Confirm Consent",
           "status": "completed",
           "attempt": 1,
           "maxAttempts": 1,
-          "startedAt": "2024-05-12T10:32:20.000Z",
-          "completedAt": "2024-05-12T10:32:55.000Z",
+          "startedAt": "2024-11-08T10:32:25.000Z",
+          "completedAt": "2024-11-08T10:32:55.000Z",
           "logs": [
             {
-              "timestamp": "2024-05-12T10:32:35.000Z",
-              "message": "Scoring model lead-score-v2 applied"
+              "timestamp": "2024-11-08T10:32:45.000Z",
+              "message": "Consent policy consent-policy-v2 satisfied"
             }
           ],
           "retry": {
@@ -78,7 +78,35 @@
           "history": [
             {
               "status": "completed",
-              "timestamp": "2024-05-12T10:32:55.000Z",
+              "timestamp": "2024-11-08T10:32:55.000Z",
+              "attempt": 1,
+              "note": "Consent confirmed"
+            }
+          ]
+        },
+        {
+          "id": "step-score",
+          "name": "Score Lead",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-11-08T10:32:55.000Z",
+          "completedAt": "2024-11-08T10:33:25.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-11-08T10:33:10.000Z",
+              "message": "Scoring model lead-score-v3 applied"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-11-08T10:33:25.000Z",
               "attempt": 1,
               "note": "Score generated"
             }
@@ -90,11 +118,11 @@
           "status": "completed",
           "attempt": 1,
           "maxAttempts": 1,
-          "startedAt": "2024-05-12T10:32:55.000Z",
-          "completedAt": "2024-05-12T10:33:25.000Z",
+          "startedAt": "2024-11-08T10:33:25.000Z",
+          "completedAt": "2024-11-08T10:33:50.000Z",
           "logs": [
             {
-              "timestamp": "2024-05-12T10:33:10.000Z",
+              "timestamp": "2024-11-08T10:33:40.000Z",
               "message": "HubSpot enrichment returned masked payload"
             }
           ],
@@ -106,7 +134,7 @@
           "history": [
             {
               "status": "completed",
-              "timestamp": "2024-05-12T10:33:25.000Z",
+              "timestamp": "2024-11-08T10:33:50.000Z",
               "attempt": 1,
               "note": "Enrichment applied"
             }
@@ -118,11 +146,11 @@
           "status": "completed",
           "attempt": 1,
           "maxAttempts": 1,
-          "startedAt": "2024-05-12T10:33:25.000Z",
-          "completedAt": "2024-05-12T10:33:42.000Z",
+          "startedAt": "2024-11-08T10:33:50.000Z",
+          "completedAt": "2024-11-08T10:34:05.000Z",
           "logs": [
             {
-              "timestamp": "2024-05-12T10:33:35.000Z",
+              "timestamp": "2024-11-08T10:33:58.000Z",
               "message": "Lead routed to sales owner"
             }
           ],
@@ -134,7 +162,7 @@
           "history": [
             {
               "status": "completed",
-              "timestamp": "2024-05-12T10:33:42.000Z",
+              "timestamp": "2024-11-08T10:34:05.000Z",
               "attempt": 1,
               "note": "Owner assignment complete"
             }
@@ -145,15 +173,15 @@
       "errors": []
     },
     {
-      "id": "run-cobalt-escalation-20240510",
+      "id": "run-cobalt-escalation-20241107",
       "workflowId": "wf-cobalt-escalation",
       "workflowName": "Escalation Digest",
       "trigger": "schedule",
       "status": "failed",
-      "startedAt": "2024-05-10T18:40:00.000Z",
-      "updatedAt": "2024-05-10T19:02:00.000Z",
-      "completedAt": "2024-05-10T19:02:00.000Z",
-      "currentAttempt": 1,
+      "startedAt": "2024-11-07T18:40:00.000Z",
+      "updatedAt": "2024-11-07T19:02:00.000Z",
+      "completedAt": "2024-11-07T19:02:00.000Z",
+      "currentAttempt": 2,
       "retryPolicy": {
         "strategy": "exponential",
         "maxAttempts": 3,
@@ -162,13 +190,18 @@
       "history": [
         {
           "status": "running",
-          "timestamp": "2024-05-10T18:40:00.000Z",
+          "timestamp": "2024-11-07T18:40:00.000Z",
           "note": "Digest run started"
         },
         {
+          "status": "retrying",
+          "timestamp": "2024-11-07T18:52:00.000Z",
+          "note": "Zendesk sandbox token rotated, retry scheduled"
+        },
+        {
           "status": "failed",
-          "timestamp": "2024-05-10T19:02:00.000Z",
-          "note": "Zendesk sandbox token expired"
+          "timestamp": "2024-11-07T19:02:00.000Z",
+          "note": "PagerDuty notification blocked pending token validation"
         }
       ],
       "steps": [
@@ -176,33 +209,209 @@
           "id": "step-ingest",
           "name": "Collect Escalations",
           "status": "failed",
-          "attempt": 1,
+          "attempt": 2,
           "maxAttempts": 3,
-          "startedAt": "2024-05-10T18:40:00.000Z",
-          "completedAt": "2024-05-10T19:02:00.000Z",
+          "startedAt": "2024-11-07T18:40:00.000Z",
+          "completedAt": "2024-11-07T19:02:00.000Z",
           "logs": [
             {
-              "timestamp": "2024-05-10T18:59:00.000Z",
+              "timestamp": "2024-11-07T18:59:00.000Z",
               "message": "Zendesk API responded 401"
+            },
+            {
+              "timestamp": "2024-11-07T19:01:30.000Z",
+              "message": "Awaiting new MASKED::zendesk-token validation"
             }
           ],
           "retry": {
-            "attempts": 1,
+            "attempts": 2,
             "maxAttempts": 3,
-            "nextRetryAt": "2024-05-10T19:12:00.000Z"
+            "nextRetryAt": "2024-11-07T19:12:00.000Z"
           },
           "history": [
             {
               "status": "running",
-              "timestamp": "2024-05-10T18:40:00.000Z",
+              "timestamp": "2024-11-07T18:40:00.000Z",
               "attempt": 1,
               "note": "Ingest start"
             },
             {
-              "status": "failed",
-              "timestamp": "2024-05-10T19:02:00.000Z",
+              "status": "retrying",
+              "timestamp": "2024-11-07T18:52:00.000Z",
               "attempt": 1,
-              "note": "Token expired"
+              "note": "Token rotated"
+            },
+            {
+              "status": "failed",
+              "timestamp": "2024-11-07T19:02:00.000Z",
+              "attempt": 2,
+              "note": "Token validation pending"
+            }
+          ]
+        },
+        {
+          "id": "step-pagerduty",
+          "name": "PagerDuty Ping",
+          "status": "blocked",
+          "attempt": 0,
+          "maxAttempts": 1,
+          "startedAt": null,
+          "completedAt": null,
+          "logs": [],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": []
+        }
+      ],
+      "retryHistory": [
+        {
+          "attempt": 1,
+          "scheduledAt": "2024-11-07T18:52:00.000Z",
+          "reason": "Rotated Zendesk sandbox token"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "id": "run-lumen-prompt-forge-20241108",
+      "workflowId": "wf-lumen-prompt-forge",
+      "workflowName": "Prompt Forge",
+      "trigger": "manual",
+      "status": "completed",
+      "startedAt": "2024-11-08T16:05:00.000Z",
+      "updatedAt": "2024-11-08T16:18:30.000Z",
+      "completedAt": "2024-11-08T16:18:30.000Z",
+      "currentAttempt": 1,
+      "retryPolicy": {
+        "strategy": "none",
+        "maxAttempts": 1,
+        "intervalSeconds": 0
+      },
+      "history": [
+        {
+          "status": "running",
+          "timestamp": "2024-11-08T16:05:00.000Z",
+          "note": "Manual run kicked off by user-avery"
+        },
+        {
+          "status": "completed",
+          "timestamp": "2024-11-08T16:18:30.000Z",
+          "note": "Prompt bundle delivered"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step-gather",
+          "name": "Gather Seeds",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-11-08T16:05:00.000Z",
+          "completedAt": "2024-11-08T16:08:00.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-11-08T16:06:30.000Z",
+              "message": "Fetched MASKED::notion-block set"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-11-08T16:08:00.000Z",
+              "attempt": 1,
+              "note": "Seed collection complete"
+            }
+          ]
+        },
+        {
+          "id": "step-tone",
+          "name": "Calibrate Tone",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-11-08T16:08:00.000Z",
+          "completedAt": "2024-11-08T16:11:30.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-11-08T16:09:45.000Z",
+              "message": "Applied creative-tone-v3 baseline"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-11-08T16:11:30.000Z",
+              "attempt": 1,
+              "note": "Tone calibrated"
+            }
+          ]
+        },
+        {
+          "id": "step-compose",
+          "name": "Compose Prompts",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-11-08T16:11:30.000Z",
+          "completedAt": "2024-11-08T16:16:00.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-11-08T16:13:15.000Z",
+              "message": "Generated 6 masked prompts"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-11-08T16:16:00.000Z",
+              "attempt": 1,
+              "note": "Prompts generated"
+            }
+          ]
+        },
+        {
+          "id": "step-package",
+          "name": "Package Assets",
+          "status": "completed",
+          "attempt": 1,
+          "maxAttempts": 1,
+          "startedAt": "2024-11-08T16:16:00.000Z",
+          "completedAt": "2024-11-08T16:18:30.000Z",
+          "logs": [
+            {
+              "timestamp": "2024-11-08T16:17:45.000Z",
+              "message": "Tokenized assets and signed bundle"
+            }
+          ],
+          "retry": {
+            "attempts": 0,
+            "maxAttempts": 1,
+            "nextRetryAt": null
+          },
+          "history": [
+            {
+              "status": "completed",
+              "timestamp": "2024-11-08T16:18:30.000Z",
+              "attempt": 1,
+              "note": "Bundle delivered"
             }
           ]
         }
