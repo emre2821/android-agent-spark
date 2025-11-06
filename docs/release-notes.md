@@ -28,3 +28,4 @@
 
 ## Unreleased
 - Track follow-up items in `docs/release-checklist.md` as they are planned.
+- Captured lint/test/build logs for this cycle in `docs/release-tracker.md` and added helper scripts that stage mobile and desktop shells alongside the web bundle before native packaging.
