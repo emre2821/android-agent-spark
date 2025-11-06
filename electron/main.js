@@ -1,5 +1,9 @@
-const { app, BrowserWindow, nativeTheme } = require('electron');
-const path = require('path');
+import { app, BrowserWindow, nativeTheme } from 'electron';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const isDev = !app.isPackaged;
 const startUrl = process.env.ELECTRON_START_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
