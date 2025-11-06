@@ -15,9 +15,17 @@
       "riskLevel": "low",
       "region": "us-west-2",
       "deployStage": "production",
-      "createdAt": "2024-04-30T16:12:00.000Z",
-      "updatedAt": "2024-05-18T09:15:00.000Z",
-      "lastActive": "2024-05-18T09:20:00.000Z"
+      "complianceProfile": {
+        "maskingPolicy": "masking-v4",
+        "dataResidency": "us-west-2"
+      },
+      "integrationHealth": {
+        "zendeskSandbox": "healthy",
+        "slackWebhook": "healthy"
+      },
+      "createdAt": "2024-10-28T16:12:00.000Z",
+      "updatedAt": "2024-11-08T19:45:00.000Z",
+      "lastActive": "2024-11-08T19:47:30.000Z"
     },
     {
       "id": "agent-aurora-scout",
@@ -34,16 +42,24 @@
       "riskLevel": "medium",
       "region": "us-west-2",
       "deployStage": "staging",
-      "createdAt": "2024-05-05T09:30:00.000Z",
-      "updatedAt": "2024-05-18T08:52:00.000Z",
-      "lastActive": "2024-05-18T08:55:00.000Z"
+      "complianceProfile": {
+        "maskingPolicy": "masking-v4",
+        "dataResidency": "us-west-2"
+      },
+      "integrationHealth": {
+        "bigqueryReplica": "degraded",
+        "slackWebhook": "healthy"
+      },
+      "createdAt": "2024-11-01T09:30:00.000Z",
+      "updatedAt": "2024-11-08T18:20:00.000Z",
+      "lastActive": "2024-11-08T18:24:00.000Z"
     },
     {
       "id": "agent-cobalt-sentinel",
       "workspaceId": "workspace-cobalt",
       "name": "Support Sentinel",
       "description": "Summarizes escalations and drafts handoff notes for customer support.",
-      "status": "inactive",
+      "status": "active",
       "tags": ["support", "summaries"],
       "owner": {
         "id": "user-bailey",
@@ -53,9 +69,17 @@
       "riskLevel": "low",
       "region": "us-east-1",
       "deployStage": "production",
-      "createdAt": "2024-03-18T18:45:00.000Z",
-      "updatedAt": "2024-05-15T21:10:00.000Z",
-      "lastActive": "2024-05-15T19:02:00.000Z"
+      "complianceProfile": {
+        "maskingPolicy": "tokenization-v2",
+        "dataResidency": "us-east-1"
+      },
+      "integrationHealth": {
+        "zendeskSandbox": "validating",
+        "pagerdutySandbox": "healthy"
+      },
+      "createdAt": "2024-09-18T18:45:00.000Z",
+      "updatedAt": "2024-11-07T22:15:00.000Z",
+      "lastActive": "2024-11-07T22:18:40.000Z"
     },
     {
       "id": "agent-lumen-weaver",
@@ -72,59 +96,71 @@
       "riskLevel": "medium",
       "region": "us-west-1",
       "deployStage": "production",
-      "createdAt": "2024-04-22T14:20:00.000Z",
-      "updatedAt": "2024-05-18T07:40:00.000Z",
-      "lastActive": "2024-05-18T07:45:00.000Z"
+      "complianceProfile": {
+        "maskingPolicy": "masking-v4",
+        "dataResidency": "us-west-1"
+      },
+      "integrationHealth": {
+        "figmaLibrary": "healthy",
+        "slackWebhook": "healthy"
+      },
+      "createdAt": "2024-10-12T14:20:00.000Z",
+      "updatedAt": "2024-11-08T17:10:00.000Z",
+      "lastActive": "2024-11-08T17:12:10.000Z"
     }
   ],
   "tasks": [
     {
-      "id": "task-aurora-inbox-001",
+      "id": "task-aurora-inbox-109",
       "agentId": "agent-aurora-orbit",
-      "title": "Process high-priority inbox triage",
+      "title": "Process masked priority queue",
       "status": "completed",
-      "log": "Surrogate contact IDs applied; export verified against masking policy v3.",
+      "log": "Applied surrogate requester IDs and replayed masking profile v4 checks.",
       "labels": ["triage", "ops"],
       "sloSeconds": 300,
-      "createdAt": "2024-05-18T09:05:00.000Z",
-      "updatedAt": "2024-05-18T09:20:00.000Z",
-      "completedAt": "2024-05-18T09:20:00.000Z"
+      "slaBreached": false,
+      "createdAt": "2024-11-08T19:32:00.000Z",
+      "updatedAt": "2024-11-08T19:47:30.000Z",
+      "completedAt": "2024-11-08T19:47:30.000Z"
     },
     {
-      "id": "task-aurora-scout-052",
+      "id": "task-aurora-scout-089",
       "agentId": "agent-aurora-scout",
-      "title": "Refresh telemetry extract for APAC region",
+      "title": "Stream telemetry sample for APAC shard",
       "status": "running",
-      "log": "Streaming masked metrics sample for validator checksum.",
+      "log": "Streaming MASKED::telemetry-window payload; checksum validation pending.",
       "labels": ["data-pipeline"],
       "sloSeconds": 900,
-      "createdAt": "2024-05-18T08:30:00.000Z",
-      "updatedAt": "2024-05-18T08:55:00.000Z",
+      "slaBreached": false,
+      "createdAt": "2024-11-08T18:05:00.000Z",
+      "updatedAt": "2024-11-08T18:24:00.000Z",
       "completedAt": null
     },
     {
-      "id": "task-cobalt-sentinel-327",
+      "id": "task-cobalt-sentinel-412",
       "agentId": "agent-cobalt-sentinel",
       "title": "Draft escalation digest for shift change",
-      "status": "failed",
-      "log": "Zendesk sandbox token rotated; awaiting validation before retry.",
+      "status": "running",
+      "log": "Zendesk sandbox token rotated; revalidating MASKED::ticket-bundle.",
       "labels": ["support"],
       "sloSeconds": 420,
-      "createdAt": "2024-05-15T18:40:00.000Z",
-      "updatedAt": "2024-05-15T19:02:00.000Z",
-      "completedAt": "2024-05-15T19:02:00.000Z"
+      "slaBreached": false,
+      "createdAt": "2024-11-07T21:55:00.000Z",
+      "updatedAt": "2024-11-07T22:18:40.000Z",
+      "completedAt": null
     },
     {
-      "id": "task-lumen-weaver-104",
+      "id": "task-lumen-weaver-208",
       "agentId": "agent-lumen-weaver",
-      "title": "Assemble weekly creative prompt set",
+      "title": "Assemble luminous creative prompt set",
       "status": "completed",
-      "log": "All reference assets tokenized; distribution package signed.",
+      "log": "Tokenized reference assets; signed distribution manifest with masked client tags.",
       "labels": ["creative"],
       "sloSeconds": 600,
-      "createdAt": "2024-05-18T07:10:00.000Z",
-      "updatedAt": "2024-05-18T07:45:00.000Z",
-      "completedAt": "2024-05-18T07:45:00.000Z"
+      "slaBreached": false,
+      "createdAt": "2024-11-08T16:40:00.000Z",
+      "updatedAt": "2024-11-08T17:12:10.000Z",
+      "completedAt": "2024-11-08T17:12:10.000Z"
     }
   ],
   "memories": [
@@ -137,9 +173,10 @@
       "source": "manual-entry",
       "visibility": "internal",
       "masked": false,
-      "createdAt": "2024-04-30T16:15:00.000Z",
-      "updatedAt": "2024-05-18T09:00:00.000Z",
-      "timestamp": "2024-05-18T09:00:00.000Z"
+      "retentionPolicy": "retain-30-days",
+      "createdAt": "2024-10-28T16:15:00.000Z",
+      "updatedAt": "2024-11-08T18:50:00.000Z",
+      "timestamp": "2024-11-08T18:50:00.000Z"
     },
     {
       "id": "memory-aurora-orbit-channel",
@@ -150,9 +187,10 @@
       "source": "settings-sync",
       "visibility": "internal",
       "masked": true,
-      "createdAt": "2024-04-30T17:00:00.000Z",
-      "updatedAt": "2024-05-18T08:45:00.000Z",
-      "timestamp": "2024-05-18T08:45:00.000Z"
+      "retentionPolicy": "retain-14-days",
+      "createdAt": "2024-10-28T17:00:00.000Z",
+      "updatedAt": "2024-11-08T18:40:00.000Z",
+      "timestamp": "2024-11-08T18:40:00.000Z"
     },
     {
       "id": "memory-aurora-scout-refresh",
@@ -163,9 +201,10 @@
       "source": "analytics-policy",
       "visibility": "internal",
       "masked": false,
-      "createdAt": "2024-05-05T09:35:00.000Z",
-      "updatedAt": "2024-05-18T08:52:00.000Z",
-      "timestamp": "2024-05-18T08:52:00.000Z"
+      "retentionPolicy": "retain-60-days",
+      "createdAt": "2024-11-01T09:35:00.000Z",
+      "updatedAt": "2024-11-08T18:20:00.000Z",
+      "timestamp": "2024-11-08T18:20:00.000Z"
     },
     {
       "id": "memory-cobalt-sentinel-scrub",
@@ -176,9 +215,10 @@
       "source": "audit-log",
       "visibility": "restricted",
       "masked": false,
-      "createdAt": "2024-03-20T08:10:00.000Z",
-      "updatedAt": "2024-05-15T16:55:00.000Z",
-      "timestamp": "2024-05-15T16:55:00.000Z"
+      "retentionPolicy": "retain-180-days",
+      "createdAt": "2024-09-20T08:10:00.000Z",
+      "updatedAt": "2024-11-07T22:10:00.000Z",
+      "timestamp": "2024-11-07T22:10:00.000Z"
     },
     {
       "id": "memory-lumen-weaver-tone",
@@ -189,9 +229,10 @@
       "source": "creative-brief",
       "visibility": "internal",
       "masked": false,
-      "createdAt": "2024-04-22T14:30:00.000Z",
-      "updatedAt": "2024-05-18T07:40:00.000Z",
-      "timestamp": "2024-05-18T07:40:00.000Z"
+      "retentionPolicy": "retain-90-days",
+      "createdAt": "2024-10-12T14:30:00.000Z",
+      "updatedAt": "2024-11-08T17:10:00.000Z",
+      "timestamp": "2024-11-08T17:10:00.000Z"
     }
   ]
 }
