@@ -36,7 +36,15 @@ function stageDesktopBundle(projectRoot) {
   const webDist = path.join(projectRoot, 'web', 'dist');
   const electronMain = path.join(projectRoot, 'electron', 'main.js');
 
-  fs.rmSync(distRoot, { recursive: true, force: true });
+  // Safety check: Only remove distRoot if it matches the expected pattern
+  if (
+    distRoot.endsWith(path.join('dist', 'desktop')) &&
+    distRoot.startsWith(projectRoot)
+  ) {
+    fs.rmSync(distRoot, { recursive: true, force: true });
+  } else {
+    throw new Error(`Refusing to remove unexpected distRoot: ${distRoot}`);
+  }
   fs.mkdirSync(resourcesDir, { recursive: true });
 
   console.log(`Copying web build from ${webDist} to ${path.join(resourcesDir, 'web')}`);
