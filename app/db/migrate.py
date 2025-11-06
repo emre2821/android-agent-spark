@@ -20,7 +20,6 @@ def run_migrations() -> None:
     existing_tables = inspector.get_table_names()
     if existing_tables:
         logger.debug("Database already has tables: %s", existing_tables)
-        return
 
     Base.metadata.create_all(bind=engine)
     settings = get_settings()
