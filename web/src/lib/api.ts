@@ -76,14 +76,22 @@ export const resolveConfiguredApiKey = (): string | null => {
     return fromSettings;
   }
 
-  const fromLocalStorage = readFromStorage(globalScope.localStorage);
-  if (fromLocalStorage) {
-    return fromLocalStorage;
+  try {
+    const fromLocalStorage = readFromStorage(globalScope.localStorage);
+    if (fromLocalStorage) {
+      return fromLocalStorage;
+    }
+  } catch {
+    // Accessing storage can throw in some browsers (e.g., Safari private mode)
   }
 
-  const fromSessionStorage = readFromStorage(globalScope.sessionStorage);
-  if (fromSessionStorage) {
-    return fromSessionStorage;
+  try {
+    const fromSessionStorage = readFromStorage(globalScope.sessionStorage);
+    if (fromSessionStorage) {
+      return fromSessionStorage;
+    }
+  } catch {
+    // Accessing storage can throw in some browsers (e.g., Safari private mode)
   }
 
   const globalCandidates = [
