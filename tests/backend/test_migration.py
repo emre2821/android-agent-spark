@@ -5,13 +5,15 @@ import os
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import Integer, inspect, select
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config import get_settings
 from app.db.legacy import migrate_legacy_vault
 from app.db.migrate import run_migrations
-from app.db.session import get_sessionmaker, reset_engine
+from app.db.session import get_engine, get_sessionmaker, reset_engine
 from app.models.vault import VaultRecord
+from app.db.base import Base
 
 
 @pytest.fixture()
@@ -54,3 +56,32 @@ def test_corrupt_file_moved(setup_db: Path):
     corrupt_dir = Path(os.environ["AGENT_SPARK_DB_PATH"]).parent / "corrupt"
     assert corrupt_dir.exists()
     assert any(child.name.startswith(legacy_path.name) for child in corrupt_dir.iterdir())
+
+
+def test_run_migrations_creates_new_tables_without_data_loss(setup_db: Path):
+    SessionLocal = get_sessionmaker()
+    with SessionLocal() as session:
+        record = VaultRecord(theme="aurora", posts=[{"body": "light"}])
+        session.add(record)
+        session.commit()
+        existing_id = record.id
+
+    class NewModel(Base):
+        __tablename__ = "new_model"
+
+        id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    run_migrations()
+
+    engine = get_engine()
+    inspector = inspect(engine)
+    assert "new_model" in inspector.get_table_names()
+
+    SessionLocal = get_sessionmaker()
+    with SessionLocal() as session:
+        records = session.scalars(select(VaultRecord)).all()
+        assert [r.id for r in records] == [existing_id]
+
+    # Clean up the dynamically declared model from metadata for other tests
+    Base.metadata.remove(NewModel.__table__)
+    Base.registry._class_registry.pop(NewModel.__name__, None)
