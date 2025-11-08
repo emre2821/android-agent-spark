@@ -1,8 +1,8 @@
 # Troubleshooting
 
 ## Dev server will not connect to the API
-- Ensure `npm run server` is running on port 3001.
-- If another process already uses the port, export `PORT=3002` before starting the server and update the client fetch URL temporarily.
+- Ensure the backend is running with `npm run dev:backend` (or `npm run dev`, which starts both services) on port 8000.
+- If another process already uses port 8000, pass a new value to the CLI: `npm run dev:backend -- --port 8001`. Update the client fetch URL temporarily so it targets the new port.
 - When working behind a corporate proxy, add the host to your allow list because Vite defaults to IPv6 (`::`). Use `npm run dev -- --host 127.0.0.1` if IPv6 routing fails.
 - If the dashboard immediately redirects back to `/login`, confirm `JWT_SECRET` is consistent between server restarts. Clearing `localStorage` and restarting the API usually resolves stale tokens.【F:server/index.js†L1-L120】【F:src/hooks/use-auth.tsx†L1-L123】
 
