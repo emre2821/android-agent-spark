@@ -6,13 +6,12 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 import {
-  workspaces,
-import {
   workspaceResources,
   findUserByEmail,
   findUserById,
   getWorkspaceById,
   getWorkspaceSummary,
+  getWorkspaceMembers,
 } from './data.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-20241109';
@@ -208,21 +207,17 @@ export const createServer = () => {
   });
 
   app.get('/workspaces/:workspaceId/members', authenticate, authorizeWorkspace, (req, res) => {
-    const workspace = getWorkspaceById(req.workspace.id);
-    const members = workspaces
-      .find((item) => item.id === workspace.id)
-      ?.members?.map((member) => sanitizeUser(findUserById(member.userId)))
-      .filter(Boolean);
+    const members = getWorkspaceMembers(req.workspace.id);
 
-    if (!members) {
+    if (members.length === 0) {
       return res.status(404).json({ message: 'Workspace members not found.' });
     }
 
-    return res.json(members);
+    return res.json(members.map((member) => ({ ...sanitizeUser(member), role: member.role })));
   });
 
   app.get('/workspaces/:workspaceId/insights', authenticate, authorizeWorkspace, (req, res) => {
-    const {insights} = req.workspaceResources;
+    const { insights } = req.workspaceResources;
     if (!insights) {
       return res.status(404).json({ message: 'Workspace insights not found.' });
     }
@@ -254,9 +249,6 @@ const isDirectExecution = () => {
 if (process.env.NODE_ENV !== 'test' && isDirectExecution()) {
   startServer();
 }
-
-  return app;
-};
 
 export const startWorkspaceServer = ({ port = Number.parseInt(process.env.PORT ?? '3001', 10), onListen } = {}) => {
   const app = createServer();

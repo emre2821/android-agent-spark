@@ -191,3 +191,20 @@ export const getWorkspaceSummary = (workspaceId) => {
     runCount: resources.runs.length,
   };
 };
+
+export const getWorkspaceMembers = (workspaceId) =>
+  users
+    .map((user) => {
+      const membership = user.workspaces.find((workspace) => workspace.id === workspaceId);
+      if (!membership) {
+        return null;
+      }
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: membership.role,
+      };
+    })
+    .filter(Boolean);
