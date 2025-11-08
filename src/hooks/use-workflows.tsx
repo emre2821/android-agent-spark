@@ -39,11 +39,18 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       getWorkflows: () => workflows,
       setWorkflows,
     }),
+    [workflows, setWorkflows],
     [workflows],
   );
 
-  const manager = useMemo(() => createWorkflowsManager(controller), [controller]);
-  const service = useMemo(() => createWorkflowService(controller), [controller]);
+  const manager = useMemo(
+    () => createWorkflowsManager(controller),
+    [controller, setWorkflows],
+  );
+  const service = useMemo(
+    () => createWorkflowService(controller),
+    [controller, setWorkflows],
+  );
 
   const getWorkflowById = useCallback(
     (workflowId: string) => service.getWorkflowById(workflowId),
@@ -113,6 +120,17 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       isDeleting,
     }),
     [
+      deleteWorkflow,
+      duplicateWorkflow,
+      getWorkflowById,
+      isDeleting,
+      isDuplicating,
+      isPublishing,
+      isSaving,
+      manager,
+      publishWorkflow,
+      saveWorkflow,
+      workflows,
       workflows,
       manager,
       getWorkflowById,
