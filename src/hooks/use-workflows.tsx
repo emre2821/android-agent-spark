@@ -98,13 +98,6 @@ interface WorkflowsManager {
 
 interface WorkflowsContextValue extends WorkflowsManager, WorkflowServiceState {
   workflows: Workflow[];
-  getWorkflowById: (workflowId: string) => Workflow | undefined;
-  saveWorkflow: (payload: WorkflowUpsert) => Promise<Workflow>;
-  publishWorkflow: (workflowId: string) => Promise<Workflow>;
-  duplicateWorkflow: (workflowId: string) => Promise<Workflow>;
-  isSaving: boolean;
-  isPublishing: boolean;
-  isDuplicating: boolean;
 }
 
 const WorkflowsContext = createContext<WorkflowsContextValue | undefined>(undefined);
@@ -359,11 +352,16 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       setWorkflows,
     }),
     [workflows, setWorkflows],
-    [workflows],
   );
 
-  const manager = useMemo(() => createWorkflowsManager(controller), [controller]);
-  const service = useMemo(() => createWorkflowService(controller), [controller]);
+  const manager = useMemo(
+    () => createWorkflowsManager(controller),
+    [controller, setWorkflows],
+  );
+  const service = useMemo(
+    () => createWorkflowService(controller),
+    [controller, setWorkflows],
+  );
 
   const getWorkflowById = useCallback(
     (workflowId: string) => service.getWorkflowById(workflowId),
@@ -557,13 +555,6 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
   const value = useMemo<WorkflowsContextValue>(
     () => ({
       workflows,
-      getWorkflowById,
-      saveWorkflow,
-      publishWorkflow,
-      duplicateWorkflow,
-      isSaving,
-      isPublishing,
-      isDuplicating,
       ...manager,
       getWorkflowById,
       saveWorkflow,
@@ -587,15 +578,6 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       publishWorkflow,
       saveWorkflow,
       workflows,
-      workflows,
-      getWorkflowById,
-      saveWorkflow,
-      publishWorkflow,
-      duplicateWorkflow,
-      isSaving,
-      isPublishing,
-      isDuplicating,
-      manager,
     ],
   );
 
