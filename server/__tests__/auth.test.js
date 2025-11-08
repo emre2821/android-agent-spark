@@ -63,4 +63,17 @@ describe('workspace isolation', () => {
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body.every((cred) => cred.id.startsWith('aurora-cred'))).toBe(true);
   });
+
+  it('returns the member roster with role assignments for a workspace', async () => {
+    const token = await loginAs('avery.owner@example.com');
+    const response = await request(app)
+      .get('/workspaces/workspace-aurora/members')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBeGreaterThan(0);
+    expect(response.body.every((member) => typeof member.role === 'string')).toBe(true);
+    expect(response.body.some((member) => member.role === 'owner')).toBe(true);
+  });
 });
