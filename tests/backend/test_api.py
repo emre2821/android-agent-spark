@@ -33,6 +33,7 @@ async def test_client_with_auth(tmp_path: Path):
     reset_engine()
     os.environ["AGENT_SPARK_DB_PATH"] = str(tmp_path / "db.sqlite")
     os.environ["AGENT_SPARK_DEV_MODE"] = "false"
+    os.environ["AGENT_SPARK_API_KEY"] = "secret"
     os.environ["AGENT_SPARK_API_KEY"] = "test-secret"
     os.environ["AGENT_SPARK_SCHEDULER_ENABLED"] = "false"
     os.environ["AGENT_SPARK_DATA_DIR"] = str(tmp_path)
@@ -41,6 +42,8 @@ async def test_client_with_auth(tmp_path: Path):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://testserver") as client:
             yield client
+    os.environ.pop("AGENT_SPARK_API_KEY", None)
+    os.environ.pop("AGENT_SPARK_DEV_MODE", None)
 
 
 @pytest.mark.asyncio()
@@ -91,6 +94,35 @@ async def test_ritual_logging(test_client: AsyncClient):
 
 @pytest.mark.asyncio()
 async def test_api_key_required_when_dev_mode_disabled(test_client_with_auth: AsyncClient):
+    payload = {"name": "Echo", "traits": {"mood": "calm"}}
+
+    missing_key_response = await test_client_with_auth.post("/agents", json=payload)
+    assert missing_key_response.status_code == 401
+
+    wrong_key_response = await test_client_with_auth.post(
+        "/agents", json=payload, headers={"X-API-Key": "wrong"}
+    )
+    assert wrong_key_response.status_code == 401
+
+    empty_key_response = await test_client_with_auth.post(
+        "/agents", json=payload, headers={"X-API-Key": ""}
+    )
+    assert empty_key_response.status_code == 401
+
+    casing_mismatch_response = await test_client_with_auth.post(
+        "/agents", json=payload, headers={"X-API-Key": "SECRET"}
+    )
+    assert casing_mismatch_response.status_code == 401
+
+    multiple_values_response = await test_client_with_auth.post(
+        "/agents", json=payload, headers=[("X-API-Key", "wrong"), ("X-API-Key", "secret")]
+    )
+    assert multiple_values_response.status_code == 401
+
+    valid_key_response = await test_client_with_auth.post(
+        "/agents", json=payload, headers={"X-API-Key": "secret"}
+    )
+    assert valid_key_response.status_code == 201
     missing_key_response = await test_client_with_auth.post(
         "/agents", json={"name": "Echo", "traits": {"mood": "calm"}}
     )
