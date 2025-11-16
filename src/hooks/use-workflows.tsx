@@ -40,7 +40,6 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       setWorkflows,
     }),
     [workflows, setWorkflows],
-    [workflows],
   );
 
   const manager = useMemo(
@@ -120,17 +119,6 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
       isDeleting,
     }),
     [
-      deleteWorkflow,
-      duplicateWorkflow,
-      getWorkflowById,
-      isDeleting,
-      isDuplicating,
-      isPublishing,
-      isSaving,
-      manager,
-      publishWorkflow,
-      saveWorkflow,
-      workflows,
       workflows,
       manager,
       getWorkflowById,
