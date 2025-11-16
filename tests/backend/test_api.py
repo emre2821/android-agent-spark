@@ -33,8 +33,9 @@ async def test_client_with_auth(tmp_path: Path):
     reset_engine()
     os.environ["AGENT_SPARK_DB_PATH"] = str(tmp_path / "db.sqlite")
     os.environ["AGENT_SPARK_DEV_MODE"] = "false"
+    # Ensure the fixture configures a single deterministic API key value so the
+    # expectations later in the test reflect the actual backend requirement.
     os.environ["AGENT_SPARK_API_KEY"] = "secret"
-    os.environ["AGENT_SPARK_API_KEY"] = "test-secret"
     os.environ["AGENT_SPARK_SCHEDULER_ENABLED"] = "false"
     os.environ["AGENT_SPARK_DATA_DIR"] = str(tmp_path)
     app = create_app()
