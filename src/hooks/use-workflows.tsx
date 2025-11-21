@@ -35,10 +35,7 @@ export const WorkflowsProvider = ({ children }: { children: React.ReactNode }) =
   const [isDeleting, setIsDeleting] = useState(false);
 
   const controller = useMemo<WorkflowsController>(
-    () => ({
-      getWorkflows: () => workflows,
-      setWorkflows,
-    }),
+    () => ({ getWorkflows: () => workflows, setWorkflows }),
     [workflows, setWorkflows],
   );
 
