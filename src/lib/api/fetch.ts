@@ -1,4 +1,5 @@
 import { getStoredAuthToken, getStoredWorkspaceId } from '@/lib/auth/storage';
+import { parseResponseText, extractErrorMessage } from '@/lib/utils/fetch';
 
 const withAuthContext = (init?: RequestInit): RequestInit => {
   const headers = new Headers(init?.headers ?? {});
@@ -25,15 +26,9 @@ export const fetchJson = async <T,>(input: RequestInfo, init?: RequestInit): Pro
   const text = await response.text();
 
   if (!response.ok) {
-    try {
-      const data = text ? JSON.parse(text) : {};
-      throw new Error(data.error ?? response.statusText);
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        throw new Error(response.statusText);
-      }
-      throw error;
-    }
+    const data = parseResponseText(text);
+    const message = extractErrorMessage(data, response.statusText);
+    throw new Error(message);
   }
 
   if (!text) {

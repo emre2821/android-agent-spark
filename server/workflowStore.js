@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { parseExpression } from './utils/cron.js';
+import { nowIso } from './utils/timestamp.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,7 +47,7 @@ export class WorkflowStore {
   }
 
   _touchRun(run, overrides = {}) {
-    const timestamp = new Date().toISOString();
+    const timestamp = nowIso();
     run.updatedAt = timestamp;
     if (RUN_TERMINAL_STATUSES.has(run.status) && !run.completedAt) {
       run.completedAt = timestamp;
@@ -56,7 +57,7 @@ export class WorkflowStore {
   }
 
   _pushRunHistory(run, status, note) {
-    const timestamp = new Date().toISOString();
+    const timestamp = nowIso();
     run.history.push({ status, timestamp, note });
     run.status = status;
     run.updatedAt = timestamp;
@@ -67,7 +68,7 @@ export class WorkflowStore {
   }
 
   _pushStepHistory(step, status, attempt, note) {
-    const timestamp = new Date().toISOString();
+    const timestamp = nowIso();
     step.history.push({ status, timestamp, attempt, note });
     step.status = status;
     return timestamp;
@@ -105,7 +106,7 @@ export class WorkflowStore {
       throw new Error('Workflow run requires at least one step');
     }
 
-    const timestamp = new Date().toISOString();
+    const timestamp = nowIso();
     const retryPolicy = payload.retryPolicy ?? {
       strategy: 'none',
       maxAttempts: 1,
@@ -164,7 +165,7 @@ export class WorkflowStore {
       throw new Error('Run not found');
     }
     const step = this._getRunStep(run, stepId);
-    const timestamp = new Date().toISOString();
+    const timestamp = nowIso();
     const entry = {
       id: this.generateId(),
       timestamp,
@@ -185,7 +186,7 @@ export class WorkflowStore {
       throw new Error('Run not found');
     }
     const step = this._getRunStep(run, stepId);
-    const now = new Date().toISOString();
+    const now = nowIso();
 
     if (result.log) {
       step.logs.push({
@@ -293,7 +294,7 @@ export class WorkflowStore {
     if (!run) {
       throw new Error('Run not found');
     }
-    const now = new Date().toISOString();
+    const now = nowIso();
     run.currentAttempt += 1;
     run.history.push({ status: 'retrying', timestamp: now, note: reason ?? 'Manual retry requested' });
     run.retryHistory.push({
@@ -498,7 +499,7 @@ function normalizeWorkflow(input) {
 }
 
 function createWorkflowRecord(payload) {
-  const now = new Date().toISOString();
+  const now = nowIso();
   const workflowId = payload.id ?? randomUUID();
   return {
     id: workflowId,
@@ -523,7 +524,7 @@ function mergeWorkflow(current, updates) {
       ? updates.triggers.map((trigger) => normalizeTrigger(trigger, current.id))
       : current.triggers,
     runs: updates.runs ?? current.runs,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso(),
   };
 }
 
@@ -594,7 +595,7 @@ export async function listWorkflowTriggers(workflowId) {
 }
 
 function buildTriggerRecord(workflowId, payload) {
-  const now = new Date().toISOString();
+  const now = nowIso();
   const base = {
     id: payload.id ?? randomUUID(),
     workflowId,
@@ -619,7 +620,7 @@ export async function createWorkflowTrigger(workflowId, payload) {
     const trigger = buildTriggerRecord(workflowId, payload);
     data.workflows[index].triggers = data.workflows[index].triggers ?? [];
     data.workflows[index].triggers.push(trigger);
-    data.workflows[index].updatedAt = new Date().toISOString();
+    data.workflows[index].updatedAt = nowIso();
     await writeStore(data);
     return normalizeTrigger(trigger, workflowId);
   });
@@ -646,11 +647,11 @@ export async function updateWorkflowTrigger(workflowId, triggerId, updates) {
         ...(updates.config ?? {}),
       },
       metadata: updates.metadata ?? current.metadata,
-      updatedAt: new Date().toISOString(),
+      updatedAt: nowIso(),
     };
     const normalized = normalizeTrigger(merged, workflowId);
     data.workflows[workflowIndex].triggers[triggerIndex] = normalized;
-    data.workflows[workflowIndex].updatedAt = new Date().toISOString();
+    data.workflows[workflowIndex].updatedAt = nowIso();
     await writeStore(data);
     return normalizeTrigger(normalized, workflowId);
   });
@@ -669,7 +670,7 @@ export async function deleteWorkflowTrigger(workflowId, triggerId) {
     if (data.workflows[workflowIndex].triggers.length === initialLength) {
       throw new Error('Trigger not found');
     }
-    data.workflows[workflowIndex].updatedAt = new Date().toISOString();
+    data.workflows[workflowIndex].updatedAt = nowIso();
     await writeStore(data);
     return true;
   });
@@ -691,7 +692,7 @@ export async function createWorkflowRunRecord(workflowId, payload) {
     if (workflowIndex === -1) {
       throw new Error('Workflow not found');
     }
-    const now = new Date().toISOString();
+    const now = nowIso();
     const run = {
       id: payload.id ?? randomUUID(),
       workflowId,
@@ -705,7 +706,7 @@ export async function createWorkflowRunRecord(workflowId, payload) {
     };
     data.workflows[workflowIndex].runs = data.workflows[workflowIndex].runs ?? [];
     data.workflows[workflowIndex].runs.push(run);
-    data.workflows[workflowIndex].updatedAt = new Date().toISOString();
+    data.workflows[workflowIndex].updatedAt = nowIso();
     await writeStore(data);
     return { ...run };
   });
@@ -732,7 +733,7 @@ export async function updateWorkflowRunRecord(workflowId, runId, updates) {
       error: updates.error ?? current.error,
     };
     data.workflows[workflowIndex].runs[runIndex] = updated;
-    data.workflows[workflowIndex].updatedAt = new Date().toISOString();
+    data.workflows[workflowIndex].updatedAt = nowIso();
     await writeStore(data);
     return { ...updated };
   });
