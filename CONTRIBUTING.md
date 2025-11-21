@@ -1,36 +1,35 @@
-# Contributing Guidelines
+# Contributing to Android Agent Spark
 
-Thank you for helping Android Agent Spark grow. Follow these expectations so every contribution is easy to review and safe to merge.
+Thank you for helping improve Android Agent Spark. Please follow these guidelines to keep the project healthy and shippable.
 
-## Development workflow
-1. Fork the repository (or create a feature branch if you have push access).
-2. Run through the quickstart steps in the README to make sure dev + mock API servers run locally.
-3. Keep pull requests scoped—prefer many small PRs over a single monolith.
+## Branching and workflow
+- Fork the repo and create feature branches from `develop`.
+- Open pull requests targeting `develop`. Maintainers will fast-forward or merge to `main` for releases.
+- Keep PRs focused and small; include screenshots or logs for UI changes or failing tests you fixed.
 
-## Coding standards
-- Use TypeScript for application logic; co-locate component tests beside the component.
-- Reuse UI primitives from `src/components/ui` instead of duplicating styles.
-- Avoid introducing new state managers; extend `useAgents` or React Query where possible.
-- Do not wrap imports in `try/catch` (per repository convention).
+## Code style
+- Use TypeScript/JavaScript ES modules with clear, descriptive names.
+- Prefer functional, composable React components.
+- Avoid try/catch around imports and keep error handling near the call site.
+- Run formatters/linters before pushing (see scripts below).
 
-## Quality checks
-Run the full suite before asking for review:
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run test:e2e
-```
-If any command fails, fix the regression and re-run.
+## Testing and verification
+- Add or update unit tests alongside code changes.
+- For UI flows, add a minimal e2e or integration test when feasible.
+- Ensure Docker-based demo still runs when touching build or env variables.
 
-## Commit & PR hygiene
-- Use conventional commit messages when possible (e.g., `feat: add timeline widget`).
-- Include screenshots or recordings for notable UI changes.
-- Reference relevant issues and describe testing performed in the PR body.
-- Keep documentation current—update files under `docs/` if your change alters behaviour.
+## Local development scripts
+Run commands from the repository root unless noted:
+- Lint: `npm run lint`
+- Unit tests: `npm test`
+- Build (web + server): `npm run build`
+- Web dev server: `npm run dev:web`
+- API dev server: `npm run dev:server`
+- Combined dev (web + server): `npm run dev`
 
-## Code of conduct
-- Be respectful and collaborative.
-- Prefer async feedback (comments, suggestions) over force-pushes.
-- Honour Eden’s ethics: protect autonomy, honor memory, and never misrepresent prior work.
-
+## Pull request checklist
+- [ ] Rebased on latest `develop`.
+- [ ] Lint, test, and build scripts pass locally.
+- [ ] Added docs or comments for new behavior.
+- [ ] Included relevant screenshots or artifacts for UI changes.
+- [ ] Updated `.env.example` if configuration changed.
