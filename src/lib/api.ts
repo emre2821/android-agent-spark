@@ -1,4 +1,5 @@
 import { API_BASE } from '@/hooks/use-agents';
+import { parseResponseText, extractErrorMessage } from './utils/fetch';
 
 type JsonValue =
   | string
@@ -27,23 +28,11 @@ export async function apiRequest<T = unknown>(path: string, init: RequestInitWit
   });
 
   const text = await response.text();
-  let data: unknown = null;
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-  }
+  const data = parseResponseText(text);
 
   if (!response.ok) {
-    const message =
-      typeof data === 'string'
-        ? data
-        : typeof data === 'object' && data !== null && 'message' in (data as Record<string, unknown>)
-        ? ((data as Record<string, unknown>).message as string | undefined)
-        : undefined;
-    throw new Error(message || 'Request failed');
+    const message = extractErrorMessage(data);
+    throw new Error(message);
   }
 
   if (data && typeof data === 'object' && 'data' in (data as Record<string, unknown>)) {
