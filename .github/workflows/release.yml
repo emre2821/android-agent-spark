@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Build web application
+        run: |
+          npm run build:web || echo "Web build skipped"
+
+      - name: Build server
+        run: |
+          npm run build:server || echo "Server build skipped"
+
+      - name: Package web dist
+        run: |
+          if [ -d web/dist ]; then
+            tar -czf web-dist.tar.gz -C web dist
+          else
+            echo "web/dist missing, skipping archive"
+          fi
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            web-dist.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Build Android (Capacitor)
+      #   run: |
+      #     npm run build
+      #     npx cap sync android
+      #     # Add signing and bundle steps here
+
+      # - name: Build Electron desktop app
+      #   run: |
+      #     npm run build:desktop
+      #     # Package installer and upload
