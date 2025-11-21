@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
+import { nowIso } from './utils/timestamp.js';
+import { buildUpdateFields } from './utils/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,8 +54,6 @@ database.exec(`
 const ALLOWED_AGENT_STATUSES = new Set(['active', 'inactive', 'learning']);
 const ALLOWED_TASK_STATUSES = new Set(['pending', 'running', 'completed', 'failed']);
 const ALLOWED_MEMORY_TYPES = new Set(['fact', 'preference', 'skill', 'context']);
-
-const nowIso = () => new Date().toISOString();
 
 const mapAgentRow = (row) => ({
   id: row.id,
@@ -136,33 +136,28 @@ function createAgent({ name, description = '', status = 'inactive' }) {
 }
 
 function updateAgent(id, data) {
-  const fields = [];
-  const values = [];
-  if (data.name !== undefined) {
-    fields.push('name = ?');
-    values.push(data.name);
+  const fieldMappings = {
+    name: 'name',
+    description: 'description',
+    status: 'status',
+    lastActive: 'last_active',
+  };
+  
+  // Validate status if provided
+  if (data.status !== undefined && !ALLOWED_AGENT_STATUSES.has(data.status)) {
+    throw new Error('Invalid status');
   }
-  if (data.description !== undefined) {
-    fields.push('description = ?');
-    values.push(data.description);
-  }
-  if (data.status !== undefined) {
-    if (!ALLOWED_AGENT_STATUSES.has(data.status)) {
-      throw new Error('Invalid status');
-    }
-    fields.push('status = ?');
-    values.push(data.status);
-  }
-  if (data.lastActive !== undefined) {
-    fields.push('last_active = ?');
-    values.push(data.lastActive);
-  }
+  
+  const { fields, values } = buildUpdateFields(data, fieldMappings);
+  
   if (fields.length === 0) {
     return getAgent(id);
   }
+  
   fields.push('updated_at = ?');
   values.push(nowIso());
   values.push(id);
+  
   const stmt = database.prepare(
     `UPDATE agents SET ${fields.join(', ')} WHERE id = ?`
   );
@@ -214,29 +209,27 @@ function createTask(agentId, { title, status = 'pending', log = '' }) {
 }
 
 function updateTask(id, data) {
-  const fields = [];
-  const values = [];
-  if (data.title !== undefined) {
-    fields.push('title = ?');
-    values.push(data.title);
+  const fieldMappings = {
+    title: 'title',
+    status: 'status',
+    log: 'log',
+  };
+  
+  // Validate status if provided
+  if (data.status !== undefined && !ALLOWED_TASK_STATUSES.has(data.status)) {
+    throw new Error('Invalid status');
   }
-  if (data.status !== undefined) {
-    if (!ALLOWED_TASK_STATUSES.has(data.status)) {
-      throw new Error('Invalid status');
-    }
-    fields.push('status = ?');
-    values.push(data.status);
-  }
-  if (data.log !== undefined) {
-    fields.push('log = ?');
-    values.push(data.log);
-  }
+  
+  const { fields, values } = buildUpdateFields(data, fieldMappings);
+  
   if (fields.length === 0) {
     return getTask(id);
   }
+  
   fields.push('updated_at = ?');
   values.push(nowIso());
   values.push(id);
+  
   const stmt = database.prepare(
     `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`
   );
@@ -287,29 +280,27 @@ function createMemory(agentId, { key, value, type = 'fact' }) {
 }
 
 function updateMemory(id, data) {
-  const fields = [];
-  const values = [];
-  if (data.key !== undefined) {
-    fields.push('key = ?');
-    values.push(data.key);
+  const fieldMappings = {
+    key: 'key',
+    value: 'value',
+    type: 'type',
+  };
+  
+  // Validate type if provided
+  if (data.type !== undefined && !ALLOWED_MEMORY_TYPES.has(data.type)) {
+    throw new Error('Invalid memory type');
   }
-  if (data.value !== undefined) {
-    fields.push('value = ?');
-    values.push(data.value);
-  }
-  if (data.type !== undefined) {
-    if (!ALLOWED_MEMORY_TYPES.has(data.type)) {
-      throw new Error('Invalid memory type');
-    }
-    fields.push('type = ?');
-    values.push(data.type);
-  }
+  
+  const { fields, values } = buildUpdateFields(data, fieldMappings);
+  
   if (fields.length === 0) {
     return getMemory(id);
   }
+  
   fields.push('updated_at = ?');
   values.push(nowIso());
   values.push(id);
+  
   const stmt = database.prepare(
     `UPDATE memory SET ${fields.join(', ')} WHERE id = ?`
   );
