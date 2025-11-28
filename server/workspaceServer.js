@@ -13,6 +13,7 @@ import {
   getWorkspaceSummary,
   getWorkspaceMembers,
 } from './data.js';
+import { collaborationEngine } from './workspaceCollaboration.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-20241109';
 const TOKEN_TTL = '4h';
@@ -223,6 +224,15 @@ export const createServer = () => {
     }
 
     return res.json(insights);
+  });
+
+  app.get('/workspaces/:workspaceId/audit', authenticate, authorizeWorkspace, (req, res) => {
+    const { limit: rawLimit } = req.query;
+    const limitParam = Array.isArray(rawLimit) ? rawLimit[0] : rawLimit;
+    const limit = Number.parseInt(limitParam ?? '', 10);
+
+    const entries = collaborationEngine.getAuditLog(Number.isFinite(limit) && limit > 0 ? limit : undefined);
+    return res.json(entries);
   });
 
   return app;
