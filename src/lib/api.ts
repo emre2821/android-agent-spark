@@ -1,4 +1,4 @@
-import { API_BASE } from '@/hooks/use-agents';
+import { API_BASE } from '@/lib/api/config';
 import { parseResponseText, extractErrorMessage } from './utils/fetch';
 
 type JsonValue =
