@@ -1,7 +1,7 @@
 import { getStoredAuthToken, getStoredWorkspaceId } from '@/lib/auth/storage';
 import { parseResponseText, extractErrorMessage } from '@/lib/utils/fetch';
 
-const withAuthContext = (init?: RequestInit): RequestInit => {
+export const withAuthContext = (init?: RequestInit): RequestInit => {
   const headers = new Headers(init?.headers ?? {});
 
   const token = getStoredAuthToken();
