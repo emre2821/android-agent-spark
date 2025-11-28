@@ -1,64 +1,58 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { buildApiUrl } from '@/lib/api/config';
+import { fetchJson } from '@/lib/api/fetch';
 import { CredentialMetadata, CreateCredentialPayload } from '@/types/credential';
 
-const baseUrl = 'http://localhost:3001/api/credentials';
+const credentialsKey = (workspaceId: string) => ['credentials', workspaceId] as const;
 
-const fetchCredentials = async (userId: string, workspaceId: string): Promise<CredentialMetadata[]> => {
-  const params = new URLSearchParams({ userId, workspaceId });
-  const response = await fetch(`${baseUrl}?${params.toString()}`);
-  if (!response.ok) {
-    throw new Error('Failed to load credentials');
-  }
-  return response.json();
-};
+const fetchCredentials = async (workspaceId: string): Promise<CredentialMetadata[]> =>
+  fetchJson<CredentialMetadata[]>(buildApiUrl(`/workspaces/${workspaceId}/credentials`), {
+    headers: {
+      'X-Workspace-Id': workspaceId,
+    },
+  });
 
-const createCredentialRequest = async (payload: CreateCredentialPayload): Promise<CredentialMetadata> => {
-  const response = await fetch(baseUrl, {
+const createCredentialRequest = async (
+  workspaceId: string,
+  payload: CreateCredentialPayload,
+): Promise<CredentialMetadata> =>
+  fetchJson<CredentialMetadata>(buildApiUrl(`/workspaces/${workspaceId}/credentials`), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Workspace-Id': workspaceId,
+    },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message ?? 'Failed to create credential');
-  }
-  return response.json();
-};
 
-const deleteCredentialRequest = async (
-  id: string,
-  userId: string,
-  workspaceId: string,
-): Promise<void> => {
-  const params = new URLSearchParams({ userId, workspaceId });
-  const response = await fetch(`${baseUrl}/${id}?${params.toString()}`, {
+const deleteCredentialRequest = async (workspaceId: string, id: string): Promise<void> =>
+  fetchJson<void>(buildApiUrl(`/workspaces/${workspaceId}/credentials/${id}`), {
     method: 'DELETE',
+    headers: {
+      'X-Workspace-Id': workspaceId,
+    },
   });
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message ?? 'Failed to delete credential');
-  }
-};
 
-export const useCredentials = (userId: string, workspaceId: string) => {
+export const useCredentials = (workspaceId: string) => {
   const queryClient = useQueryClient();
-  const queryKey = ['credentials', userId, workspaceId];
+  const queryKey = credentialsKey(workspaceId);
 
   const list = useQuery({
     queryKey,
-    queryFn: () => fetchCredentials(userId, workspaceId),
-    enabled: Boolean(userId && workspaceId),
+    queryFn: () => fetchCredentials(workspaceId),
+    enabled: Boolean(workspaceId),
   });
 
   const create = useMutation({
-    mutationFn: createCredentialRequest,
+    mutationFn: (payload: CreateCredentialPayload) => createCredentialRequest(workspaceId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
 
   const destroy = useMutation({
-    mutationFn: ({ id }: { id: string }) => deleteCredentialRequest(id, userId, workspaceId),
+    mutationFn: ({ id }: { id: string }) => deleteCredentialRequest(workspaceId, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },

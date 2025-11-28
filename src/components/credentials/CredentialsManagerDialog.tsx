@@ -28,7 +28,7 @@ export const CredentialsManagerDialog: React.FC<CredentialsManagerDialogProps> =
   workspaceId,
 }) => {
   const { toast } = useToast();
-  const { list, create, destroy } = useCredentials(userId, workspaceId);
+  const { list, create, destroy } = useCredentials(workspaceId);
 
   useEffect(() => {
     if (!open) {
