@@ -4,14 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { collaborationClient } from '@/lib/collaboration/collaborationClient';
+import { buildApiUrl } from '@/lib/api/config';
+import { fetchJson } from '@/lib/api/fetch';
+import { getStoredWorkspaceId } from '@/lib/auth/storage';
 import { AuditLogEntry } from '@/types/collaboration';
 
-const fetchAuditLog = async (): Promise<AuditLogEntry[]> => {
-  const response = await fetch('http://localhost:3001/audit');
-  if (!response.ok) {
-    throw new Error('Failed to load activity feed');
+const fetchAuditLog = async (workspaceId: string | null, limit: number): Promise<AuditLogEntry[]> => {
+  if (!workspaceId) {
+    return [];
   }
-  return response.json();
+
+  const params = new URLSearchParams();
+  if (Number.isFinite(limit) && limit > 0) {
+    params.set('limit', String(limit));
+  }
+
+  const url = buildApiUrl(`/workspaces/${workspaceId}/audit${params.size ? `?${params}` : ''}`);
+  const response = await fetchJson<AuditLogEntry[] | undefined>(url);
+  if (!response) {
+    return [];
+  }
+  return Array.isArray(response) ? response : [];
 };
 
 const actionLabels: Record<string, string> = {
@@ -33,16 +46,22 @@ interface ActivityFeedProps {
 }
 
 export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit = 25 }) => {
+  const workspaceId = getStoredWorkspaceId();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
-    queryKey: ['audit-log'],
-    queryFn: fetchAuditLog,
+    queryKey: ['audit-log', workspaceId, limit],
+    queryFn: () => fetchAuditLog(workspaceId, limit),
     staleTime: 10_000,
+    enabled: Boolean(workspaceId),
   });
 
   useEffect(() => {
+    if (!workspaceId) {
+      return undefined;
+    }
+
     const unsubscribe = collaborationClient.subscribe('audit-entry', (entry) => {
-      queryClient.setQueryData<AuditLogEntry[]>(['audit-log'], (previous = []) => {
+      queryClient.setQueryData<AuditLogEntry[]>(['audit-log', workspaceId, limit], (previous = []) => {
         const next = [...previous, entry];
         if (next.length > limit) {
           next.splice(0, next.length - limit);
@@ -54,7 +73,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ limit = 25 }) => {
     return () => {
       unsubscribe();
     };
-  }, [queryClient, limit]);
+  }, [queryClient, limit, workspaceId]);
 
   return (
     <Card className="h-full">
