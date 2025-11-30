@@ -369,6 +369,7 @@ export interface WorkflowRun {
 
 export interface WorkflowUpsert {
   id?: string;
+}
 
 export interface WorkflowPort {
   id: string;
