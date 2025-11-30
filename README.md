@@ -1,5 +1,9 @@
 # Android Agent Spark
 
+[![CI](https://github.com/emre2821/android-agent-spark/actions/workflows/ci.yml/badge.svg)](https://github.com/emre2821/android-agent-spark/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-2024.11.7-blue.svg)](https://github.com/emre2821/android-agent-spark/releases)
+
 A multi-platform AI agent workspace that ships on web, Android (Capacitor), Electron, and server runtimes with batteries-included workflows.
 
 ![Demo screenshot placeholder](apps/frontend/public/demo-screenshots/placeholder.png)
