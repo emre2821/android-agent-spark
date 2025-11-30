@@ -1,4 +1,6 @@
+# ====================
 # Logs
+# ====================
 logs
 *.log
 npm-debug.log*
@@ -7,31 +9,122 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-web/node_modules
-dist
-dist-ssr
-android-wrapper/.gradle
+# ====================
+# Node.js / JavaScript / TypeScript
+# ====================
+node_modules/
+**/node_modules/
+dist/
+dist-ssr/
+build/
 *.local
+.npm
+.yarn
+.pnp.*
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# ====================
+# Python
+# ====================
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+venv/
+.venv/
+ENV/
+env/
+.env
+.python-version
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
+# ====================
+# Shell
+# ====================
+*.sh.bak
+
+# ====================
 # Editor directories and files
+# ====================
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*.swn
+*~
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Prisma
+# ====================
+# Android / Gradle
+# ====================
+android-wrapper/.gradle/
+android-wrapper/build/
+android-wrapper/app/build/
+*.apk
+*.aab
+*.keystore
+local.properties
+
+# ====================
+# Electron
+# ====================
+dist/desktop/
+electron/dist/
+
+# ====================
+# Database
+# ====================
 prisma/*.db
 prisma/*.sqlite
 server/data/*.db*
-# Agent Spark data
-data/*.db*
-data/corrupt
 *.sqlite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ====================
+# Testing
+# ====================
+coverage/
+.nyc_output/
+cypress/videos/
+cypress/screenshots/
+
+# ====================
+# Misc
+# ====================
+*.local
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+tmp/
+temp/
+.cache/

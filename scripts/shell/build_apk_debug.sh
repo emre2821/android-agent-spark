@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+PROJECT_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
 WRAPPER_DIR="$PROJECT_DIR/android-wrapper"
 GRADLEW="$WRAPPER_DIR/gradlew"
 
