@@ -1,4 +1,10 @@
 #!/bin/sh
+# new.sh - Setup and validation script for Agent Spark
+
+# Change to project root
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+PROJECT_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
+cd "$PROJECT_DIR"
 
 # Install dependencies
 npm install
