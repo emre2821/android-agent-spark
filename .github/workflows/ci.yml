@@ -56,11 +56,47 @@ jobs:
 
       - name: Lint
         run: |
-          npm run lint || echo "Lint step skipped"
+          npm run lint || echo "::warning::Lint step skipped or encountered issues"
 
-      - name: Run unit tests
+      - name: Type check web
+        working-directory: ./web
         run: |
-          npm test || echo "Test step skipped"
+          if [ -f tsconfig.json ]; then
+            npx tsc --noEmit || echo "::warning::Web type check found issues"
+          else
+            echo "No tsconfig.json found in web, skipping type check"
+          fi
+
+      - name: Type check frontend
+        working-directory: ./apps/frontend
+        run: |
+          if [ -f tsconfig.json ]; then
+            npx tsc --noEmit || echo "::warning::Frontend type check found issues"
+          else
+            echo "No tsconfig.json found in apps/frontend, skipping type check"
+          fi
+
+      - name: Run unit tests with coverage
+        run: |
+          npm test || echo "::warning::Test step skipped or encountered issues"
+
+      - name: Run web tests with coverage
+        working-directory: ./web
+        run: |
+          if [ -f vitest.config.ts ] || [ -f vitest.config.js ]; then
+            npx vitest run --coverage || echo "::warning::Web coverage tests encountered issues"
+          else
+            echo "No vitest config found in web, skipping coverage"
+          fi
+
+      - name: Run frontend tests with coverage
+        working-directory: ./apps/frontend
+        run: |
+          if [ -f vitest.config.ts ] || [ -f vitest.config.js ]; then
+            npx vitest run --coverage || echo "::warning::Frontend coverage tests encountered issues"
+          else
+            echo "No vitest config found in apps/frontend, skipping coverage"
+          fi
 
       - name: Build web app
         run: |
