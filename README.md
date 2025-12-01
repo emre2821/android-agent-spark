@@ -32,6 +32,7 @@ This is a monorepo organized as follows:
 ├── electron/             # Electron desktop shell
 ├── .github/workflows/    # CI/CD workflows
 ├── docker-compose.yml    # Docker configuration
+├── Makefile              # Common development commands
 └── README.md
 ```
 
@@ -42,6 +43,7 @@ This is a monorepo organized as follows:
 - Node.js 18+
 - npm 9+
 - Python 3.10+ (for backend)
+- Make (optional, for Makefile commands)
 
 ### Installation
 
@@ -52,6 +54,11 @@ cd android-agent-spark
 
 # Install all dependencies
 npm run install:all
+# Or using Make:
+make install
+
+# Copy environment example
+cp .env.example .env
 ```
 
 ### Web Development
@@ -59,6 +66,7 @@ npm run install:all
 ```bash
 # Run the web frontend
 npm run dev:web
+# Or: make dev-web
 ```
 The web app runs via Vite on port 3000 by default.
 
@@ -67,6 +75,7 @@ The web app runs via Vite on port 3000 by default.
 ```bash
 # Run the main frontend
 npm run dev:frontend
+# Or: make dev-frontend
 ```
 
 ### Server Development
@@ -74,6 +83,7 @@ npm run dev:frontend
 ```bash
 # Run the Node.js API server
 npm run dev:server
+# Or: make dev-server
 ```
 The server runs on port 3001. Environment variables can be set via `.env`.
 
@@ -99,6 +109,7 @@ python -m app.cli runserver --host 0.0.0.0 --port 8000
 ```bash
 # Build and start both services
 docker-compose up --build
+# Or: make docker-up
 ```
 Open the web UI at http://localhost:3000 (API on http://localhost:3001).
 
@@ -108,6 +119,7 @@ Open the web UI at http://localhost:3000 (API on http://localhost:3001).
 
 ```bash
 npm run build
+# Or: make build
 ```
 
 ### Build for Android (Capacitor)
@@ -130,6 +142,7 @@ Package artifacts will be placed under `dist/desktop/`.
 ```bash
 # Run all tests
 npm test
+# Or: make test
 
 # Run frontend tests
 npm run test:frontend
@@ -148,6 +161,22 @@ cd scripts/python && pytest
 
 ```bash
 npm run lint
+# Or: make lint
+```
+
+## Make Commands
+
+For convenience, a `Makefile` is provided with common commands:
+
+```bash
+make help        # Show all available commands
+make install     # Install all dependencies
+make dev         # Start development servers
+make build       # Build all projects
+make test        # Run all tests
+make lint        # Run linting
+make docker-up   # Start Docker containers
+make clean       # Remove build artifacts
 ```
 
 ## Downloads

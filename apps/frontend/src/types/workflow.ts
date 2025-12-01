@@ -369,6 +369,7 @@ export interface WorkflowRun {
 
 export interface WorkflowUpsert {
   id?: string;
+}
 
 export interface WorkflowPort {
   id: string;
@@ -600,9 +601,6 @@ const cloneStep = (step: WorkflowStep): WorkflowStep => {
   }
 
   return {
-export const cloneSteps = (steps: WorkflowStep[]): WorkflowStep[] =>
-  steps.map((step) => createEmptyStep(step));
-  steps.map((step) => ({
     ...step,
     position: clonePosition(step.position),
     config: cloneConfig(step.config),
