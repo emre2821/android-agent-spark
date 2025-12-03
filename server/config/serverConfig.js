@@ -9,7 +9,11 @@ const parseOrigins = (value) =>
     .filter(Boolean)
     .map(normalizeOrigin);
 
-const defaultOrigins = ['http://localhost:5173'];
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://localhost:3000',
+];
 
 const allowedOriginsRaw = process.env.ALLOWED_ORIGINS ?? defaultOrigins.join(',');
 const allowedOrigins = parseOrigins(allowedOriginsRaw);

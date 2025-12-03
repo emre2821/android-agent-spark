@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import { createServer as createHttpServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
