@@ -285,13 +285,12 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         queryClient.setQueryData<MemoryItem[]>(key, (current = []) =>
           current.map((item) => (item.id === tempId ? memory : item)),
         );
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
         return memory;
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],
@@ -315,13 +314,12 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         queryClient.setQueryData<MemoryItem[]>(key, (current = []) =>
           current.map((item) => (item.id === memory.id ? memory : item)),
         );
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
         return memory;
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],
@@ -338,12 +336,11 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       try {
         await apiDeleteMemory(memoryId);
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],
@@ -372,13 +369,12 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         queryClient.setQueryData<Task[]>(key, (current = []) =>
           current.map((item) => (item.id === tempId ? task : item)),
         );
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
         return task;
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],
@@ -402,13 +398,12 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         queryClient.setQueryData<Task[]>(key, (current = []) =>
           current.map((item) => (item.id === task.id ? task : item)),
         );
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
         return task;
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],
@@ -425,12 +420,11 @@ export const AgentsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       try {
         await apiDeleteTask(taskId);
+        // Only invalidate agents key once, remove duplicate from finally block
         void queryClient.invalidateQueries({ queryKey: agentsKey });
       } catch (error) {
         queryClient.setQueryData(key, previous);
         throw error;
-      } finally {
-        void queryClient.invalidateQueries({ queryKey: key });
       }
     },
     [queryClient],

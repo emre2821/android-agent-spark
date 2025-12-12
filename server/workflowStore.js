@@ -149,9 +149,10 @@ export class WorkflowStore {
     };
 
     this._pushRunHistory(run, 'running', 'Workflow run started');
-    run.steps.forEach((step) => {
+    // Use for..of instead of forEach for better performance
+    for (const step of run.steps) {
       this._pushStepHistory(step, 'pending', 1, 'Awaiting execution');
-    });
+    }
 
     data.runs.push(run);
     await this.writeFile(data);

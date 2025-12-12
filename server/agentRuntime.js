@@ -50,10 +50,10 @@ export const createApp = () => {
 
   const broadcast = (event) => {
     const payload = JSON.stringify(event);
-    for (const socket of sockets) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(payload);
-      }
+    // Pre-filter to only open sockets for better performance
+    const openSockets = Array.from(sockets).filter(socket => socket.readyState === WebSocket.OPEN);
+    for (const socket of openSockets) {
+      socket.send(payload);
     }
   };
 
@@ -115,7 +115,9 @@ export const createApp = () => {
       'Finalizing and reporting results.',
     ];
 
-    steps.forEach((message, index) => {
+    // Use for..of instead of forEach for better performance
+    for (let index = 0; index < steps.length; index++) {
+      const message = steps[index];
       const key = `${task.id}-${index}`;
       const timeout = setTimeout(() => {
         broadcast({
@@ -144,7 +146,7 @@ export const createApp = () => {
       }, (index + 1) * 150);
 
       activeStreams.set(key, timeout);
-    });
+    }
   };
 
   const handler = (fn) => (req, res, next) => {
