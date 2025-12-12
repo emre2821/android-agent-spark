@@ -92,8 +92,9 @@ export const createApp = () => {
     });
     
     socket.on('error', () => {
-      // Remove from open sockets on error to prevent sending to broken connections
+      // Remove from both sets on error to prevent memory leaks and broken sends
       openSockets.delete(socket);
+      sockets.delete(socket);
     });
   });
 

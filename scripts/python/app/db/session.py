@@ -4,6 +4,7 @@ import logging
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+from urllib.parse import urlparse
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -28,8 +29,9 @@ def _ensure_engine():
             "connect_args": {"check_same_thread": False},
             "future": True,
         }
-        # Only add pooling config if not using SQLite
-        if not settings.database_url.startswith("sqlite"):
+        # Only add pooling config if not using SQLite (check scheme robustly)
+        db_scheme = urlparse(settings.database_url).scheme.lower()
+        if db_scheme not in ("sqlite", "sqlite3"):
             engine_kwargs.update({
                 "pool_size": 10,
                 "max_overflow": 20,
