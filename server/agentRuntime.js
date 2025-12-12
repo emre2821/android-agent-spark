@@ -46,12 +46,12 @@ export const createApp = () => {
   const httpServer = createHttpServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const sockets = new Set();
+  const openSockets = new Set(); // Track open sockets separately for efficient broadcasting
   const activeStreams = new Map();
 
   const broadcast = (event) => {
     const payload = JSON.stringify(event);
-    // Pre-filter to only open sockets for better performance
-    const openSockets = Array.from(sockets).filter(socket => socket.readyState === WebSocket.OPEN);
+    // Use pre-maintained set of open sockets for better performance
     for (const socket of openSockets) {
       socket.send(payload);
     }
@@ -83,9 +83,17 @@ export const createApp = () => {
 
   wss.on('connection', (socket) => {
     sockets.add(socket);
+    openSockets.add(socket); // Add to open sockets immediately
     socket.send(JSON.stringify({ type: 'connected' }));
+    
     socket.on('close', () => {
       sockets.delete(socket);
+      openSockets.delete(socket); // Remove from open sockets
+    });
+    
+    socket.on('error', () => {
+      // Remove from open sockets on error to prevent sending to broken connections
+      openSockets.delete(socket);
     });
   });
 
@@ -115,9 +123,8 @@ export const createApp = () => {
       'Finalizing and reporting results.',
     ];
 
-    // Use for..of instead of forEach for better performance
-    for (let index = 0; index < steps.length; index++) {
-      const message = steps[index];
+    // Use for..of with entries() for both performance and readability
+    for (const [index, message] of steps.entries()) {
       const key = `${task.id}-${index}`;
       const timeout = setTimeout(() => {
         broadcast({
@@ -418,6 +425,7 @@ export const createApp = () => {
           logger.warn('Failed to close websocket connection', { error });
         }
       }
+      openSockets.clear(); // Clear the openSockets set as well
       wss.close(() => {
         httpServer.close(() => resolve());
       });

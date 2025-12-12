@@ -22,16 +22,21 @@ def _ensure_engine():
         settings = get_settings()
         db_path = Path(settings.db_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
-        _engine = create_engine(
-            settings.database_url,
-            connect_args={"check_same_thread": False},
-            future=True,
-            # Add connection pooling for better performance
-            pool_size=10,
-            max_overflow=20,
-            pool_pre_ping=True,  # Verify connections before using
-            pool_recycle=3600,   # Recycle connections after 1 hour
-        )
+        # Note: SQLite doesn't use connection pooling, but we configure it
+        # for potential future migration to a client-server database
+        engine_kwargs = {
+            "connect_args": {"check_same_thread": False},
+            "future": True,
+        }
+        # Only add pooling config if not using SQLite
+        if not settings.database_url.startswith("sqlite"):
+            engine_kwargs.update({
+                "pool_size": 10,
+                "max_overflow": 20,
+                "pool_pre_ping": True,
+                "pool_recycle": 3600,
+            })
+        _engine = create_engine(settings.database_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False, future=True)
         logger.debug("Database engine initialised at %s", db_path)
 

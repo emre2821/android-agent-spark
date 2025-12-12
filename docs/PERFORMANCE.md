@@ -8,19 +8,35 @@ This document outlines performance optimizations implemented in the codebase and
 
 #### 1. WebSocket Broadcasting (agentRuntime.js)
 - **Issue**: Broadcasting to all sockets with repeated readyState checks inside the loop
-- **Solution**: Pre-filter sockets to only open connections before broadcasting
-- **Impact**: Reduces unnecessary checks in broadcast loop, especially with many idle connections
+- **Solution**: Maintain a separate Set of open sockets that's updated on connection/close/error events
+- **Impact**: Eliminates filtering overhead on every broadcast, especially beneficial with many connections
 
 ```javascript
-// Before: Check readyState for every socket in every broadcast
+// Before: Filter on every broadcast
 for (const socket of sockets) {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(payload);
   }
 }
 
-// After: Pre-filter to open sockets once
-const openSockets = Array.from(sockets).filter(socket => socket.readyState === WebSocket.OPEN);
+// After: Maintain open sockets separately
+const openSockets = new Set(); // Track open sockets separately
+
+wss.on('connection', (socket) => {
+  sockets.add(socket);
+  openSockets.add(socket);
+  
+  socket.on('close', () => {
+    sockets.delete(socket);
+    openSockets.delete(socket);
+  });
+  
+  socket.on('error', () => {
+    openSockets.delete(socket);
+  });
+});
+
+// Broadcasting now just iterates the open set
 for (const socket of openSockets) {
   socket.send(payload);
 }
@@ -28,9 +44,9 @@ for (const socket of openSockets) {
 
 #### 2. Loop Performance Optimization
 - **Issue**: Using `forEach` for performance-critical loops
-- **Solution**: Replace with `for..of` loops which are faster and allow early breaks
+- **Solution**: Replace with `for..of` loops (or `for..of` with `.entries()` when index is needed)
 - **Files affected**: 
-  - `server/agentRuntime.js` (simulateTaskRun function)
+  - `server/agentRuntime.js` (simulateTaskRun function - uses entries())
   - `server/queueService.js` (publish method)
   - `server/workflowStore.js` (createRun method)
   - `apps/frontend/src/lib/workflows/controller.ts` (runWorkflow function)
@@ -39,6 +55,19 @@ for (const socket of openSockets) {
 - `for..of`: ~60% faster for large arrays
 - Allows early termination with `break`
 - Better for async operations
+- `.entries()` provides both index and value with good readability
+
+```javascript
+// Best for index + value: for..of with entries()
+for (const [index, message] of steps.entries()) {
+  // Use both index and message
+}
+
+// Best for just values: plain for..of
+for (const handler of handlers.values()) {
+  // Just use handler
+}
+```
 
 #### 3. Object Cloning Optimization
 - **Issue**: Using `JSON.parse(JSON.stringify())` for deep cloning (slow and memory-intensive)
@@ -85,21 +114,29 @@ try {
 ### Python Backend Improvements
 
 #### 5. Database Connection Pooling
-- **Issue**: No explicit connection pool configuration
-- **Solution**: Add connection pool settings to SQLAlchemy engine
+- **Issue**: No explicit connection pool configuration for client-server databases
+- **Solution**: Add connection pool settings to SQLAlchemy engine (when not using SQLite)
 - **Files affected**: `scripts/python/app/db/session.py`
-- **Impact**: Better handling of concurrent requests, prevents connection exhaustion
+- **Impact**: Better handling of concurrent requests for PostgreSQL/MySQL deployments
 
 ```python
-# Added connection pooling configuration
-_engine = create_engine(
-    settings.database_url,
-    pool_size=10,           # Maintain 10 connections
-    max_overflow=20,        # Allow up to 30 total connections
-    pool_pre_ping=True,     # Verify connections before using
-    pool_recycle=3600,      # Recycle connections after 1 hour
-)
+# Added conditional connection pooling configuration
+engine_kwargs = {
+    "connect_args": {"check_same_thread": False},
+    "future": True,
+}
+# Only add pooling config if not using SQLite (which doesn't support pooling)
+if not settings.database_url.startswith("sqlite"):
+    engine_kwargs.update({
+        "pool_size": 10,           # Maintain 10 connections
+        "max_overflow": 20,        # Allow up to 30 total connections
+        "pool_pre_ping": True,     # Verify connections before using
+        "pool_recycle": 3600,      # Recycle connections after 1 hour
+    })
+_engine = create_engine(settings.database_url, **engine_kwargs)
 ```
+
+**Note**: SQLite is file-based and doesn't use connection pooling. This configuration prepares the codebase for migration to PostgreSQL or MySQL if needed.
 
 ## Performance Best Practices
 
