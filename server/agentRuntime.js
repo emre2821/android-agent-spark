@@ -46,14 +46,14 @@ export const createApp = () => {
   const httpServer = createHttpServer(app);
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const sockets = new Set();
+  const openSockets = new Set(); // Track open sockets separately for efficient broadcasting
   const activeStreams = new Map();
 
   const broadcast = (event) => {
     const payload = JSON.stringify(event);
-    for (const socket of sockets) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(payload);
-      }
+    // Use pre-maintained set of open sockets for better performance
+    for (const socket of openSockets) {
+      socket.send(payload);
     }
   };
 
@@ -83,9 +83,27 @@ export const createApp = () => {
 
   wss.on('connection', (socket) => {
     sockets.add(socket);
+    // WebSocket connections are OPEN after 'connection' event in ws library
+    // Add to openSockets only if OPEN (defensive check)
+    if (socket.readyState === WebSocket.OPEN) {
+      openSockets.add(socket);
+    }
     socket.send(JSON.stringify({ type: 'connected' }));
+    
+    socket.on('open', () => {
+      // Ensure socket is in openSockets when explicitly opened
+      openSockets.add(socket);
+    });
+    
     socket.on('close', () => {
       sockets.delete(socket);
+      openSockets.delete(socket);
+    });
+    
+    socket.on('error', () => {
+      // Remove from both sets consistently (same order as close handler)
+      sockets.delete(socket);
+      openSockets.delete(socket);
     });
   });
 
@@ -115,7 +133,8 @@ export const createApp = () => {
       'Finalizing and reporting results.',
     ];
 
-    steps.forEach((message, index) => {
+    // Use for..of with entries() for both performance and readability
+    for (const [index, message] of steps.entries()) {
       const key = `${task.id}-${index}`;
       const timeout = setTimeout(() => {
         broadcast({
@@ -144,7 +163,7 @@ export const createApp = () => {
       }, (index + 1) * 150);
 
       activeStreams.set(key, timeout);
-    });
+    }
   };
 
   const handler = (fn) => (req, res, next) => {
@@ -416,6 +435,7 @@ export const createApp = () => {
           logger.warn('Failed to close websocket connection', { error });
         }
       }
+      openSockets.clear(); // Clear the openSockets set as well
       wss.close(() => {
         httpServer.close(() => resolve());
       });

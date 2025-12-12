@@ -29,7 +29,8 @@ class InMemoryQueueService {
     if (!handlers || handlers.size === 0) {
       return;
     }
-    handlers.forEach((handler) => {
+    // Use for..of instead of forEach for better performance
+    for (const handler of handlers.values()) {
       try {
         Promise.resolve(handler(message)).catch((error) => {
           console.error('Queue handler failed', error);
@@ -37,7 +38,7 @@ class InMemoryQueueService {
       } catch (error) {
         console.error('Queue handler failed', error);
       }
-    });
+    }
   }
 }
 

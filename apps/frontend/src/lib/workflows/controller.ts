@@ -231,7 +231,8 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
 
     const start = new Date().toISOString();
 
-    workflow.steps.forEach((step) => {
+    // Use for..of instead of forEach for better performance
+    for (const step of workflow.steps) {
       logStepExecution(workflowId, step.id, {
         status: 'running',
         message: `Started ${step.name}`,
@@ -241,7 +242,7 @@ export const createWorkflowsManager = ({ getWorkflows, setWorkflows }: Workflows
         status: 'success',
         message: `Completed ${step.name}`,
       });
-    });
+    }
 
     updateWorkflow(workflowId, {
       lastRunAt: new Date().toISOString(),

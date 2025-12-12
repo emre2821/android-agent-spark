@@ -149,9 +149,10 @@ export class WorkflowStore {
     };
 
     this._pushRunHistory(run, 'running', 'Workflow run started');
-    run.steps.forEach((step) => {
+    // Use for..of instead of forEach for better performance
+    for (const step of run.steps) {
       this._pushStepHistory(step, 'pending', 1, 'Awaiting execution');
-    });
+    }
 
     data.runs.push(run);
     await this.writeFile(data);
@@ -436,7 +437,11 @@ async function readStore() {
     }
     return parsed;
   } catch {
-    const fallback = JSON.parse(JSON.stringify(defaultData));
+    // Use structuredClone if available (Node 17+), otherwise use defaultData structure
+    // Maintain consistency with defaultData by using its structure
+    const fallback = typeof structuredClone !== 'undefined' 
+      ? structuredClone(defaultData) 
+      : { ...defaultData, workflows: [] };
     await fs.writeFile(dataFile, JSON.stringify(fallback, null, 2), 'utf-8');
     return fallback;
   }
