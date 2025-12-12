@@ -26,6 +26,11 @@ def _ensure_engine():
             settings.database_url,
             connect_args={"check_same_thread": False},
             future=True,
+            # Add connection pooling for better performance
+            pool_size=10,
+            max_overflow=20,
+            pool_pre_ping=True,  # Verify connections before using
+            pool_recycle=3600,   # Recycle connections after 1 hour
         )
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False, future=True)
         logger.debug("Database engine initialised at %s", db_path)

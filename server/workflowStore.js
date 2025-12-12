@@ -437,7 +437,10 @@ async function readStore() {
     }
     return parsed;
   } catch {
-    const fallback = JSON.parse(JSON.stringify(defaultData));
+    // Use structuredClone if available (Node 17+), otherwise object spread for shallow copy
+    const fallback = typeof structuredClone !== 'undefined' 
+      ? structuredClone(defaultData) 
+      : { ...defaultData, workflows: [...defaultData.workflows] };
     await fs.writeFile(dataFile, JSON.stringify(fallback, null, 2), 'utf-8');
     return fallback;
   }
