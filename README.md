@@ -14,25 +14,23 @@ This is a monorepo organized as follows:
 
 ```
 /
-├── apps/
-│   └── frontend/         # Main React/TypeScript frontend (Vite)
-├── packages/
-│   └── ts-common/        # Shared TypeScript utilities (if any)
-├── scripts/
-│   ├── python/           # Python backend application and scripts
-│   │   ├── app/          # Python API server
-│   │   └── tests/        # Python tests
+├── frontend-app/         # Main React/TypeScript frontend (Vite)
+├── web-app/              # Secondary web frontend
+├── nodejs-server/        # Node.js API server
+├── python-backend/       # Python backend application and scripts
+│   ├── app/              # Python API server
+│   └── tests/            # Python tests
+├── build-scripts/        # Build scripts for mobile and desktop
 │   ├── shell/            # Shell scripts (.sh)
 │   ├── build_mobile.js   # Mobile build script
 │   └── build_desktop.js  # Desktop build script
-├── docs/                 # Documentation and architecture diagrams
-├── web/                  # Secondary web frontend
-├── server/               # Node.js API server
+├── documentation/        # Documentation and architecture diagrams
+├── shared-packages/      # Shared TypeScript utilities
+│   └── ts-common/        # Common TypeScript code
 ├── android-wrapper/      # Capacitor Android host
-├── electron/             # Electron desktop shell
+├── electron-desktop/     # Electron desktop shell
+├── misc/                 # Miscellaneous config files
 ├── .github/workflows/    # CI/CD workflows
-├── docker-compose.yml    # Docker configuration
-├── Makefile              # Common development commands
 └── README.md
 ```
 
@@ -90,8 +88,8 @@ The server runs on port 3001. Environment variables can be set via `.env`.
 ### Python Backend
 
 ```bash
-# Navigate to Python scripts
-cd scripts/python
+# Navigate to Python backend
+cd python-backend
 
 # Create virtual environment
 python -m venv venv
@@ -154,7 +152,7 @@ npm run test:web
 npm run test:server
 
 # Run Python tests
-cd scripts/python && pytest
+cd python-backend && pytest
 ```
 
 ## Linting

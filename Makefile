@@ -110,17 +110,17 @@ docker-logs:
 # Cleanup
 clean:
 	rm -rf node_modules || true
-	rm -rf apps/frontend/node_modules || true
-	rm -rf web/node_modules || true
-	rm -rf server/node_modules || true
-	rm -rf web/dist || true
-	rm -rf apps/frontend/dist || true
+	rm -rf frontend-app/node_modules || true
+	rm -rf web-app/node_modules || true
+	rm -rf nodejs-server/node_modules || true
+	rm -rf web-app/dist || true
+	rm -rf frontend-app/dist || true
 	rm -rf dist || true
 
 # Python backend setup
 python-setup:
-	cd scripts/python && python -m venv venv
-	cd scripts/python && ./venv/bin/pip install -r requirements.txt
+	cd python-backend && python -m venv venv
+	cd python-backend && ./venv/bin/pip install -r requirements.txt
 
 python-test:
-	cd scripts/python && pytest
+	cd python-backend && pytest

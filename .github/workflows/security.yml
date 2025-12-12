@@ -37,29 +37,29 @@ jobs:
         continue-on-error: true
 
       - name: Audit web dependencies
-        working-directory: ./web
+        working-directory: ./web-app
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
-            npm audit --audit-level=high || echo "::warning::web npm audit found vulnerabilities"
+            npm audit --audit-level=high || echo "::warning::web-app npm audit found vulnerabilities"
           fi
         continue-on-error: true
 
       - name: Audit frontend dependencies
-        working-directory: ./apps/frontend
+        working-directory: ./frontend-app
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
-            npm audit --audit-level=high || echo "::warning::frontend npm audit found vulnerabilities"
+            npm audit --audit-level=high || echo "::warning::frontend-app npm audit found vulnerabilities"
           fi
         continue-on-error: true
 
       - name: Audit server dependencies
-        working-directory: ./server
+        working-directory: ./nodejs-server
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
-            npm audit --audit-level=high || echo "::warning::server npm audit found vulnerabilities"
+            npm audit --audit-level=high || echo "::warning::nodejs-server npm audit found vulnerabilities"
           fi
         continue-on-error: true
 
@@ -75,21 +75,21 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: scripts/python/requirements.txt
+          cache-dependency-path: python-backend/requirements.txt
 
       - name: Install Python dependencies
-        working-directory: ./scripts/python
+        working-directory: ./python-backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install bandit safety
 
       - name: Run Bandit security linter
-        working-directory: ./scripts/python
+        working-directory: ./python-backend
         run: bandit -r app -ll || echo "::warning::Bandit found potential security issues"
         continue-on-error: true
 
       - name: Run Safety check
-        working-directory: ./scripts/python
+        working-directory: ./python-backend
         run: safety check -r requirements.txt || echo "::warning::Safety found vulnerable dependencies"
         continue-on-error: true

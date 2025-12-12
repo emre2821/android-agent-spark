@@ -12,9 +12,9 @@ services:
       - SPARK_ENV=development
     volumes:
       # Hot reload for server code (optional):
-      - ./server:/opt/app/server
+      - ./nodejs-server:/opt/app/nodejs-server
       # Persist lightweight data if needed
-      - ./data:/opt/app/server/data
+      - ./data:/opt/app/nodejs-server/data
     command: ["npm", "run", "start"]
 
   web:
@@ -27,7 +27,7 @@ services:
       - VITE_API_URL=http://localhost:3001
     volumes:
       # Enable Vite hot module reload during local development
-      - ./web:/opt/app/web
+      - ./web-app:/opt/app/web-app
     depends_on:
       - server
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

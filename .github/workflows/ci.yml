@@ -28,30 +28,30 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Install frontend dependencies
-        working-directory: ./apps/frontend
+        working-directory: ./frontend-app
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
           else
-            echo "apps/frontend missing package.json, skipping install"
+            echo "frontend-app missing package.json, skipping install"
           fi
 
       - name: Install web dependencies
-        working-directory: ./web
+        working-directory: ./web-app
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
           else
-            echo "web directory missing package.json, skipping install"
+            echo "web-app directory missing package.json, skipping install"
           fi
 
       - name: Install server dependencies
-        working-directory: ./server
+        working-directory: ./nodejs-server
         run: |
           if [ -f package.json ]; then
             npm install --ignore-scripts
           else
-            echo "server directory missing package.json, skipping install"
+            echo "nodejs-server directory missing package.json, skipping install"
           fi
 
       - name: Lint
@@ -59,21 +59,21 @@ jobs:
           npm run lint || echo "::warning::Lint step skipped or encountered issues"
 
       - name: Type check web
-        working-directory: ./web
+        working-directory: ./web-app
         run: |
           if [ -f tsconfig.json ]; then
             npx tsc --noEmit || echo "::warning::Web type check found issues"
           else
-            echo "No tsconfig.json found in web, skipping type check"
+            echo "No tsconfig.json found in web-app, skipping type check"
           fi
 
       - name: Type check frontend
-        working-directory: ./apps/frontend
+        working-directory: ./frontend-app
         run: |
           if [ -f tsconfig.json ]; then
             npx tsc --noEmit || echo "::warning::Frontend type check found issues"
           else
-            echo "No tsconfig.json found in apps/frontend, skipping type check"
+            echo "No tsconfig.json found in frontend-app, skipping type check"
           fi
 
       - name: Run unit tests with coverage
@@ -81,21 +81,21 @@ jobs:
           npm test || echo "::warning::Test step skipped or encountered issues"
 
       - name: Run web tests with coverage
-        working-directory: ./web
+        working-directory: ./web-app
         run: |
           if [ -f vitest.config.ts ] || [ -f vitest.config.js ]; then
             npx vitest run --coverage || echo "::warning::Web coverage tests encountered issues"
           else
-            echo "No vitest config found in web, skipping coverage"
+            echo "No vitest config found in web-app, skipping coverage"
           fi
 
       - name: Run frontend tests with coverage
-        working-directory: ./apps/frontend
+        working-directory: ./frontend-app
         run: |
           if [ -f vitest.config.ts ] || [ -f vitest.config.js ]; then
             npx vitest run --coverage || echo "::warning::Frontend coverage tests encountered issues"
           else
-            echo "No vitest config found in apps/frontend, skipping coverage"
+            echo "No vitest config found in frontend-app, skipping coverage"
           fi
 
       - name: Build web app
@@ -118,10 +118,10 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: scripts/python/requirements.txt
+          cache-dependency-path: python-backend/requirements.txt
 
       - name: Install Python dependencies
-        working-directory: ./scripts/python
+        working-directory: ./python-backend
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
@@ -129,7 +129,7 @@ jobs:
           fi
 
       - name: Run Python tests
-        working-directory: ./scripts/python
+        working-directory: ./python-backend
         run: |
           if [ -f pytest.ini ]; then
             pytest --tb=short || echo "Python tests skipped or failed"
@@ -149,4 +149,4 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          find scripts/shell -name "*.sh" -type f | xargs shellcheck || echo "ShellCheck completed with warnings"
+          find build-scripts/shell -name "*.sh" -type f | xargs shellcheck || echo "ShellCheck completed with warnings"

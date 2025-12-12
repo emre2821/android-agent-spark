@@ -31,10 +31,10 @@ jobs:
 
       - name: Package web dist
         run: |
-          if [ -d web/dist ]; then
-            tar -czf web-dist.tar.gz -C web dist
+          if [ -d web-app/dist ]; then
+            tar -czf web-dist.tar.gz -C web-app dist
           else
-            echo "web/dist missing, skipping archive"
+            echo "web-app/dist missing, skipping archive"
           fi
 
       - name: Upload release artifacts
