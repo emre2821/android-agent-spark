@@ -83,18 +83,27 @@ export const createApp = () => {
 
   wss.on('connection', (socket) => {
     sockets.add(socket);
-    openSockets.add(socket); // Add to open sockets immediately
+    // WebSocket connections are OPEN after 'connection' event in ws library
+    // Add to openSockets only if OPEN (defensive check)
+    if (socket.readyState === WebSocket.OPEN) {
+      openSockets.add(socket);
+    }
     socket.send(JSON.stringify({ type: 'connected' }));
+    
+    socket.on('open', () => {
+      // Ensure socket is in openSockets when explicitly opened
+      openSockets.add(socket);
+    });
     
     socket.on('close', () => {
       sockets.delete(socket);
-      openSockets.delete(socket); // Remove from open sockets
+      openSockets.delete(socket);
     });
     
     socket.on('error', () => {
-      // Remove from both sets on error to prevent memory leaks and broken sends
-      openSockets.delete(socket);
+      // Remove from both sets consistently (same order as close handler)
       sockets.delete(socket);
+      openSockets.delete(socket);
     });
   });
 

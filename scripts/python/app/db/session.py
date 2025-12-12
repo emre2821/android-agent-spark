@@ -30,8 +30,9 @@ def _ensure_engine():
             "future": True,
         }
         # Only add pooling config if not using SQLite (check scheme robustly)
+        # Handle variations like 'sqlite', 'sqlite3', 'sqlite:///', etc.
         db_scheme = urlparse(settings.database_url).scheme.lower()
-        if db_scheme not in ("sqlite", "sqlite3"):
+        if not db_scheme.startswith("sqlite"):
             engine_kwargs.update({
                 "pool_size": 10,
                 "max_overflow": 20,

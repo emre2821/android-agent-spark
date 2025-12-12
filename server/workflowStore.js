@@ -437,11 +437,11 @@ async function readStore() {
     }
     return parsed;
   } catch {
-    // Use structuredClone if available (Node 17+), otherwise create new default
-    // Note: defaultData is simple structure (workflows array), so both methods work
+    // Use structuredClone if available (Node 17+), otherwise use defaultData structure
+    // Maintain consistency with defaultData by using its structure
     const fallback = typeof structuredClone !== 'undefined' 
       ? structuredClone(defaultData) 
-      : { workflows: [] }; // Recreate simple default rather than shallow clone
+      : { ...defaultData, workflows: [] };
     await fs.writeFile(dataFile, JSON.stringify(fallback, null, 2), 'utf-8');
     return fallback;
   }
