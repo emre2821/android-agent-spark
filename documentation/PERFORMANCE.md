@@ -46,10 +46,10 @@ for (const socket of openSockets) {
 - **Issue**: Using `forEach` for performance-critical loops
 - **Solution**: Replace with `for..of` loops (or `for..of` with `.entries()` when index is needed)
 - **Files affected**: 
-  - `server/agentRuntime.js` (simulateTaskRun function - uses entries())
-  - `server/queueService.js` (publish method)
-  - `server/workflowStore.js` (createRun method)
-  - `apps/frontend/src/lib/workflows/controller.ts` (runWorkflow function)
+  - `nodejs-server/agentRuntime.js` (simulateTaskRun function - uses entries())
+  - `nodejs-server/queueService.js` (publish method)
+  - `nodejs-server/workflowStore.js` (createRun method)
+  - `frontend-app/src/lib/workflows/controller.ts` (runWorkflow function)
 
 **Performance comparison:**
 - `for..of`: ~60% faster for large arrays
@@ -72,7 +72,7 @@ for (const handler of handlers.values()) {
 #### 3. Object Cloning Optimization
 - **Issue**: Using `JSON.parse(JSON.stringify())` for deep cloning (slow and memory-intensive)
 - **Solution**: Use `structuredClone()` (Node 17+) or shallow cloning when appropriate
-- **Files affected**: `server/workflowStore.js`
+- **Files affected**: `nodejs-server/workflowStore.js`
 - **Impact**: ~70% faster cloning, reduces memory pressure
 
 ```javascript
@@ -91,7 +91,7 @@ const fallback = typeof structuredClone !== 'undefined'
 - **Issue**: Duplicate `invalidateQueries` calls in try/finally blocks causing excessive refetches
 - **Solution**: Remove redundant invalidations from finally blocks
 - **Impact**: Reduces network requests by ~40% for memory/task operations
-- **Files affected**: `apps/frontend/src/hooks/use-agents.tsx`
+- **Files affected**: `frontend-app/src/hooks/use-agents.tsx`
 
 **Before:**
 ```typescript
@@ -116,7 +116,7 @@ try {
 #### 5. Database Connection Pooling
 - **Issue**: No explicit connection pool configuration for client-server databases
 - **Solution**: Add connection pool settings to SQLAlchemy engine (when not using SQLite)
-- **Files affected**: `scripts/python/app/db/session.py`
+- **Files affected**: `python-backend/app/db/session.py`
 - **Impact**: Better handling of concurrent requests for PostgreSQL/MySQL deployments
 
 ```python
@@ -163,7 +163,7 @@ _engine = create_engine(settings.database_url, **engine_kwargs)
 5. **Use connection pooling** for database connections
    - Configured with SQLAlchemy using pool_size and max_overflow
    - Prevents connection exhaustion under load
-   - Already configured in `scripts/python/app/db/session.py`
+   - Already configured in `python-backend/app/db/session.py`
 
 6. **Configure SQLite for performance**
    - WAL mode for better concurrency (already enabled)

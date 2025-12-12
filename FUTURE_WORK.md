@@ -22,7 +22,7 @@ This document captures deferred improvements and tasks that require human intent
 ### Component Organization
 
 - [ ] Consider extracting React contexts to separate files (per `react-refresh/only-export-components` warnings)
-- [ ] Review the shared components strategy between `apps/frontend` and `web`
+- [ ] Review the shared components strategy between `frontend-app` and `web-app`
 
 ### Performance
 

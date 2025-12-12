@@ -6,7 +6,7 @@
 
 A multi-platform AI agent workspace that ships on web, Android (Capacitor), Electron, and server runtimes with batteries-included workflows.
 
-![Demo screenshot placeholder](apps/frontend/public/demo-screenshots/placeholder.png)
+![Demo screenshot placeholder](frontend-app/public/demo-screenshots/placeholder.png)
 
 ## Repository Structure
 
