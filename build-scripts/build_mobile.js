@@ -24,7 +24,7 @@ function copyDir(src, dest) {
 
 function ensureWebBuild(projectRoot) {
   console.log('Building web assets for mobile wrapper...');
-  execSync('npm --prefix web run build', {
+  execSync('npm --prefix web-app run build', {
     cwd: projectRoot,
     stdio: 'inherit',
   });
@@ -32,7 +32,7 @@ function ensureWebBuild(projectRoot) {
 
 function stageMobileBundle(projectRoot) {
   const distRoot = path.join(projectRoot, 'dist');
-  const webDist = path.join(projectRoot, 'web', 'dist');
+  const webDist = path.join(projectRoot, 'web-app', 'dist');
 
   fs.rmSync(distRoot, { recursive: true, force: true });
   fs.mkdirSync(distRoot, { recursive: true });
@@ -42,7 +42,7 @@ function stageMobileBundle(projectRoot) {
 
   const buildInfo = {
     generatedAt: new Date().toISOString(),
-    source: 'scripts/build_mobile.js',
+    source: 'build-scripts/build_mobile.js',
     note: 'Assets ready for Capacitor/Android wrapper ingestion.',
   };
   fs.writeFileSync(

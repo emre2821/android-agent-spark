@@ -24,7 +24,7 @@ function copyDir(src, dest) {
 
 function ensureWebBuild(projectRoot) {
   console.log('Building web assets for desktop wrapper...');
-  execSync('npm --prefix web run build', {
+  execSync('npm --prefix web-app run build', {
     cwd: projectRoot,
     stdio: 'inherit',
   });
@@ -33,8 +33,8 @@ function ensureWebBuild(projectRoot) {
 function stageDesktopBundle(projectRoot) {
   const distRoot = path.join(projectRoot, 'dist', 'desktop');
   const resourcesDir = path.join(distRoot, 'resources', 'app');
-  const webDist = path.join(projectRoot, 'web', 'dist');
-  const electronMain = path.join(projectRoot, 'electron', 'main.js');
+  const webDist = path.join(projectRoot, 'web-app', 'dist');
+  const electronMain = path.join(projectRoot, 'electron-desktop', 'main.js');
 
   // Safety check: Only remove distRoot if it matches the expected pattern
   if (
@@ -69,7 +69,7 @@ function stageDesktopBundle(projectRoot) {
 
   const buildInfo = {
     generatedAt: new Date().toISOString(),
-    source: 'scripts/build_desktop.js',
+    source: 'build-scripts/build_desktop.js',
     note: 'Bundle ready for electron-builder or npm start within dist/desktop.',
   };
   fs.writeFileSync(path.join(distRoot, 'BUILD_INFO.json'), JSON.stringify(buildInfo, null, 2));
