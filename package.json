@@ -23,7 +23,7 @@
     "dev:backend": "cd python-backend && python -m app.cli runserver --host 0.0.0.0 --port 8000",
     "build:mobile": "node build-scripts/build_mobile.js",
     "build:desktop": "node build-scripts/build_desktop.js",
-    "typecheck": "npm exec --prefix web-app tsc -- --noEmit",
+    "typecheck": "npm exec --prefix web-app tsc -- --project web-app/tsconfig.json --noEmit",
     "test:e2e": "cd python-backend && python -m pytest tests/concurrency",
     "install:all": "npm install && npm --prefix frontend-app install && npm --prefix web-app install && npm --prefix nodejs-server install",
     "validate": "npm run lint && npm run typecheck && npm test"
