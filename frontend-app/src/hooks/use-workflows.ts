@@ -14,6 +14,17 @@ import {
   WorkflowVersionPayload,
   type StoredWorkflow,
 } from "@/types/workflow";
+export {
+  WorkflowsProvider,
+  createInMemoryWorkflowsManager,
+  useWorkflows,
+} from "./use-workflows-context";
+export type {
+  CreateWorkflowInput,
+  UpdateWorkflowInput,
+  WorkflowUpsert,
+  WorkflowsManager,
+} from "./use-workflows-context";
 
 const requireWorkspaceId = (workspaceId?: string | null) => {
   const resolved = workspaceId ?? getStoredWorkspaceId();
