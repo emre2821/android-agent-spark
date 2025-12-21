@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useWorkflows } from '@/hooks/use-workflows.tsx';
+import { useWorkflows } from '@/hooks/use-workflows';
 import type { Workflow } from '@/types/workflow';
 import { CalendarCheck, Copy, Flame, Pencil, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
