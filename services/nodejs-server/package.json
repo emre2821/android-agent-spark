@@ -1,0 +1,29 @@
+{
+  "name": "agent-spark-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js",
+    "build": "node -e \"console.log('No server build step; runtime files are used directly.')\"",
+    "test": "vitest run \"tests/**/*.{test,spec}.?(c|m)[tj]s\" --passWithNoTests",
+    "lint": "node -e \"console.log('Server lint placeholder')\""
+  },
+  "dependencies": {
+    "agent-spark-monorepo": "file:../..",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.5.0",
+    "cors": "^2.8.5",
+    "cron-parser": "^5.4.0",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "winston": "^3.13.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^1.6.1"
+  }
+}

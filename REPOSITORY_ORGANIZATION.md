@@ -8,58 +8,58 @@ The repository has been reorganized into dedicated project folders to improve cl
 
 ## Project Folders
 
-### `frontend-app/`
-**Former location:** `apps/frontend/`
+### `apps/frontend-app/`
+**Former location:** `frontend-app/`
 
 The main React/TypeScript frontend application built with Vite. This is the primary user interface for the Agent Spark system.
 
 - **Tech Stack:** React 18, TypeScript, Vite, TailwindCSS
-- **Build:** `npm --prefix frontend-app run build`
-- **Dev Server:** `npm --prefix frontend-app run dev`
-- **Tests:** `npm --prefix frontend-app run test`
+- **Build:** `npm --prefix apps/frontend-app run build`
+- **Dev Server:** `npm --prefix apps/frontend-app run dev`
+- **Tests:** `npm --prefix apps/frontend-app run test`
 
-### `web-app/`
-**Former location:** `web/`
+### `apps/web-app/`
+**Former location:** `web-app/`
 
 Secondary web frontend application, also built with React and Vite.
 
 - **Tech Stack:** React, TypeScript, Vite
-- **Build:** `npm --prefix web-app run build`
-- **Dev Server:** `npm --prefix web-app run dev`
-- **Tests:** `npm --prefix web-app run test`
+- **Build:** `npm --prefix apps/web-app run build`
+- **Dev Server:** `npm --prefix apps/web-app run dev`
+- **Tests:** `npm --prefix apps/web-app run test`
 
-### `nodejs-server/`
-**Former location:** `server/`
+### `services/nodejs-server/`
+**Former location:** `nodejs-server/`
 
 Node.js API server providing backend services for the Agent Spark system.
 
 - **Tech Stack:** Node.js, Express, WebSocket, SQLite
-- **Start:** `npm --prefix nodejs-server run dev`
-- **Tests:** `npm --prefix nodejs-server run test`
+- **Start:** `npm --prefix services/nodejs-server run dev`
+- **Tests:** `npm --prefix services/nodejs-server run test`
 - **Port:** 3001 (default)
 
-### `python-backend/`
-**Former location:** `scripts/python/`
+### `services/python-backend/`
+**Former location:** `python-backend/`
 
 Python backend application providing additional API services and background automation.
 
 - **Tech Stack:** Python 3.11+, FastAPI, SQLAlchemy
-- **Setup:** `cd python-backend && pip install -r requirements.txt`
-- **Start:** `cd python-backend && python -m app.cli runserver --host 0.0.0.0 --port 8000`
-- **Tests:** `cd python-backend && pytest`
+- **Setup:** `cd services/python-backend && pip install -r requirements.txt`
+- **Start:** `cd services/python-backend && python -m app.cli runserver --host 0.0.0.0 --port 8000`
+- **Tests:** `cd services/python-backend && pytest`
 - **Port:** 8000 (default)
 
-### `android-wrapper/`
-**Former location:** `android-wrapper/` (unchanged)
+### `platforms/android-wrapper/`
+**Former location:** `android-wrapper/`
 
 Capacitor-based Android application wrapper.
 
 - **Tech Stack:** Capacitor, Android/Kotlin
 - **Build:** `npm run build:mobile && npx cap sync android`
-- **Location:** Open `android-wrapper/` in Android Studio to build APK/AAB
+- **Location:** Open `platforms/android-wrapper/` in Android Studio to build APK/AAB
 
-### `electron-desktop/`
-**Former location:** `electron/`
+### `platforms/electron-desktop/`
+**Former location:** `electron-desktop/`
 
 Electron desktop application shell for cross-platform desktop deployment.
 
@@ -67,8 +67,8 @@ Electron desktop application shell for cross-platform desktop deployment.
 - **Build:** `npm run build:desktop`
 - **Output:** `dist/desktop/`
 
-### `build-scripts/`
-**Former location:** `scripts/`
+### `scripts/build/`
+**Former location:** `build-scripts/`
 
 Build and deployment scripts for mobile and desktop platforms.
 
@@ -78,16 +78,16 @@ Build and deployment scripts for mobile and desktop platforms.
 - `shell/` - Shell scripts for various build tasks
 - `README.md` - Build scripts documentation
 
-### `shared-packages/`
-**Former location:** `packages/`
+### `packages/`
+**Former location:** `shared-packages/`
 
 Shared TypeScript utilities and common code used across projects.
 
 **Contents:**
 - `ts-common/` - Common TypeScript utilities
 
-### `documentation/`
-**Former location:** `docs/`
+### `docs/documentation/`
+**Former location:** `documentation/`
 
 All documentation including architecture diagrams, deployment guides, and operational procedures.
 
@@ -98,8 +98,8 @@ All documentation including architecture diagrams, deployment guides, and operat
 - `troubleshooting.md` - Common issues and solutions
 - `operations/` - Operational runbooks and release notes
 
-### `misc/`
-**New folder for standalone configuration files**
+### `config/misc/`
+**Former location:** `misc/`
 
 Miscellaneous root-level configuration files that don't belong to a specific project.
 
@@ -141,15 +141,16 @@ The following important files remain at the root level:
 
 | Old Path | New Path | Type |
 |----------|----------|------|
-| `apps/frontend/` | `frontend-app/` | Main React frontend |
-| `web/` | `web-app/` | Secondary React frontend |
-| `server/` | `nodejs-server/` | Node.js API server |
-| `scripts/python/` | `python-backend/` | Python backend |
-| `electron/` | `electron-desktop/` | Electron desktop |
-| `scripts/` | `build-scripts/` | Build scripts |
-| `packages/` | `shared-packages/` | Shared code |
-| `docs/` | `documentation/` | Documentation |
-| (various) | `misc/` | Config files |
+| `frontend-app/` | `apps/frontend-app/` | Main React frontend |
+| `web-app/` | `apps/web-app/` | Secondary React frontend |
+| `nodejs-server/` | `services/nodejs-server/` | Node.js API server |
+| `python-backend/` | `services/python-backend/` | Python backend |
+| `android-wrapper/` | `platforms/android-wrapper/` | Android wrapper |
+| `electron-desktop/` | `platforms/electron-desktop/` | Electron desktop |
+| `build-scripts/` | `scripts/build/` | Build scripts |
+| `shared-packages/` | `packages/` | Shared code |
+| `documentation/` | `docs/documentation/` | Documentation |
+| `misc/` | `config/misc/` | Config files |
 
 ## Updated Commands
 
@@ -160,25 +161,25 @@ All npm scripts in `package.json` and `Makefile` have been updated to reference 
 npm run install:all
 
 # Development
-npm run dev:frontend    # Start frontend-app
-npm run dev:web         # Start web-app
-npm run dev:server      # Start nodejs-server
-npm run dev:backend     # Start python-backend
+npm run dev:frontend    # Start apps/frontend-app
+npm run dev:web         # Start apps/web-app
+npm run dev:server      # Start services/nodejs-server
+npm run dev:backend     # Start services/python-backend
 
 # Building
 npm run build           # Build all
-npm run build:frontend  # Build frontend-app
-npm run build:web       # Build web-app
-npm run build:server    # Build nodejs-server
+npm run build:frontend  # Build apps/frontend-app
+npm run build:web       # Build apps/web-app
+npm run build:server    # Build services/nodejs-server
 npm run build:mobile    # Build Android
 npm run build:desktop   # Build Electron
 
 # Testing
 npm test               # Run all tests
-npm run test:frontend  # Test frontend-app
-npm run test:web       # Test web-app
-npm run test:server    # Test nodejs-server
-npm run test:e2e       # Test python-backend
+npm run test:frontend  # Test apps/frontend-app
+npm run test:web       # Test apps/web-app
+npm run test:server    # Test services/nodejs-server
+npm run test:e2e       # Test services/python-backend
 
 # Code Quality
 npm run lint           # Lint all projects
@@ -207,5 +208,5 @@ This organization prepares the repository for potential future changes:
 
 For questions about this reorganization or the repository structure, please:
 1. Check the main [README.md](./README.md)
-2. Review the [documentation/](./documentation/) folder
+2. Review the [docs/documentation/](./docs/documentation/) folder
 3. Open an issue on GitHub
