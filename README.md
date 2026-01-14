@@ -6,7 +6,7 @@
 
 A multi-platform AI agent workspace that ships on web, Android (Capacitor), Electron, and server runtimes with batteries-included workflows.
 
-![Demo screenshot placeholder](frontend-app/public/demo-screenshots/placeholder.png)
+![Demo screenshot placeholder](apps/frontend-app/public/demo-screenshots/placeholder.png)
 
 ## Repository Structure
 
@@ -14,22 +14,28 @@ This is a monorepo organized as follows:
 
 ```
 /
-├── frontend-app/         # Main React/TypeScript frontend (Vite)
-├── web-app/              # Secondary web frontend
-├── nodejs-server/        # Node.js API server
-├── python-backend/       # Python backend application and scripts
+├── apps/
+│   ├── frontend-app/     # Main React/TypeScript frontend (Vite)
+│   └── web-app/          # Secondary web frontend
+├── services/
+│   ├── nodejs-server/    # Node.js API server
+│   └── python-backend/   # Python backend application and scripts
 │   ├── app/              # Python API server
 │   └── tests/            # Python tests
-├── build-scripts/        # Build scripts for mobile and desktop
-│   ├── shell/            # Shell scripts (.sh)
-│   ├── build_mobile.js   # Mobile build script
-│   └── build_desktop.js  # Desktop build script
-├── documentation/        # Documentation and architecture diagrams
-├── shared-packages/      # Shared TypeScript utilities
+├── scripts/              # Build scripts for mobile and desktop
+│   └── build/            # Build script bundle
+│       ├── shell/        # Shell scripts (.sh)
+│       ├── build_mobile.js   # Mobile build script
+│       └── build_desktop.js  # Desktop build script
+├── docs/                 # Documentation and architecture diagrams
+│   └── documentation/    # Project documentation
+├── packages/             # Shared TypeScript utilities
 │   └── ts-common/        # Common TypeScript code
-├── android-wrapper/      # Capacitor Android host
-├── electron-desktop/     # Electron desktop shell
-├── misc/                 # Miscellaneous config files
+├── platforms/            # Platform-specific shells
+│   ├── android-wrapper/  # Capacitor Android host
+│   └── electron-desktop/ # Electron desktop shell
+├── config/               # Miscellaneous config files
+│   └── misc/             # Root config storage
 ├── .github/workflows/    # CI/CD workflows
 └── README.md
 ```
@@ -89,7 +95,7 @@ The server runs on port 3001. Environment variables can be set via `.env`.
 
 ```bash
 # Navigate to Python backend
-cd python-backend
+cd services/python-backend
 
 # Create virtual environment
 python -m venv venv
@@ -126,7 +132,7 @@ npm run build
 npm run build:mobile
 npx cap sync android
 ```
-Then open Android Studio to generate a signed AAB or APK from the `android-wrapper` project.
+Then open Android Studio to generate a signed AAB or APK from the `platforms/android-wrapper` project.
 
 ### Build for Desktop (Electron)
 
@@ -152,7 +158,7 @@ npm run test:web
 npm run test:server
 
 # Run Python tests
-cd python-backend && pytest
+cd services/python-backend && pytest
 ```
 
 ## Linting

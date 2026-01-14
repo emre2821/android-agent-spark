@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: .
+      target: server
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - SPARK_ENV=development
+    volumes:
+      # Hot reload for server code (optional):
+      - ./services/nodejs-server:/opt/app/services/nodejs-server
+      # Persist lightweight data if needed
+      - ./data:/opt/app/services/nodejs-server/data
+    command: ["npm", "run", "start"]
+
+  web:
+    build:
+      context: .
+      target: web-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    volumes:
+      # Enable Vite hot module reload during local development
+      - ./apps/web-app:/opt/app/apps/web-app
+    depends_on:
+      - server
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+
+# Quick demo instructions:
+# 1. docker-compose up --build
+# 2. Open http://localhost:3000 for the web UI
+# 3. API will be served from http://localhost:3001
