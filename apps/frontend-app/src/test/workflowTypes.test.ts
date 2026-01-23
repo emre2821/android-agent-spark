@@ -6,6 +6,7 @@ import {
   cloneSteps,
   createEmptyStep,
 } from '@/types/workflow';
+import { WorkflowExecutionLog, WorkflowPort, cloneSteps, createEmptyStep } from '@/types/workflow';
 
 describe('workflow type helpers', () => {
   it('creates a step with defaults and unique identifiers', () => {
