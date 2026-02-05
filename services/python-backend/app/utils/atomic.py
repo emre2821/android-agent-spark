@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 
 def atomic_write(path: Path, content: str | bytes, mode: str = "w", encoding: str = "utf-8") -> None:
