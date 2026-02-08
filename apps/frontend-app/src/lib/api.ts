@@ -16,7 +16,7 @@ type RequestInitWithBody = RequestInit & { body?: JsonValue | BodyInit | null };
 export async function apiRequest<T = unknown>(path: string, init: RequestInitWithBody = {}) {
   const headers = new Headers(init.headers ?? {});
   let body = init.body;
-  if (body && typeof body !== 'string' && !(body instanceof FormData) && !(body instanceof Blob)) {
+  if (body != null && typeof body !== 'string' && !(body instanceof FormData) && !(body instanceof Blob)) {
     headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
     body = JSON.stringify(body);
   }
